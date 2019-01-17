@@ -346,6 +346,22 @@ def is_new_stop_event_valid(event_name, stop_id, stop_order, nav_stop, db_tu, ne
     return True
 
 
+def make_fake_realtime_stop_time(order, sp_id, new_stu, db_trip_update):
+    """
+    Since the wanted stop_point doesn't exist in the base vj (for example, we want to delay/delete a stop_point
+    which is added by a previous disruption), we search the wanted stop_point in db first, if we cannot find it in
+    the db(for example, the very first 'add'), we use the info of new_stu
+    """
+    stu = db_trip_update.find_stop(sp_id, order) if db_trip_update else None
+    utc_departure_time, utc_arrival_time = (stu.departure.time(), stu.arrival.time()) if stu else \
+                                           (extract_str_utc_time(new_stu.departure),
+                                            extract_str_utc_time(new_stu.arrival))
+
+    return {'stop_point': new_stu.navitia_stop,
+            'utc_departure_time': utc_departure_time,
+            'utc_arrival_time': utc_arrival_time}
+
+
 def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=False):
     """
     We need to merge the info from 3 sources:
@@ -416,13 +432,9 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=False):
                             is_new_stop_event_valid(event_name='departure', stop_id=sp_id, stop_order=order,
                                                     nav_stop=None, db_tu=db_trip_update, new_stu=new_stu):
                         # It is an added stop_time or a modification on a previously added stop_time, create a
-                        # new "fake" Navitia stop time (even if it's not in navitia kirin needs to iterate on it)
-                        added_st = {
-                            'stop_point': new_stu.navitia_stop,
-                            'utc_departure_time': extract_str_utc_time(new_stu.departure),
-                            'utc_arrival_time': extract_str_utc_time(new_stu.arrival),
-                        }
-                        yield order, added_st
+                        # new "fake" Navitia stop time (even if it's not in navitia,
+                        #  kirin needs to iterate on it)
+                        yield order, make_fake_realtime_stop_time(order, sp_id, new_stu, db_trip_update)
         else:
             # Iterate on the theoretical VJ if the new trip update doesn't list all stop_times
             for order, vj_st in enumerate(navitia_vj.get('stop_times', [])):

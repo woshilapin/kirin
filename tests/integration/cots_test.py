@@ -608,6 +608,7 @@ def test_cots_added_and_deleted_stop_time():
         assert len(StopTimeUpdate.query.all()) == 7
         assert StopTimeUpdate.query.all()[3].arrival_status == 'delete'
         assert StopTimeUpdate.query.all()[3].departure_status == 'delete'
+
         created_at_for_delete = StopTimeUpdate.query.all()[3].created_at
 
     # At this point the trip_update is valid. Stop_time recently added will be deleted.
@@ -646,7 +647,7 @@ def test_cots_added_and_deleted_stop_time():
         assert len(db_trip_delayed.stop_time_updates) == 7
 
 
-def test_cots_added_stop_time_first_position():
+def test_cots_added_stop_time_first_position_then_delete_it():
     """
     A new stop time is added in the VJ 96231 in first position
     """
@@ -663,6 +664,29 @@ def test_cots_added_stop_time_first_position():
         assert StopTimeUpdate.query.all()[0].arrival_status == 'none'
         assert StopTimeUpdate.query.all()[0].departure_status == 'add'
         assert StopTimeUpdate.query.all()[0].departure == datetime(2015, 9, 21, 14, 20)
+        assert StopTimeUpdate.query.all()[1].arrival_status == 'none'
+        assert StopTimeUpdate.query.all()[1].departure_status == 'none'
+        assert StopTimeUpdate.query.all()[1].departure == datetime(2015, 9, 21, 15, 21)
+        assert StopTimeUpdate.query.all()[1].arrival == datetime(2015, 9, 21, 15, 21)
+
+    # we remove the added first stop time
+    cots_del_file = get_fixture_data('cots_train_96231_delete_previously_added_first_stop.json')
+    res = api_post('/cots', data=cots_del_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 2
+        assert len(TripUpdate.query.all()) == 1
+        assert TripUpdate.query.all()[0].status == 'update'
+        assert TripUpdate.query.all()[0].effect == 'REDUCED_SERVICE'
+        assert TripUpdate.query.all()[0].company_id == 'company:OCE:TH'
+        assert len(StopTimeUpdate.query.all()) == 7
+        assert StopTimeUpdate.query.all()[0].arrival_status == 'none'
+        assert StopTimeUpdate.query.all()[0].departure_status == 'delete'
+        assert StopTimeUpdate.query.all()[0].departure == datetime(2015, 9, 21, 14, 20)
+        # Here is the real departure
+        assert StopTimeUpdate.query.all()[1].arrival_status == 'none'
+        assert StopTimeUpdate.query.all()[1].departure_status == 'none'
+        assert StopTimeUpdate.query.all()[1].departure == datetime(2015, 9, 21, 15, 21)
 
 
 def test_cots_added_stop_time_last_position():
