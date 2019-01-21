@@ -73,7 +73,7 @@ class TimestampMixin(object):
     updated_at = db.Column(db.DateTime(), default=None, onupdate=datetime.datetime.utcnow)
 
 
-Db_TripEffect = db.Enum(*[e.name for e in TripEffect],name='trip_effect')
+Db_TripEffect = db.Enum(*[e.name for e in TripEffect], name='trip_effect')
 Db_ModificationType = db.Enum(*[t.name for t in ModificationType], name='modification_type')
 
 

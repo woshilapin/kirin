@@ -36,6 +36,7 @@ from pytz import utc
 from kirin.core.model import RealTimeUpdate, db, TripUpdate, StopTimeUpdate
 from kirin.core.populate_pb import to_posix_time, convert_to_gtfsrt
 from kirin import gtfs_rt
+from kirin.core.types import TripEffect
 from tests import mock_navitia
 from tests.check_utils import dumb_nav_wrapper, api_post
 from kirin import gtfs_realtime_pb2, app
@@ -727,6 +728,30 @@ def partial_update_gtfs_rt_data_3():
 
     return feed
 
+
+@pytest.fixture()
+def partial_update_gtfs_rt_code_r_jv1_last_stop_normal():
+    """
+    This fixture is modifying trip Code-R-vj1 StopR4 is back to normal (no info on others)
+    """
+    feed = gtfs_realtime_pb2.FeedMessage()
+
+    feed.header.gtfs_realtime_version = "1.0"
+    feed.header.incrementality = gtfs_realtime_pb2.FeedHeader.FULL_DATASET
+    feed.header.timestamp = to_posix_time(datetime.datetime(year=2012, month=6, day=15, hour=15))
+
+    entity = feed.entity.add()
+    entity.id = 'bob'
+    trip_update = entity.trip_update
+    trip_update.trip.trip_id = "Code-R-vj1"
+
+    stu = trip_update.stop_time_update.add()
+    stu.arrival.delay = 0
+    stu.stop_sequence = 4
+    stu.stop_id = "Code-StopR4"
+
+    return feed
+
 def test_gtfs_rt_partial_update_same_feed(partial_update_gtfs_rt_data_1):
     """
     In this test, we will send the same gtfs-rt twice, the second sending should not create neither
@@ -853,6 +878,52 @@ def test_gtfs_rt_partial_update_diff_feed_2(partial_update_gtfs_rt_data_2,
                 assert trip_update.stop_time_updates[2].arrival_delay.seconds == 0
                 assert trip_update.stop_time_updates[3].arrival_delay.seconds == 0
                 assert len(trip_update.real_time_updates) == 1
+
+
+def test_gtfs_rt_partial_update_last_stop_back_normal(partial_update_gtfs_rt_data_2,
+                                                      partial_update_gtfs_rt_code_r_jv1_last_stop_normal):
+    """
+    In this test, we send a gtfs-rt containing only one trip_update (delay on R2 and R4),
+    then send a gtfs-rt with just back-to-normal info on R4.
+    Currently, this second feed is seen as back-to-normal on all stops, as GTFS-RT feed is currently
+    supposed to be complete (stops not provided are served on time)
+    """
+    tester = app.test_client()
+    resp = tester.post('/gtfs_rt', data=partial_update_gtfs_rt_data_2.SerializeToString())
+    assert resp.status_code == 200
+
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 1
+        assert len(TripUpdate.query.all()) == 1
+        assert len(StopTimeUpdate.query.all()) == 4
+
+        trip_update = TripUpdate.query.first()
+        assert trip_update.stop_time_updates[0].arrival_delay.seconds == 0
+        assert trip_update.stop_time_updates[1].arrival_delay.seconds == 60
+        assert trip_update.stop_time_updates[2].arrival_delay.seconds == 0
+        assert trip_update.stop_time_updates[3].arrival_delay.seconds == 180
+        assert len(trip_update.real_time_updates) == 1
+        assert trip_update.effect == TripEffect.SIGNIFICANT_DELAYS.name
+
+    tester = app.test_client()
+    resp = tester.post('/gtfs_rt', data=partial_update_gtfs_rt_code_r_jv1_last_stop_normal.SerializeToString())
+    assert resp.status_code == 200
+
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 2
+        assert len(TripUpdate.query.all()) == 1
+        assert len(StopTimeUpdate.query.all()) == 4
+
+        trip_update = TripUpdate.query.first()
+        assert trip_update.stop_time_updates[0].arrival_delay.seconds == 0
+        # from previous feed R2 was delayed, it is not anymore as current implementation considers
+        # GTFS-RT feeds on a trip as complete, and no info on stop means it's on time
+        assert trip_update.stop_time_updates[1].arrival_delay.seconds == 0
+        assert trip_update.stop_time_updates[2].arrival_delay.seconds == 0
+        assert trip_update.stop_time_updates[3].arrival_delay.seconds == 0
+        assert len(trip_update.real_time_updates) == 2
+        # feed is supposed complete on trip, so status is UNKNOWN_EFFECT (means everything is normal)
+        assert trip_update.effect == TripEffect.UNKNOWN_EFFECT.name
 
 
 '''
