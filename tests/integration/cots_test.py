@@ -790,3 +790,41 @@ def test_cots_added_stop_time_earlier_than_previous():
     with app.app_context():
         assert RealTimeUpdate.query.first().error == \
                'invalid cots: stop_point\'s(0087-713065-BV) time is not consistent'
+
+
+def test_cots_added_stop_time_with_dalays():
+    """
+    A new stop time is added in the VJ 96231 with a delay as explained below
+
+    Base:   15:21/15:21     15:38/15:40    15:51/15:53      16:14/16:16     16:30/16:31     16:39/16:39
+            -------|------------|-|------------|-|---------------|-|------------|-|-------------|
+
+    W/Delay 15:21/15:21     15:38/15:55         16:06/16:08      16:29/16:31     16:45/16:46     16:54/16:54
+            -------|----------|----|---------------|-|---------------|-|--------------|-|--------------|
+
+    Valid add: (16:06/16:08 < new_stop_time < 16:29/16:31) ----|-----16:17/16:19
+    Arrival and departure datetime of newly added stop_time compared to the existing stop_times with delay.
+    To test you can modify arrival and departure of added stop_time = (713065) in Flux-cots
+    """
+    cots_add_file = get_fixture_data('cots_train_96231_add_with_departure_after_next_base_stop_time_arrival.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 1
+        assert len(TripUpdate.query.all()) == 1
+        assert TripUpdate.query.all()[0].status == 'update'
+        assert TripUpdate.query.all()[0].effect == 'MODIFIED_SERVICE'
+        assert TripUpdate.query.all()[0].company_id == 'company:OCE:SN'
+        assert len(StopTimeUpdate.query.all()) == 7
+        assert StopTimeUpdate.query.all()[2].arrival_status == 'update'
+        assert StopTimeUpdate.query.all()[2].arrival == datetime(2015, 9, 21, 16, 6)
+        assert StopTimeUpdate.query.all()[2].departure_status == 'update'
+        assert StopTimeUpdate.query.all()[2].departure == datetime(2015, 9, 21, 16, 8)
+        assert StopTimeUpdate.query.all()[3].arrival_status == 'add'
+        assert StopTimeUpdate.query.all()[3].arrival == datetime(2015, 9, 21, 16, 17)
+        assert StopTimeUpdate.query.all()[3].departure_status == 'add'
+        assert StopTimeUpdate.query.all()[3].departure == datetime(2015, 9, 21, 16, 19)
+        assert StopTimeUpdate.query.all()[6].arrival_status == 'update'
+        assert StopTimeUpdate.query.all()[6].arrival == datetime(2015, 9, 21, 16, 54)
+        assert StopTimeUpdate.query.all()[6].departure_status == 'none'
+        assert StopTimeUpdate.query.all()[6].departure == datetime(2015, 9, 21, 16, 54)
