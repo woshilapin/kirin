@@ -51,7 +51,6 @@ import company_1187
 import empty_company_1180
 import company_OCETH
 import logging
-import vj_96231_adjusted
 
 mocks = [
     vj_john.response,
@@ -74,8 +73,7 @@ mocks = [
     st_713666.response,
     company_1187.response,
     empty_company_1180.response,
-    company_OCETH.response,
-    vj_96231_adjusted.response
+    company_OCETH.response
 ]
 _mock_navitia_call = {}
 for r in mocks:
