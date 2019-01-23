@@ -918,16 +918,20 @@ def test_gtfs_rt_partial_update_last_stop_back_normal(partial_update_gtfs_rt_dat
         trip_update = TripUpdate.query.first()
         assert trip_update.stop_time_updates[0].arrival_delay.seconds == 0
 
-        # from previous feed R2 was delayed, it is not anymore as current implementation considers
-        # GTFS-RT feeds on a trip as complete, and no info on stop means it's on time
-        # if stop is considered delayed, trip.effect below should match that.
+        # from previous feed: R2 was delayed. It is not the case anymore as current implementation considers
+        # GTFS-RT feeds on a trip as complete, and no info on stop means it's on time.
+        # (if stop R2 is delayed, trip.effect below should match that)
         assert trip_update.stop_time_updates[1].arrival_delay.seconds == 0
 
         assert trip_update.stop_time_updates[2].arrival_delay.seconds == 0
         assert trip_update.stop_time_updates[3].arrival_delay.seconds == 0
         assert len(trip_update.real_time_updates) == 2
-        # feed is supposed complete on trip, so status is UNKNOWN_EFFECT (means everything is normal)
-        assert trip_update.effect == TripEffect.UNKNOWN_EFFECT.name
+
+        # check that effect matches the absence or presence of delay
+        if all(stu.arrival_delay.seconds == 0 for stu in trip_update.stop_time_updates):
+            assert trip_update.effect == TripEffect.UNKNOWN_EFFECT.name
+        else:
+            assert trip_update.effect == TripEffect.SIGNIFICANT_DELAYS.name
 
 
 '''
