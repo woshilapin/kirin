@@ -634,6 +634,7 @@ def partial_update_gtfs_rt_data_1():
 def partial_update_gtfs_rt_data_2():
     """
     This fixture is almost the same as partial_update_gtfs_rt_data_1
+    It's modifying trip Code-R-vj1: StopR2 and StopR4 are delayed, StopR3 on time (no info on StopR1)
     Based on the previous one, we add one more stop_time_update
     """
     feed = gtfs_realtime_pb2.FeedMessage()
@@ -732,7 +733,7 @@ def partial_update_gtfs_rt_data_3():
 @pytest.fixture()
 def partial_update_gtfs_rt_code_r_jv1_last_stop_normal():
     """
-    This fixture is modifying trip Code-R-vj1 StopR4 is back to normal (no info on others)
+    This fixture is modifying trip Code-R-vj1: StopR4 is back to normal (no info on others)
     """
     feed = gtfs_realtime_pb2.FeedMessage()
 
@@ -916,9 +917,12 @@ def test_gtfs_rt_partial_update_last_stop_back_normal(partial_update_gtfs_rt_dat
 
         trip_update = TripUpdate.query.first()
         assert trip_update.stop_time_updates[0].arrival_delay.seconds == 0
+
         # from previous feed R2 was delayed, it is not anymore as current implementation considers
         # GTFS-RT feeds on a trip as complete, and no info on stop means it's on time
+        # if stop is considered delayed, trip.effect below should match that.
         assert trip_update.stop_time_updates[1].arrival_delay.seconds == 0
+
         assert trip_update.stop_time_updates[2].arrival_delay.seconds == 0
         assert trip_update.stop_time_updates[3].arrival_delay.seconds == 0
         assert len(trip_update.real_time_updates) == 2
