@@ -238,7 +238,7 @@ Please read [tests readme](https://github.com/CanalTP/kirin/blob/master/tests/re
 ###### pgAdmin
 
 To use pgAdmin, simply `File/add server` then enter any `name` then
-`Host`, `user` and `password` used by Kirin on given platform.   
+`Host`, `user` and `password` used by Kirin on given platform (default kirin / kirin).  
 If you use pgAdmin, you can increase massively the number of characters per column
 (as the feed is big):
 `File/preferences` then `Request editor/Request editor/Maximum number of characters per column`
