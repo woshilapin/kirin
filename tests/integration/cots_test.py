@@ -797,12 +797,12 @@ def test_cots_added_stop_time_with_dalays():
     A new stop time is added in the VJ 96231 with a delay as explained below
 
     Base:   15:21/15:21     15:38/15:40    15:51/15:53      16:14/16:16     16:30/16:31     16:39/16:39
-            -------|------------|-|------------|-|---------------|-|------------|-|-------------|
+            -------|------------|-|------------|-|--------------|-|------------|-|-------------|
 
     W/Delay 15:21/15:21     15:38/15:55         16:06/16:08      16:29/16:31     16:45/16:46     16:54/16:54
-            -------|----------|----|---------------|-|---------------|-|--------------|-|--------------|
+            -------|------------|----|--------------|-|---------------|-|-------------|-|--------------|
 
-    Valid add: (16:06/16:08 < new_stop_time < 16:29/16:31) ----|-----16:17/16:19
+    Valid add: (16:06/16:08 < new_stop_time < 16:29/16:31)     ----|-----16:17/16:19
     Arrival and departure datetime of newly added stop_time compared to the existing stop_times with delay.
     To test you can modify arrival and departure of added stop_time = (713065) in Flux-cots
     """

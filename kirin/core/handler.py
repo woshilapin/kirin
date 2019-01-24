@@ -416,7 +416,6 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=False):
     last_stop_event_time = None
     last_departure = None
     utc_circulation_date = new_trip_update.vj.get_utc_circulation_date()
-    utc_date = utc_circulation_date
 
     def get_next_stop():
         if is_new_complete:
@@ -465,14 +464,15 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=False):
         base_arrival = base_departure = None
         stop_id = navitia_stop.get('stop_point', {}).get('id')
         new_st = new_trip_update.find_stop(stop_id, nav_order)
-        arrival_delay = new_st.arrival_delay if new_st and new_st.arrival_delay else datetime.timedelta(seconds=0)
-        departure_delay = new_st.departure_delay if new_st and new_st.departure_delay else datetime.timedelta(seconds=0)
 
         # considering only served arrival
         if is_stop_event_served(event_name='arrival', stop_id=stop_id, stop_order=nav_order,
                                 nav_stop=navitia_stop, db_tu=db_trip_update, new_stu=new_st):
             # For arrival we need to compare arrival time and delay with previous departure time and delay
             if utc_nav_arrival_time is not None:
+                arrival_delay = new_st.arrival_delay if new_st and new_st.arrival_delay \
+                    else datetime.timedelta(seconds=0)
+
                 if is_past_midnight(utc_circulation_date, previous_stop_event,
                                     TimeDelayTuple(time=utc_nav_arrival_time, delay=arrival_delay)):
                     # last departure is after arrival, it's a past-midnight
@@ -494,6 +494,8 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=False):
             # store departure as previous stop-event time
             last_stop_event_time = utc_nav_departure_time
             # store the departure time and delay to compare with next arrival time and delay
+            departure_delay = new_st.departure_delay if new_st and new_st.departure_delay \
+                else datetime.timedelta(seconds=0)
             previous_stop_event = TimeDelayTuple(time=utc_nav_departure_time, delay=departure_delay)
 
         if db_trip_update is not None and new_st is not None:

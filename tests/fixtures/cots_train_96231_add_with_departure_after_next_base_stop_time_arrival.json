@@ -228,14 +228,14 @@
         "timeZoneLocale": "Europe/Paris",
         "horaireVoyageurArrivee": {
           "dateHeure": "2015-09-21T16:17:00+0000",
-          "heureLocale": "18:02:00",
+          "heureLocale": "18:17:00",
           "idFuseauHoraire": "Europe/Paris",
           "nbJoursPasseMinuit": 0,
           "statutCirculationOPE": "CREATION"
         },
         "horaireVoyageurDepart": {
           "dateHeure": "2015-09-21T16:19:00+0000",
-          "heureLocale": "18:04:00",
+          "heureLocale": "18:19:00",
           "idFuseauHoraire": "Europe/Paris",
           "nbJoursPasseMinuit": 0,
           "statutCirculationOPE": "CREATION"
