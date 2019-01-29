@@ -218,11 +218,56 @@ If the COTS was successfully sent and processed by Kirin, the http response 200 
 
 ## Development
 
-To generate a new migration script for database (after an upgrade of the model.py file):
+
+### Alembic database revisions
+
+To generate a new revision script for database (after an upgrade of the model.py file):
 ```
 honcho run ./manage.py db migrate
 ```
 This will generate a new migration file, that you can amend to your will.
+
+:warning: To ensure safe db migrations for both upgrade (deploy) and downgrade (rollback), please make sure that:  
+Kirin version `n` is able to read/write in db version `n+1` FILLED by Kirin `n+1` (it's the case on rollback)
+
+
+### Roles and architecture
+
+Kirin is split in 4 separate "components"
+
+#### Kirin-webservice (or just 'Kirin')
+
+Its roles are:
+* display the `/status`.
+* provide a POST endpoint for each type of realtime provider accepted.  
+  On given endpoints, the webservice receives and directly processes the feed.
+  The result is then saved in db and sent to corresponding Navitia's Kraken.
+  It is mainly used for COTS and IRE.
+* provide a POST endpoint to ask for a full reload on a given realtime provider.  
+  When a Kraken restarts it pops a rabbitmq queue and asks Kirin to provide all info in it.
+  Then the webservice asks Kirin background to fulfill this task.
+
+There can be several of these (if they are behind a load-balancer).
+
+#### Kirin-background
+
+Its role is to provide all information available in db for a given provider in the rabbitmq queue, so
+that Kraken can restart fully aware of realtime.
+
+There can be several of these if load is important.
+
+#### Kirin-beat
+
+Its role is to regularly publish polling jobs destined to Kirin-workers.
+
+There is only one of these on each platform.
+
+#### Kirin-worker
+
+Its role is to poll an external location and check if new information were published.
+In that case it processes it then store the result in db and send the corresponding info the Kraken.
+
+There can be several of these if load is important. At least one per provider is recommended.
 
 
 ### Tests
