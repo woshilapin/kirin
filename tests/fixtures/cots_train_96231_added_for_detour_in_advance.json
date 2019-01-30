@@ -227,7 +227,6 @@
                 "listeMotifDepart":[
                 ],
                 "rang":3,
-                "sourceHoraireProjeteDepartReference":"ESCALE",
                 "typeArret":"CH"
             },
             {
@@ -275,7 +274,6 @@
                 "listeMotifDepart":[
                 ],
                 "rang":3,
-                "sourceHoraireProjeteDepartReference":"ESCALE",
                 "typeArret":"CH"
             },
             {

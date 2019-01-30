@@ -266,8 +266,8 @@
           {
             "dateHeure": "2018-10-23T11:50:00+0000",
             "dateHeureEmission": "2018-10-23T09:22:19+0000",
-            "pronosticBrut": 300,
-            "pronosticIV": 300,
+            "pronosticBrut": 0,
+            "pronosticIV": 0,
             "source": "IRE-GOP"
           }
         ],
