@@ -116,10 +116,8 @@ def _retrieve_interesting_pdp(list_pdp):
     return res
 
 
-def as_date(s):
-    if s is None:
-        return None
-    return parser.parse(s, dayfirst=False, yearfirst=True)
+def as_utc_dt(str_time):
+    return parser.parse(str_time, dayfirst=False, yearfirst=True, ignoretz=False).astimezone(utc)
 
 
 def as_duration(seconds):
@@ -232,13 +230,13 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
                                    'json elt {elt}'.format(elt=ujson.dumps(json_train)))
 
         # retrieve base-schedule's first departure and last arrival
-        def get_first_fully_added(list_pdps, hour_obj_name):
+        def get_first_not_fully_added(list_pdps, hour_obj_name):
             p = next(p for p in list_pdps if not _is_fully_added_pdp(p))
             str_time = get_value(get_value(p, hour_obj_name), 'dateHeure') if p else None
-            return parser.parse(str_time, dayfirst=False, yearfirst=True, ignoretz=False) if str_time else None
+            return as_utc_dt(str_time) if str_time else None
 
-        utc_vj_start = get_first_fully_added(pdps, 'horaireVoyageurDepart').astimezone(utc)
-        utc_vj_end = get_first_fully_added(reversed(pdps), 'horaireVoyageurArrivee').astimezone(utc)
+        utc_vj_start = get_first_not_fully_added(pdps, 'horaireVoyageurDepart')
+        utc_vj_end = get_first_not_fully_added(reversed(pdps), 'horaireVoyageurArrivee')
 
         return self._get_navitia_vjs(train_numbers, utc_vj_start, utc_vj_end)
 
@@ -378,24 +376,28 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
 
                 elif cots_stop_time_status == 'SUPPRESSION_DETOURNEMENT':
                     # stop_time is replaced by another one
-                    setattr(st_update, _status_map[arrival_departure_toggle], ModificationType.deleted_for_detour.name)
+                    setattr(st_update, _status_map[arrival_departure_toggle],
+                            ModificationType.deleted_for_detour.name)
 
                 elif cots_stop_time_status == 'CREATION':
                     # new stop_time added
-                    setattr(st_update, _status_map[arrival_departure_toggle], ModificationType.add.name)
                     setattr(st_update, _add_map[arrival_departure_toggle], base_schedule_datetime)
 
+                    setattr(st_update, _status_map[arrival_departure_toggle],
+                            ModificationType.add.name)
                     projected_stop_time[arrival_departure_toggle] = parser.parse(base_schedule_datetime)
 
                 elif cots_stop_time_status == 'DETOURNEMENT':
-                    setattr(st_update, _status_map[arrival_departure_toggle], 'added_for_detour')
                     setattr(st_update, _add_map[arrival_departure_toggle], base_schedule_datetime)
+                    setattr(st_update, _status_map[arrival_departure_toggle],
+                            ModificationType.added_for_detour.name)
 
                 else:
                     raise InvalidArguments('invalid value {} for field horaireVoyageur{}/statutCirculationOPE'.
                                            format(cots_stop_time_status, arrival_departure_toggle))
 
-                arr_dep_status = getattr(st_update, _status_map[arrival_departure_toggle], ModificationType.none.name)
+                arr_dep_status = getattr(st_update, _status_map[arrival_departure_toggle],
+                                         ModificationType.none.name)
                 highest_st_status = get_higher_status(highest_st_status, arr_dep_status)
 
             self._check_stop_time_consistency(last_stop_time_depart, projected_stop_time,
