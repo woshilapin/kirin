@@ -233,9 +233,11 @@ Kirin version `n` is able to read/write in db version `n+1` FILLED by Kirin `n+1
 
 ### Roles and architecture
 
-Kirin is split in 4 separate "components"
+Kirin is split in 4 separate "components", as seen in honcho's Procfile.
 
-#### Kirin-webservice (or just 'Kirin')
+#### Kirin-webservice
+
+> Alias 'kirin' or 'web'
 
 Its roles are:
 * display the `/status`.
@@ -251,6 +253,8 @@ There can be several of these (if they are behind a load-balancer).
 
 #### Kirin-background
 
+> Alias 'load_realtime'
+
 Its role is to provide all information available in db for a given provider in the rabbitmq queue, so
 that Kraken can restart fully aware of realtime.
 
@@ -258,11 +262,15 @@ There can be several of these if load is important.
 
 #### Kirin-beat
 
+> Alias 'scheduler'
+
 Its role is to regularly publish polling jobs destined to Kirin-workers.
 
 There is only one of these on each platform.
 
 #### Kirin-worker
+
+> Alias 'worker'
 
 Its role is to poll an external location and check if new information were published.
 In that case it processes it then store the result in db and send the corresponding info the Kraken.
