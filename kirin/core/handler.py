@@ -153,26 +153,6 @@ def find_st_in_vj(st_id, vj_sts):
     return next((vj_st for vj_st in vj_sts if vj_st.get('stop_point', {}).get('id') == st_id), None)
 
 
-def extract_str_utc_time(str_time):
-    """
-    Return UTC time of day from given str
-    :param str_time: datetime+timezone (type: str)
-    :return: corresponding time of day in UTC timezone (type: datetime.time)
-
-    >>> str_time = '20181108T093000+0000'
-    >>> extract_str_utc_time(str_time)
-    datetime.time(9, 30)
-    >>> str_time = '20181108T093000+0100'
-    >>> extract_str_utc_time(str_time)
-    datetime.time(8, 30)
-    >>> str_time = '20181108T093000+0900'
-    >>> extract_str_utc_time(str_time)
-    datetime.time(0, 30)
-    """
-    if str_time:
-        return parser.parse(str_time).astimezone(pytz.utc).time()
-
-
 def handle(real_time_update, trip_updates, contributor, is_new_complete=False):
     """
     receive a RealTimeUpdate with at least one TripUpdate filled with the data received
@@ -359,13 +339,20 @@ def make_fake_realtime_stop_time(order, sp_id, new_stu, db_trip_update):
     in the db(for example, the very first 'add'), we use the info of new_stu
     """
     stu = db_trip_update.find_stop(sp_id, order) if db_trip_update else None
-    utc_departure_time, utc_arrival_time = (stu.departure.time(), stu.arrival.time()) if stu else \
-                                           (extract_str_utc_time(new_stu.departure),
-                                            extract_str_utc_time(new_stu.arrival))
+    if stu:
+        utc_departure = stu.departure
+        utc_arrival = stu.arrival
+    else:
+        utc_departure = new_stu.departure if new_stu.departure else new_stu.arrival
+        utc_arrival = new_stu.arrival if new_stu.arrival else new_stu.departure
+        if new_stu.departure_delay:
+            utc_departure += new_stu.departure_delay
+        if new_stu.arrival_delay:
+            utc_arrival += new_stu.arrival_delay
 
     return {'stop_point': new_stu.navitia_stop,
-            'utc_departure_time': utc_departure_time,
-            'utc_arrival_time': utc_arrival_time}
+            'utc_departure_time': utc_departure.time(),
+            'utc_arrival_time': utc_arrival.time()}
 
 
 def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=False):
