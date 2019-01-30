@@ -214,12 +214,14 @@ def _get_datetime(utc_circulation_date, utc_time):
     return datetime.datetime.combine(utc_circulation_date, utc_time)
 
 
-def _get_update_info_of_stop_time(base_time, input_status, input_delay):
+def _get_update_info_of_stop_time(base_time, input_time, input_status, input_delay):
     new_time = None
     status = ModificationType.none.name
     delay = datetime.timedelta(0)
     if input_status == ModificationType.update.name:
-        new_time = (base_time + input_delay) if base_time else None
+        new_time = base_time if base_time else None
+        if new_time is not None and input_delay:
+            new_time += input_delay
         status = input_status
         delay = input_delay
     elif input_status in (ModificationType.delete.name, ModificationType.deleted_for_detour.name):
@@ -229,7 +231,9 @@ def _get_update_info_of_stop_time(base_time, input_status, input_delay):
         status = input_status
     elif input_status in (ModificationType.add.name, ModificationType.added_for_detour.name):
         status = input_status
-        new_time = base_time
+        new_time = input_time.replace(tzinfo=None) if input_time else None
+        if new_time is not None and input_delay:
+            new_time += input_delay
     else:
         new_time = base_time
     return new_time, status, delay
@@ -237,9 +241,11 @@ def _get_update_info_of_stop_time(base_time, input_status, input_delay):
 
 def _make_stop_time_update(base_arrival, base_departure, last_departure, input_st, stop_point, order):
     dep, dep_status, dep_delay = _get_update_info_of_stop_time(base_departure,
+                                                               input_st.departure,
                                                                input_st.departure_status,
                                                                input_st.departure_delay)
     arr, arr_status, arr_delay = _get_update_info_of_stop_time(base_arrival,
+                                                               input_st.arrival,
                                                                input_st.arrival_status,
                                                                input_st.arrival_delay)
 
