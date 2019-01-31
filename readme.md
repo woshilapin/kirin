@@ -273,9 +273,9 @@ There is only one of these on each platform.
 > Alias 'worker'
 
 Its role is to poll an external location and check if new information were published.
-In that case it processes it then store the result in db and send the corresponding info the Kraken.
+In that case worker processes it then stores the result in db and sends the corresponding info to Kraken.
 
-There can be several of these if load is important. At least one per provider is recommended.
+There can be several of these if load is important. At least one per provider polled is recommended.
 
 
 ### Tests
