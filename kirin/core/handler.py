@@ -339,7 +339,7 @@ def make_fake_realtime_stop_time(order, sp_id, new_stu, db_trip_update):
     in the db(for example, the very first 'add'), we use the info of new_stu
     """
     stu = db_trip_update.find_stop(sp_id, order) if db_trip_update else None
-    if stu:
+    if stu and not new_stu.departure and not new_stu.arrival:  # new_stu datetime prevails
         utc_departure = stu.departure
         utc_arrival = stu.arrival
     else:
