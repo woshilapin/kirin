@@ -194,7 +194,17 @@ def _get_datetime(utc_circulation_date, utc_time):
     return datetime.datetime.combine(utc_circulation_date, utc_time)
 
 
-def _get_update_info_of_stop_time(base_time, input_time, input_status, input_delay):
+def _get_update_info_of_stop_event(base_time, input_time, input_status, input_delay):
+    """
+    Process information for a given stop event: given information available, compute info to be stored in db.
+    :param base_time: datetime in base_schedule
+    :param input_time: datetime in new feed
+    :param input_status: status in new feed
+    :param input_delay: delay in new feed
+    :return: new_time (base-schedule datetime in most case),
+             status (update, delete, ...)
+             delay (new_time + delay = RT datetime)
+    """
     new_time = None
     status = ModificationType.none.name
     delay = datetime.timedelta(0)
@@ -220,14 +230,14 @@ def _get_update_info_of_stop_time(base_time, input_time, input_status, input_del
 
 
 def _make_stop_time_update(base_arrival, base_departure, last_departure, input_st, stop_point, order):
-    dep, dep_status, dep_delay = _get_update_info_of_stop_time(base_departure,
-                                                               input_st.departure,
-                                                               input_st.departure_status,
-                                                               input_st.departure_delay)
-    arr, arr_status, arr_delay = _get_update_info_of_stop_time(base_arrival,
-                                                               input_st.arrival,
-                                                               input_st.arrival_status,
-                                                               input_st.arrival_delay)
+    dep, dep_status, dep_delay = _get_update_info_of_stop_event(base_departure,
+                                                                input_st.departure,
+                                                                input_st.departure_status,
+                                                                input_st.departure_delay)
+    arr, arr_status, arr_delay = _get_update_info_of_stop_event(base_arrival,
+                                                                input_st.arrival,
+                                                                input_st.arrival_status,
+                                                                input_st.arrival_delay)
 
     # in case where arrival/departure time are None
     if arr is None:

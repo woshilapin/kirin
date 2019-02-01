@@ -373,10 +373,11 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
                     cots_delay = _retrieve_stop_event_delay(pdp, arrival_departure_toggle)
 
                     if cots_delay is not None:
-                        projected_stop_time[arrival_departure_toggle] += cots_delay
                         # It's an update only if there is delay
+                        projected_stop_time[arrival_departure_toggle] += cots_delay
                         setattr(st_update, _status_map[arrival_departure_toggle], ModificationType.update.name)
                         setattr(st_update, _delay_map[arrival_departure_toggle], cots_delay)
+                    # otherwise nothing to do (status none, delay none, time none)
 
                 elif cots_stop_time_status == 'SUPPRESSION':
                     # partial delete
@@ -387,7 +388,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
                     setattr(st_update, _status_map[arrival_departure_toggle],
                             ModificationType.deleted_for_detour.name)
 
-                elif cots_stop_time_status == 'CREATION':
+                elif cots_stop_time_status in ['CREATION', 'DETOURNEMENT']:
                     # new stop_time added
                     cots_base_datetime = _retrieve_stop_event_datetime(cots_traveler_time)
                     if cots_base_datetime:
@@ -396,28 +397,19 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
                     if cots_delay is not None:
                         projected_stop_time[arrival_departure_toggle] += cots_delay
 
-                    setattr(st_update, _status_map[arrival_departure_toggle],
-                            ModificationType.add.name)
                     setattr(st_update, _stop_event_datetime_map[arrival_departure_toggle],
                             projected_stop_time[arrival_departure_toggle])
                     # delay already added to stop_event datetime
                     setattr(st_update, _delay_map[arrival_departure_toggle], None)
 
-                elif cots_stop_time_status == 'DETOURNEMENT':
-                    # new stop_time added to replace another one
-                    cots_base_datetime = _retrieve_stop_event_datetime(cots_traveler_time)
-                    if cots_base_datetime:
-                        projected_stop_time[arrival_departure_toggle] = cots_base_datetime
-                    cots_delay = _retrieve_stop_event_delay(pdp, arrival_departure_toggle)
-                    if cots_delay is not None:
-                        projected_stop_time[arrival_departure_toggle] += cots_delay
-
-                    setattr(st_update, _status_map[arrival_departure_toggle],
-                            ModificationType.added_for_detour.name)
-                    setattr(st_update, _stop_event_datetime_map[arrival_departure_toggle],
-                            projected_stop_time[arrival_departure_toggle])
-                    # delay already added to stop_event datetime
-                    setattr(st_update, _delay_map[arrival_departure_toggle], None)
+                    if cots_stop_time_status == 'CREATION':
+                        # pure add
+                        setattr(st_update, _status_map[arrival_departure_toggle],
+                                ModificationType.add.name)
+                    elif cots_stop_time_status == 'DETOURNEMENT':
+                        # add to replace another stop_time
+                        setattr(st_update, _status_map[arrival_departure_toggle],
+                                ModificationType.added_for_detour.name)
 
                 else:
                     raise InvalidArguments('invalid value {} for field horaireVoyageur{}/statutCirculationOPE'.
