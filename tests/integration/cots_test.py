@@ -561,7 +561,7 @@ def test_cots_added_stop_time():
         assert StopTimeUpdate.query.all()[3].arrival_status == 'add'
         assert StopTimeUpdate.query.all()[3].arrival == datetime(2015, 9, 21, 16, 2)
         assert StopTimeUpdate.query.all()[3].departure_status == 'add'
-        assert StopTimeUpdate.query.all()[3].departure == datetime(2015, 9, 21, 16, 4)
+        assert StopTimeUpdate.query.all()[3].departure == datetime(2015, 9, 21, 16, 9)  # 16:04 + 5 min delay
 
 
 def test_cots_added_and_deleted_stop_time():
@@ -592,7 +592,7 @@ def test_cots_added_and_deleted_stop_time():
         assert StopTimeUpdate.query.all()[3].arrival_status == 'add'
         assert StopTimeUpdate.query.all()[3].arrival == datetime(2015, 9, 21, 16, 2)
         assert StopTimeUpdate.query.all()[3].departure_status == 'add'
-        assert StopTimeUpdate.query.all()[3].departure == datetime(2015, 9, 21, 16, 4)
+        assert StopTimeUpdate.query.all()[3].departure == datetime(2015, 9, 21, 16, 9)  # 16:04 + 5 min delay
         created_at_for_add = StopTimeUpdate.query.all()[3].created_at
 
     # At this point the trip_update is valid. Adding a new Stop_time in data base
@@ -792,7 +792,95 @@ def test_cots_added_stop_time_earlier_than_previous():
                'invalid cots: stop_point\'s(0087-713065-BV) time is not consistent'
 
 
-def test_cots_added_stop_time_with_delays():
+def check_add_no_delays_96231():
+    trips = TripUpdate.query.all()
+    assert len(trips) == 1
+    assert trips[0].status == 'update'
+    assert trips[0].effect == 'MODIFIED_SERVICE'
+    assert trips[0].company_id == 'company:OCE:SN'
+    stus = StopTimeUpdate.query.all()
+    assert len(stus) == 7
+    assert stus[0].arrival_status == 'none'
+    assert stus[0].arrival == datetime(2015, 9, 21, 15, 21)
+    assert stus[0].departure_status == 'none'
+    assert stus[0].departure == datetime(2015, 9, 21, 15, 21)
+    assert stus[1].arrival_status == 'none'
+    assert stus[1].arrival == datetime(2015, 9, 21, 15, 38)
+    assert stus[1].departure_status == 'none'
+    assert stus[1].departure == datetime(2015, 9, 21, 15, 40)
+    assert stus[2].arrival_status == 'none'
+    assert stus[2].arrival == datetime(2015, 9, 21, 15, 51)
+    assert stus[2].departure_status == 'none'
+    assert stus[2].departure == datetime(2015, 9, 21, 15, 53)
+    assert stus[3].arrival_status == 'add'
+    assert stus[3].arrival == datetime(2015, 9, 21, 16, 02)
+    assert stus[3].departure_status == 'add'
+    assert stus[3].departure == datetime(2015, 9, 21, 16, 04)
+    assert stus[4].arrival_status == 'none'
+    assert stus[4].arrival == datetime(2015, 9, 21, 16, 14)
+    assert stus[4].departure_status == 'none'
+    assert stus[4].departure == datetime(2015, 9, 21, 16, 16)
+    assert stus[5].arrival_status == 'none'
+    assert stus[5].arrival == datetime(2015, 9, 21, 16, 30)
+    assert stus[5].departure_status == 'none'
+    assert stus[5].departure == datetime(2015, 9, 21, 16, 31)
+    assert stus[6].arrival_status == 'none'
+    assert stus[6].arrival == datetime(2015, 9, 21, 16, 39)
+    assert stus[6].departure_status == 'none'
+    assert stus[6].departure == datetime(2015, 9, 21, 16, 39)
+
+
+def check_add_with_delays_96231():
+    trips = TripUpdate.query.all()
+    assert len(trips) == 1
+    assert trips[0].status == 'update'
+    assert trips[0].effect == 'MODIFIED_SERVICE'
+    assert trips[0].company_id == 'company:OCE:SN'
+    stus = StopTimeUpdate.query.all()
+    assert len(stus) == 7
+    assert stus[0].arrival_status == 'none'
+    assert stus[0].arrival == datetime(2015, 9, 21, 15, 21)
+    assert stus[0].departure_status == 'none'
+    assert stus[0].departure == datetime(2015, 9, 21, 15, 21)
+    assert stus[1].arrival_status == 'none'
+    assert stus[1].arrival == datetime(2015, 9, 21, 15, 38)
+    assert stus[1].departure_status == 'update'
+    assert stus[1].departure == datetime(2015, 9, 21, 15, 54)
+    assert stus[2].arrival_status == 'update'
+    assert stus[2].arrival == datetime(2015, 9, 21, 16, 6)
+    assert stus[2].departure_status == 'update'
+    assert stus[2].departure == datetime(2015, 9, 21, 16, 8)
+    assert stus[3].arrival_status == 'add'
+    assert stus[3].arrival == datetime(2015, 9, 21, 16, 17)
+    assert stus[3].departure_status == 'add'
+    assert stus[3].departure == datetime(2015, 9, 21, 16, 19)
+    assert stus[4].arrival_status == 'update'
+    assert stus[4].arrival == datetime(2015, 9, 21, 16, 29)
+    assert stus[4].departure_status == 'update'
+    assert stus[4].departure == datetime(2015, 9, 21, 16, 31)
+    assert stus[5].arrival_status == 'update'
+    assert stus[5].arrival == datetime(2015, 9, 21, 16, 45)
+    assert stus[5].departure_status == 'update'
+    assert stus[5].departure == datetime(2015, 9, 21, 16, 46)
+    assert stus[6].arrival_status == 'update'
+    assert stus[6].arrival == datetime(2015, 9, 21, 16, 54)
+    assert stus[6].departure_status == 'none'
+    assert stus[6].departure == datetime(2015, 9, 21, 16, 54)
+
+
+def test_cots_add_no_delay():
+    """
+    A simple add, no delay inside or around
+    """
+    cots_add_file = get_fixture_data('cots_train_96231_no_delay_add_before_add_with_delay.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 1
+        check_add_no_delays_96231()
+
+
+def test_cots_add_stop_time_with_delays_around():
     """
     A new stop time is added in the VJ 96231 with a delay as explained below
 
@@ -806,25 +894,68 @@ def test_cots_added_stop_time_with_delays():
     Arrival and departure datetime of newly added stop_time compared to the existing stop_times with delay.
     To test you can modify arrival and departure of added stop_time = (713065) in Flux-cots
     """
+
     cots_add_file = get_fixture_data('cots_train_96231_add_with_departure_after_next_base_stop_time_arrival.json')
     res = api_post('/cots', data=cots_add_file)
     assert res == 'OK'
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) == 1
-        assert len(TripUpdate.query.all()) == 1
-        assert TripUpdate.query.all()[0].status == 'update'
-        assert TripUpdate.query.all()[0].effect == 'MODIFIED_SERVICE'
-        assert TripUpdate.query.all()[0].company_id == 'company:OCE:SN'
-        assert len(StopTimeUpdate.query.all()) == 7
-        assert StopTimeUpdate.query.all()[2].arrival_status == 'update'
-        assert StopTimeUpdate.query.all()[2].arrival == datetime(2015, 9, 21, 16, 6)
-        assert StopTimeUpdate.query.all()[2].departure_status == 'update'
-        assert StopTimeUpdate.query.all()[2].departure == datetime(2015, 9, 21, 16, 8)
-        assert StopTimeUpdate.query.all()[3].arrival_status == 'add'
-        assert StopTimeUpdate.query.all()[3].arrival == datetime(2015, 9, 21, 16, 17)
-        assert StopTimeUpdate.query.all()[3].departure_status == 'add'
-        assert StopTimeUpdate.query.all()[3].departure == datetime(2015, 9, 21, 16, 19)
-        assert StopTimeUpdate.query.all()[6].arrival_status == 'update'
-        assert StopTimeUpdate.query.all()[6].arrival == datetime(2015, 9, 21, 16, 54)
-        assert StopTimeUpdate.query.all()[6].departure_status == 'none'
-        assert StopTimeUpdate.query.all()[6].departure == datetime(2015, 9, 21, 16, 54)
+        check_add_with_delays_96231()
+
+
+def test_cots_add_and_delay_stop_time_with_delays_around():
+    """
+    Same as above, but the added stop is a base+delay datetime (16:02 + 15 min = 16:17)
+    """
+
+    cots_add_file = get_fixture_data('cots_train_96231_add_with_delay_departure_after_next_base_stop_time_arrival.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 1
+        check_add_with_delays_96231()
+
+
+def test_chain_add_no_delay_and_add_with_delay_around():
+    """
+    The death chain:
+    * Simple add
+    * then add(no delay) with delays around
+    * then back to simple add
+    * then add+delay with delay around
+    * then back to simple add
+    """
+    cots_add_file = get_fixture_data('cots_train_96231_no_delay_add_before_add_with_delay.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 1
+        check_add_no_delays_96231()
+
+    cots_add_file = get_fixture_data('cots_train_96231_add_with_departure_after_next_base_stop_time_arrival.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 2
+        check_add_with_delays_96231()
+
+    cots_add_file = get_fixture_data('cots_train_96231_no_delay_add_before_add_with_delay.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 3
+        check_add_no_delays_96231()
+
+    cots_add_file = get_fixture_data('cots_train_96231_add_with_delay_departure_after_next_base_stop_time_arrival.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 4
+        check_add_with_delays_96231()
+
+    cots_add_file = get_fixture_data('cots_train_96231_no_delay_add_before_add_with_delay.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 5
+        check_add_no_delays_96231()

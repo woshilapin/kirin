@@ -33,7 +33,6 @@ import datetime
 import logging
 import socket
 from collections import namedtuple
-from datetime import timedelta
 from dateutil import parser
 import pytz
 
@@ -154,26 +153,6 @@ def find_st_in_vj(st_id, vj_sts):
     return next((vj_st for vj_st in vj_sts if vj_st.get('stop_point', {}).get('id') == st_id), None)
 
 
-def extract_str_utc_time(str_time):
-    """
-    Return UTC time of day from given str
-    :param str_time: datetime+timezone (type: str)
-    :return: corresponding time of day in UTC timezone (type: datetime.time)
-
-    >>> str_time = '20181108T093000+0000'
-    >>> extract_str_utc_time(str_time)
-    datetime.time(9, 30)
-    >>> str_time = '20181108T093000+0100'
-    >>> extract_str_utc_time(str_time)
-    datetime.time(8, 30)
-    >>> str_time = '20181108T093000+0900'
-    >>> extract_str_utc_time(str_time)
-    datetime.time(0, 30)
-    """
-    if str_time:
-        return parser.parse(str_time).astimezone(pytz.utc).time()
-
-
 def handle(real_time_update, trip_updates, contributor, is_new_complete=False):
     """
     receive a RealTimeUpdate with at least one TripUpdate filled with the data received
@@ -215,12 +194,24 @@ def _get_datetime(utc_circulation_date, utc_time):
     return datetime.datetime.combine(utc_circulation_date, utc_time)
 
 
-def _get_update_info_of_stop_time(base_time, input_status, input_delay):
+def _get_update_info_of_stop_event(base_time, input_time, input_status, input_delay):
+    """
+    Process information for a given stop event: given information available, compute info to be stored in db.
+    :param base_time: datetime in base_schedule
+    :param input_time: datetime in new feed
+    :param input_status: status in new feed
+    :param input_delay: delay in new feed
+    :return: new_time (base-schedule datetime in most case),
+             status (update, delete, ...)
+             delay (new_time + delay = RT datetime)
+    """
     new_time = None
     status = ModificationType.none.name
-    delay = timedelta(0)
+    delay = datetime.timedelta(0)
     if input_status == ModificationType.update.name:
-        new_time = (base_time + input_delay) if base_time else None
+        new_time = base_time if base_time else None
+        if new_time is not None and input_delay:
+            new_time += input_delay
         status = input_status
         delay = input_delay
     elif input_status in (ModificationType.delete.name, ModificationType.deleted_for_detour.name):
@@ -230,19 +221,23 @@ def _get_update_info_of_stop_time(base_time, input_status, input_delay):
         status = input_status
     elif input_status in (ModificationType.add.name, ModificationType.added_for_detour.name):
         status = input_status
-        new_time = base_time
+        new_time = input_time.replace(tzinfo=None) if input_time else None
+        if new_time is not None and input_delay:
+            new_time += input_delay
     else:
         new_time = base_time
     return new_time, status, delay
 
 
 def _make_stop_time_update(base_arrival, base_departure, last_departure, input_st, stop_point, order):
-    dep, dep_status, dep_delay = _get_update_info_of_stop_time(base_departure,
-                                                               input_st.departure_status,
-                                                               input_st.departure_delay)
-    arr, arr_status, arr_delay = _get_update_info_of_stop_time(base_arrival,
-                                                               input_st.arrival_status,
-                                                               input_st.arrival_delay)
+    dep, dep_status, dep_delay = _get_update_info_of_stop_event(base_departure,
+                                                                input_st.departure,
+                                                                input_st.departure_status,
+                                                                input_st.departure_delay)
+    arr, arr_status, arr_delay = _get_update_info_of_stop_event(base_arrival,
+                                                                input_st.arrival,
+                                                                input_st.arrival_status,
+                                                                input_st.arrival_delay)
 
     # in case where arrival/departure time are None
     if arr is None:
@@ -350,17 +345,24 @@ def is_new_stop_event_valid(event_name, stop_id, stop_order, nav_stop, db_tu, ne
 def make_fake_realtime_stop_time(order, sp_id, new_stu, db_trip_update):
     """
     Since the wanted stop_point doesn't exist in the base vj (for example, we want to delay/delete a stop_point
-    which is added by a previous disruption), we search the wanted stop_point in db first, if we cannot find it in
-    the db(for example, the very first 'add'), we use the info of new_stu
+    which is added by a previous disruption), we search the wanted stop_point in db first, if we cannot find it
+    in the db(for example, the very first 'add'), we use the info of new_stu
     """
     stu = db_trip_update.find_stop(sp_id, order) if db_trip_update else None
-    utc_departure_time, utc_arrival_time = (stu.departure.time(), stu.arrival.time()) if stu else \
-                                           (extract_str_utc_time(new_stu.departure),
-                                            extract_str_utc_time(new_stu.arrival))
+    if stu and not new_stu.departure and not new_stu.arrival:  # new_stu datetime prevails
+        utc_departure = stu.departure
+        utc_arrival = stu.arrival
+    else:
+        utc_departure = new_stu.departure if new_stu.departure else new_stu.arrival
+        utc_arrival = new_stu.arrival if new_stu.arrival else new_stu.departure
+        if new_stu.departure_delay:
+            utc_departure += new_stu.departure_delay
+        if new_stu.arrival_delay:
+            utc_arrival += new_stu.arrival_delay
 
     return {'stop_point': new_stu.navitia_stop,
-            'utc_departure_time': utc_departure_time,
-            'utc_arrival_time': utc_arrival_time}
+            'utc_departure_time': utc_departure.time(),
+            'utc_arrival_time': utc_arrival.time()}
 
 
 def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=False):
@@ -481,7 +483,7 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=False):
             if utc_nav_arrival_time is not None:
                 if is_past_midnight(previous_stop_event, arrival_stop_event):
                     # last departure is after arrival, it's a past-midnight
-                    utc_circulation_date += timedelta(days=1)
+                    utc_circulation_date += datetime.timedelta(days=1)
                 base_arrival = _get_datetime(utc_circulation_date, utc_nav_arrival_time)
 
             # store arrival as previous stop-event
@@ -497,7 +499,7 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=False):
             if utc_nav_departure_time is not None:
                 if is_past_midnight(previous_stop_event, departure_stop_event):
                     # departure is before arrival, it's a past-midnight
-                    utc_circulation_date += timedelta(days=1)
+                    utc_circulation_date += datetime.timedelta(days=1)
                 base_departure = _get_datetime(utc_circulation_date, utc_nav_departure_time)
 
             # store departure as previous stop-event

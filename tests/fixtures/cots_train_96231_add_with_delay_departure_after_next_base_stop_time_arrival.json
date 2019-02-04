@@ -227,21 +227,37 @@
         "ch": "BV",
         "timeZoneLocale": "Europe/Paris",
         "horaireVoyageurArrivee": {
-          "dateHeure": "2015-09-21T16:17:00+0000",
-          "heureLocale": "18:17:00",
+          "dateHeure": "2015-09-21T16:02:00+0000",
+          "heureLocale": "18:02:00",
           "idFuseauHoraire": "Europe/Paris",
           "nbJoursPasseMinuit": 0,
           "statutCirculationOPE": "CREATION"
         },
         "horaireVoyageurDepart": {
-          "dateHeure": "2015-09-21T16:19:00+0000",
-          "heureLocale": "18:19:00",
+          "dateHeure": "2015-09-21T16:04:00+0000",
+          "heureLocale": "18:04:00",
           "idFuseauHoraire": "Europe/Paris",
           "nbJoursPasseMinuit": 0,
           "statutCirculationOPE": "CREATION"
         },
-        "listeHoraireProjeteArrivee": [],
-        "listeHoraireProjeteDepart": [],
+        "listeHoraireProjeteArrivee": [
+          {
+            "dateHeure": "2015-09-21T16:17:00+0000",
+            "dateHeureEmission": "2018-04-19T15:44:53+0000",
+            "pronosticBrut": 900,
+            "pronosticIV": 900,
+            "source": "ESCALE"
+          }
+        ],
+        "listeHoraireProjeteDepart": [
+          {
+            "dateHeure": "2015-09-21T16:19:00+0000",
+            "dateHeureEmission": "2018-04-19T15:44:53+0000",
+            "pronosticBrut": 900,
+            "pronosticIV": 900,
+            "source": "ESCALE"
+          }
+        ],
         "listeMotifArrivee": [],
         "listeMotifDepart": [],
         "rang": 4,
@@ -342,7 +358,8 @@
             "pronosticBrut": 900,
             "pronosticIV": 900,
             "source": "ESCALE"
-          }],
+          }
+        ],
         "listeHoraireProjeteDepart": [
           {
             "dateHeure": "2015-09-21T16:46:00+0000",

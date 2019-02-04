@@ -116,10 +116,8 @@ def _retrieve_interesting_pdp(list_pdp):
     return res
 
 
-def as_date(s):
-    if s is None:
-        return None
-    return parser.parse(s, dayfirst=False, yearfirst=True)
+def as_utc_dt(str_time):
+    return parser.parse(str_time, dayfirst=False, yearfirst=True, ignoretz=False).astimezone(utc)
 
 
 def as_duration(seconds):
@@ -138,6 +136,11 @@ def as_duration(seconds):
     if seconds is None:
         return None
     return datetime.utcfromtimestamp(seconds) - datetime.utcfromtimestamp(0)
+
+
+def _retrieve_stop_event_datetime(cots_traveler_time):
+    base_schedule_datetime = get_value(cots_traveler_time, 'dateHeure', nullable=True)
+    return as_utc_dt(base_schedule_datetime) if base_schedule_datetime else None
 
 
 def _retrieve_projected_time(source_ref, list_proj_time):
@@ -165,6 +168,22 @@ def _retrieve_projected_time(source_ref, list_proj_time):
         # if list has multiple elements but no source-reference, reject whole COTS feed
         raise InvalidArguments('invalid json, impossible no source but multiple json dicts '
                                'in list: {list}'.format(list=ujson.dumps(list_proj_time)))
+
+    return None
+
+
+def _retrieve_stop_event_delay(pdp, arrival_departure_toggle):
+    cots_ref_planned = get_value(pdp,
+                                 'sourceHoraireProjete{}Reference'.format(arrival_departure_toggle),
+                                 nullable=True)
+    cots_planned_stop_times = get_value(pdp,
+                                        'listeHoraireProjete{}'.format(arrival_departure_toggle),
+                                        nullable=True)
+    cots_planned_stop_time = _retrieve_projected_time(cots_ref_planned, cots_planned_stop_times)
+
+    if cots_planned_stop_time is not None:
+        delay = get_value(cots_planned_stop_time, 'pronosticIV', nullable=True)
+        return as_duration(delay)
 
     return None
 
@@ -232,13 +251,13 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
                                    'json elt {elt}'.format(elt=ujson.dumps(json_train)))
 
         # retrieve base-schedule's first departure and last arrival
-        def get_first_fully_added(list_pdps, hour_obj_name):
+        def get_first_not_fully_added(list_pdps, hour_obj_name):
             p = next(p for p in list_pdps if not _is_fully_added_pdp(p))
             str_time = get_value(get_value(p, hour_obj_name), 'dateHeure') if p else None
-            return parser.parse(str_time, dayfirst=False, yearfirst=True, ignoretz=False) if str_time else None
+            return as_utc_dt(str_time) if str_time else None
 
-        utc_vj_start = get_first_fully_added(pdps, 'horaireVoyageurDepart').astimezone(utc)
-        utc_vj_end = get_first_fully_added(reversed(pdps), 'horaireVoyageurArrivee').astimezone(utc)
+        utc_vj_start = get_first_not_fully_added(pdps, 'horaireVoyageurDepart')
+        utc_vj_end = get_first_not_fully_added(reversed(pdps), 'horaireVoyageurArrivee')
 
         return self._get_navitia_vjs(train_numbers, utc_vj_start, utc_vj_end)
 
@@ -312,7 +331,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
         for pdp in pdps:
             # retrieve navitia's stop_point corresponding to the current COTS pdp
             nav_stop, log_dict = self._get_navitia_stop_point(pdp, vj.navitia_vj)
-            projected_stop_time = {'Arrivee': None, 'Depart': None}
+            projected_stop_time = {'Arrivee': None, 'Depart': None}  # used to check consistency
 
             if log_dict:
                 record_internal_failure(log_dict['log'], contributor=self.contributor)
@@ -333,7 +352,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
 
             _status_map = {'Arrivee': 'arrival_status', 'Depart': 'departure_status'}
             _delay_map = {'Arrivee': 'arrival_delay', 'Depart': 'departure_delay'}
-            _add_map = {'Arrivee': 'arrival', 'Depart': 'departure'}
+            _stop_event_datetime_map = {'Arrivee': 'arrival', 'Depart': 'departure'}
 
             # compute realtime information and fill st_update for arrival and departure
             for arrival_departure_toggle in ['Arrivee', 'Depart']:
@@ -344,33 +363,21 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
                     continue
 
                 cots_stop_time_status = get_value(cots_traveler_time, 'statutCirculationOPE', nullable=True)
-                base_schedule_datetime = get_value(cots_traveler_time, 'dateHeure', nullable=True)
 
                 if cots_stop_time_status is None:
                     # if no cots_stop_time_status, it is considered an 'update' of the stop_time
                     # (can be a delay, back to normal, normal, ...)
-                    if base_schedule_datetime:
-                        projected_stop_time[arrival_departure_toggle] = parser.parse(base_schedule_datetime)
+                    cots_base_datetime = _retrieve_stop_event_datetime(cots_traveler_time)
+                    if cots_base_datetime:
+                        projected_stop_time[arrival_departure_toggle] = cots_base_datetime
+                    cots_delay = _retrieve_stop_event_delay(pdp, arrival_departure_toggle)
 
-                    cots_ref_planned = get_value(pdp,
-                                                 'sourceHoraireProjete{}Reference'.format(arrival_departure_toggle),
-                                                 nullable=True)
-                    cots_planned_stop_times = get_value(pdp,
-                                                        'listeHoraireProjete{}'.format(arrival_departure_toggle),
-                                                        nullable=True)
-                    cots_planned_stop_time = _retrieve_projected_time(cots_ref_planned, cots_planned_stop_times)
-
-                    if cots_planned_stop_time is None:
-                        continue
-
-                    cots_delay = get_value(cots_planned_stop_time, 'pronosticIV', nullable=True)
-                    if cots_delay is None:
-                        continue
-
-                    setattr(st_update, _status_map[arrival_departure_toggle], ModificationType.update.name)
-                    setattr(st_update, _delay_map[arrival_departure_toggle], as_duration(cots_delay))
-
-                    projected_stop_time[arrival_departure_toggle] += as_duration(cots_delay)
+                    if cots_delay is not None:
+                        # It's an update only if there is delay
+                        projected_stop_time[arrival_departure_toggle] += cots_delay
+                        setattr(st_update, _status_map[arrival_departure_toggle], ModificationType.update.name)
+                        setattr(st_update, _delay_map[arrival_departure_toggle], cots_delay)
+                    # otherwise nothing to do (status none, delay none, time none)
 
                 elif cots_stop_time_status == 'SUPPRESSION':
                     # partial delete
@@ -378,24 +385,38 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
 
                 elif cots_stop_time_status == 'SUPPRESSION_DETOURNEMENT':
                     # stop_time is replaced by another one
-                    setattr(st_update, _status_map[arrival_departure_toggle], ModificationType.deleted_for_detour.name)
+                    setattr(st_update, _status_map[arrival_departure_toggle],
+                            ModificationType.deleted_for_detour.name)
 
-                elif cots_stop_time_status == 'CREATION':
+                elif cots_stop_time_status in ['CREATION', 'DETOURNEMENT']:
                     # new stop_time added
-                    setattr(st_update, _status_map[arrival_departure_toggle], ModificationType.add.name)
-                    setattr(st_update, _add_map[arrival_departure_toggle], base_schedule_datetime)
+                    cots_base_datetime = _retrieve_stop_event_datetime(cots_traveler_time)
+                    if cots_base_datetime:
+                        projected_stop_time[arrival_departure_toggle] = cots_base_datetime
+                    cots_delay = _retrieve_stop_event_delay(pdp, arrival_departure_toggle)
+                    if cots_delay is not None:
+                        projected_stop_time[arrival_departure_toggle] += cots_delay
 
-                    projected_stop_time[arrival_departure_toggle] = parser.parse(base_schedule_datetime)
+                    setattr(st_update, _stop_event_datetime_map[arrival_departure_toggle],
+                            projected_stop_time[arrival_departure_toggle])
+                    # delay already added to stop_event datetime
+                    setattr(st_update, _delay_map[arrival_departure_toggle], None)
 
-                elif cots_stop_time_status == 'DETOURNEMENT':
-                    setattr(st_update, _status_map[arrival_departure_toggle], 'added_for_detour')
-                    setattr(st_update, _add_map[arrival_departure_toggle], base_schedule_datetime)
+                    if cots_stop_time_status == 'CREATION':
+                        # pure add
+                        setattr(st_update, _status_map[arrival_departure_toggle],
+                                ModificationType.add.name)
+                    elif cots_stop_time_status == 'DETOURNEMENT':
+                        # add to replace another stop_time
+                        setattr(st_update, _status_map[arrival_departure_toggle],
+                                ModificationType.added_for_detour.name)
 
                 else:
                     raise InvalidArguments('invalid value {} for field horaireVoyageur{}/statutCirculationOPE'.
                                            format(cots_stop_time_status, arrival_departure_toggle))
 
-                arr_dep_status = getattr(st_update, _status_map[arrival_departure_toggle], ModificationType.none.name)
+                arr_dep_status = getattr(st_update, _status_map[arrival_departure_toggle],
+                                         ModificationType.none.name)
                 highest_st_status = get_higher_status(highest_st_status, arr_dep_status)
 
             self._check_stop_time_consistency(last_stop_time_depart, projected_stop_time,
