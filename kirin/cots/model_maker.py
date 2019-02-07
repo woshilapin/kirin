@@ -237,13 +237,13 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             raise InvalidArguments('No object "nouvelleVersion" available in feed provided')
 
         dict_version = get_value(json, 'nouvelleVersion')
-        vjs = self._get_vjs(dict_version)
-
-        trip_updates = [self._make_trip_update(vj, dict_version) for vj in vjs]
+        status_op = get_value(dict_version, 'statutOperationnel', 'PERTURBEE')
+        vjs = self._get_vjs(dict_version, status_op=status_op)
+        trip_updates = [self._make_trip_update(dict_version, vj) for vj in vjs]
 
         return trip_updates
 
-    def _get_vjs(self, json_train):
+    def _get_vjs(self, json_train, status_op='PERTURBEE'):
         train_numbers = get_value(json_train, 'numeroCourse')
         pdps = _retrieve_interesting_pdp(get_value(json_train, 'listePointDeParcours'))
         if not pdps:
@@ -252,14 +252,18 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
 
         # retrieve base-schedule's first departure and last arrival
         def get_first_not_fully_added(list_pdps, hour_obj_name):
-            p = next(p for p in list_pdps if not _is_fully_added_pdp(p))
+            # For an added trip we always take first stop_time.
+            if status_op == 'AJOUTEE':
+                p = next(p for p in list_pdps)
+            else:
+                p = next(p for p in list_pdps if not _is_fully_added_pdp(p))
             str_time = get_value(get_value(p, hour_obj_name), 'dateHeure') if p else None
             return as_utc_dt(str_time) if str_time else None
 
         utc_vj_start = get_first_not_fully_added(pdps, 'horaireVoyageurDepart')
         utc_vj_end = get_first_not_fully_added(reversed(pdps), 'horaireVoyageurArrivee')
 
-        return self._get_navitia_vjs(train_numbers, utc_vj_start, utc_vj_end)
+        return self._get_navitia_vjs(train_numbers, utc_vj_start, utc_vj_end, status_op=status_op)
 
     def _record_and_log(self, logger, log_str):
         log_dict = {'log': log_str}
@@ -282,7 +286,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             raise InvalidArguments('invalid cots: stop_point\'s({}) time is not consistent'
                                    .format(pdp_code))
 
-    def _make_trip_update(self, vj, json_train):
+    def _make_trip_update(self, json_train, vj=None):
         """
         create the new TripUpdate object
         Following the COTS spec: https://github.com/CanalTP/kirin/blob/master/documentation/cots_connector.md
@@ -307,17 +311,16 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
 
         elif trip_status == 'AJOUTEE':
             # the trip is created from scratch
-            # not handled yet
-            self._record_and_log(logger, 'nouvelleVersion/statutOperationnel == "AJOUTEE" is not handled (yet)')
             trip_update.effect = TripEffect.ADDITIONAL_SERVICE.name
-            return trip_update
+            trip_update.status = ModificationType.add.name
 
         # all other status is considered an 'update' of the trip_update and effect is calculated
         # from stop_time status list. This part is also done in kraken and is to be deleted later
         # Ordered stop_time status= 'nochange', 'add', 'delete', 'update'
         # 'nochange' or 'update' -> SIGNIFICANT_DELAYS, add -> MODIFIED_SERVICE, delete = DETOUR
-        trip_update.status = ModificationType.update.name
-        trip_update.effect = TripEffect.MODIFIED_SERVICE.name
+        else:
+            trip_update.status = ModificationType.update.name
+            trip_update.effect = TripEffect.MODIFIED_SERVICE.name
 
         # Initialize stop_time status to nochange
         highest_st_status = ModificationType.none.name
@@ -330,7 +333,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
         # manage realtime information stop_time by stop_time
         for pdp in pdps:
             # retrieve navitia's stop_point corresponding to the current COTS pdp
-            nav_stop, log_dict = self._get_navitia_stop_point(pdp, vj.navitia_vj)
+            nav_stop, log_dict = self._get_navitia_stop_point(pdp, vj)
             projected_stop_time = {'Arrivee': None, 'Depart': None}  # used to check consistency
 
             if log_dict:
@@ -424,10 +427,11 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             last_stop_time_depart = projected_stop_time['Depart']
 
         # Calculates effect from stop_time status list(this work is also done in kraken and has to be deleted)
-        trip_update.effect = get_effect_by_stop_time_status(highest_st_status)
+        if trip_update.effect != TripEffect.ADDITIONAL_SERVICE.name:
+            trip_update.effect = get_effect_by_stop_time_status(highest_st_status)
         return trip_update
 
-    def _get_navitia_stop_point(self, pdp, nav_vj):
+    def _get_navitia_stop_point(self, pdp, vj=None):
         """
         Get a navitia stop point from the stop_time in a 'Point de Parcours' dict.
         The dict MUST contain cr, ci, ch tags.
@@ -438,10 +442,14 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
 
         Error messages are also returned as 'missing stop point', 'duplicate stops'
         """
-        nav_st, log_dict = get_navitia_stop_time_sncf(cr=get_value(pdp, 'cr'),
-                                                      ci=get_value(pdp, 'ci'),
-                                                      ch=get_value(pdp, 'ch'),
-                                                      nav_vj=nav_vj)
+        if vj and vj.navitia_vj:
+            nav_st, log_dict = get_navitia_stop_time_sncf(cr=get_value(pdp, 'cr'),
+                                                          ci=get_value(pdp, 'ci'),
+                                                          ch=get_value(pdp, 'ch'),
+                                                          nav_vj=vj.navitia_vj)
+        else:
+            nav_st = None
+
         if not nav_st:
             nav_stop, log_dict = self._request_navitia_stop_point(cr=get_value(pdp, 'cr'),
                                                                   ci=get_value(pdp, 'ci'),

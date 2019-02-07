@@ -50,6 +50,11 @@ import st_713666
 import company_1187
 import empty_company_1180
 import company_OCETH
+import st_0087_318964_BV
+import st_0087_319012_00
+import st_0087_683573_BV
+import st_0087_686667_BV
+import st_0087_751008_BV
 import logging
 
 mocks = [
@@ -73,7 +78,12 @@ mocks = [
     st_713666.response,
     company_1187.response,
     empty_company_1180.response,
-    company_OCETH.response
+    company_OCETH.response,
+    st_0087_751008_BV.response,
+    st_0087_686667_BV.response,
+    st_0087_683573_BV.response,
+    st_0087_319012_00.response,
+    st_0087_318964_BV.response
 ]
 _mock_navitia_call = {}
 for r in mocks:

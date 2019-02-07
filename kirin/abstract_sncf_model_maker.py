@@ -41,6 +41,12 @@ import six
 from kirin.core import model
 
 
+def make_navitia_vj(headsign):
+    navitia_vj = dict()
+    navitia_vj['id'] = 'OCE:SN:{}'.format(headsign)
+    return navitia_vj
+
+
 def to_navitia_str(dt):
     """
     format a datetime to a navitia-readable str
@@ -100,7 +106,7 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
         self.navitia = nav
         self.contributor = contributor
 
-    def _get_navitia_vjs(self, headsign_str, utc_since_dt, utc_until_dt):
+    def _get_navitia_vjs(self, headsign_str, utc_since_dt, utc_until_dt, status_op='PERTURBEE'):
         """
         Search for navitia's vehicle journeys with given headsigns, in the period provided
         :param utc_since_dt: UTC datetime that starts the search period.
@@ -125,26 +131,30 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
 
             log.debug('searching for vj {} during period [{} - {}] in navitia'.format(
                             train_number, extended_since_dt, extended_until_dt))
+            # Don't call navitia for an added trip ("statutOperationnel" == "AJOUTEE")
+            is_added = (status_op == 'AJOUTEE')
+            if not is_added:
+                navitia_vjs = self.navitia.vehicle_journeys(q={
+                    'headsign': train_number,
+                    'since': to_navitia_str(extended_since_dt),
+                    'until': to_navitia_str(extended_until_dt),
+                    'depth': '2',  # we need this depth to get the stoptime's stop_area
+                    'show_codes': 'true'  # we need the stop_points CRCICH codes
+                })
 
-            navitia_vjs = self.navitia.vehicle_journeys(q={
-                'headsign': train_number,
-                'since': to_navitia_str(extended_since_dt),
-                'until': to_navitia_str(extended_until_dt),
-                'depth': '2',  # we need this depth to get the stoptime's stop_area
-                'show_codes': 'true'  # we need the stop_points CRCICH codes
-            })
-
-            if not navitia_vjs:
-                logging.getLogger(__name__).info('impossible to find train {t} on [{s}, {u}['
-                                                 .format(t=train_number,
-                                                         s=extended_since_dt,
-                                                         u=extended_until_dt))
-                record_internal_failure('missing train', contributor=self.contributor)
+                if not navitia_vjs:
+                    logging.getLogger(__name__).info('impossible to find train {t} on [{s}, {u}['
+                                                     .format(t=train_number,
+                                                             s=extended_since_dt,
+                                                             u=extended_until_dt))
+                    record_internal_failure('missing train', contributor=self.contributor)
+            else:
+                navitia_vjs = [make_navitia_vj(train_number)]
 
             for nav_vj in navitia_vjs:
 
                 try:
-                    vj = model.VehicleJourney(nav_vj, extended_since_dt, extended_until_dt)
+                    vj = model.VehicleJourney(nav_vj, extended_since_dt, extended_until_dt, is_added)
                     vjs[nav_vj['id']] = vj
                 except Exception as e:
                     logging.getLogger(__name__).exception(
