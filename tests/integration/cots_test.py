@@ -967,28 +967,28 @@ def check_add_trip_151515():
     assert trips[0].status == 'add'
     assert trips[0].effect == 'ADDITIONAL_SERVICE'
     assert trips[0].company_id == 'company:OCE:SN'
-    stus = StopTimeUpdate.query.all()
-    assert len(stus) == 5
-    assert stus[0].arrival_status == 'none'
-    assert stus[0].arrival == datetime(2012, 11, 20, 11, 00)
-    assert stus[0].departure_status == 'add'
-    assert stus[0].departure == datetime(2012, 11, 20, 11, 00)
-    assert stus[1].arrival_status == 'add'
-    assert stus[1].arrival == datetime(2012, 11, 20, 12, 00)
-    assert stus[1].departure_status == 'add'
-    assert stus[1].departure == datetime(2012, 11, 20, 12, 10)
-    assert stus[2].arrival_status == 'add'
-    assert stus[2].arrival == datetime(2012, 11, 20, 14, 00)
-    assert stus[2].departure_status == 'add'
-    assert stus[2].departure == datetime(2012, 11, 20, 14, 10)
-    assert stus[3].arrival_status == 'add'
-    assert stus[3].arrival == datetime(2012, 11, 20, 15, 00)
-    assert stus[3].departure_status == 'add'
-    assert stus[3].departure == datetime(2012, 11, 20, 15, 10)
-    assert stus[4].arrival_status == 'add'
-    assert stus[4].arrival == datetime(2012, 11, 20, 16, 00)
-    assert stus[4].departure_status == 'none'
-    assert stus[4].departure == datetime(2012, 11, 20, 16, 00)
+    status = StopTimeUpdate.query.all()
+    assert len(status) == 5
+    assert status[0].arrival_status == 'none'
+    assert status[0].arrival == datetime(2012, 11, 20, 11, 00)
+    assert status[0].departure_status == 'add'
+    assert status[0].departure == datetime(2012, 11, 20, 11, 00)
+    assert status[1].arrival_status == 'add'
+    assert status[1].arrival == datetime(2012, 11, 20, 12, 00)
+    assert status[1].departure_status == 'add'
+    assert status[1].departure == datetime(2012, 11, 20, 12, 10)
+    assert status[2].arrival_status == 'add'
+    assert status[2].arrival == datetime(2012, 11, 20, 14, 00)
+    assert status[2].departure_status == 'add'
+    assert status[2].departure == datetime(2012, 11, 20, 14, 10)
+    assert status[3].arrival_status == 'add'
+    assert status[3].arrival == datetime(2012, 11, 20, 15, 00)
+    assert status[3].departure_status == 'add'
+    assert status[3].departure == datetime(2012, 11, 20, 15, 10)
+    assert status[4].arrival_status == 'add'
+    assert status[4].arrival == datetime(2012, 11, 20, 16, 00)
+    assert status[4].departure_status == 'none'
+    assert status[4].departure == datetime(2012, 11, 20, 16, 00)
 
 
 def test_cots_for_added_trip():

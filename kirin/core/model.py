@@ -296,14 +296,16 @@ class TripUpdate(db.Model, TimestampMixin):
                                         cascade='all, delete-orphan')
     company_id = db.Column(db.Text, nullable=True)
     effect = db.Column(Db_TripEffect, nullable=True)
+    physical_mode_id = db.Column(db.Text, nullable=True)
 
-    def __init__(self, vj=None, status='none', contributor=None, company_id=None, effect=None):
+    def __init__(self, vj=None, status='none', contributor=None, company_id=None, effect=None, physical_mode_id=None):
         self.created_at = datetime.datetime.utcnow()
         self.vj = vj
         self.status = status
         self.contributor = contributor
         self.company_id = company_id
         self.effect = effect
+        self.physical_mode_id = physical_mode_id
 
     def __repr__(self):
         return '<TripUpdate %r>' % self.vj_id

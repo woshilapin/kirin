@@ -380,6 +380,7 @@ def test_populate_pb_no_status_stop_times_status():
     assert pb_stop_time.departure.Extensions[kirin_pb2.stop_time_event_status] == kirin_pb2.SCHEDULED
     assert pb_stop_time.arrival.Extensions[kirin_pb2.stop_time_event_status] == kirin_pb2.SCHEDULED
 
+
 def test_populate_pb_added_for_detour_stop_times_status():
     st_added_status = StopTimeUpdate({'id': 'id1'}, dep_status='added_for_detour', arr_status='added_for_detour')
     pb_stop_time = gtfs_realtime_pb2.TripUpdate.StopTimeUpdate()
@@ -388,6 +389,7 @@ def test_populate_pb_added_for_detour_stop_times_status():
 
     assert pb_stop_time.departure.Extensions[kirin_pb2.stop_time_event_status] == kirin_pb2.ADDED_FOR_DETOUR
     assert pb_stop_time.arrival.Extensions[kirin_pb2.stop_time_event_status] == kirin_pb2.ADDED_FOR_DETOUR
+
 
 def test_populate_pb_added_stop_times_status():
     st_added_status = StopTimeUpdate({'id': 'id1'}, dep_status='add', arr_status='add')
@@ -398,6 +400,7 @@ def test_populate_pb_added_stop_times_status():
     assert pb_stop_time.departure.Extensions[kirin_pb2.stop_time_event_status] == kirin_pb2.ADDED
     assert pb_stop_time.arrival.Extensions[kirin_pb2.stop_time_event_status] == kirin_pb2.ADDED
 
+
 def test_populate_pb_skipped_for_detour_stop_times_status():
     st_added_status = StopTimeUpdate({'id': 'id1'}, dep_status='deleted_for_detour', arr_status='deleted_for_detour')
     pb_stop_time = gtfs_realtime_pb2.TripUpdate.StopTimeUpdate()
@@ -406,6 +409,7 @@ def test_populate_pb_skipped_for_detour_stop_times_status():
 
     assert pb_stop_time.departure.Extensions[kirin_pb2.stop_time_event_status] == kirin_pb2.DELETED_FOR_DETOUR
     assert pb_stop_time.arrival.Extensions[kirin_pb2.stop_time_event_status] == kirin_pb2.DELETED_FOR_DETOUR
+
 
 def test_populate_pb_deleted_stop_times_status():
     st_added_status = StopTimeUpdate({'id': 'id1'}, dep_status='delete', arr_status='delete')
@@ -416,3 +420,73 @@ def test_populate_pb_deleted_stop_times_status():
     assert pb_stop_time.departure.Extensions[kirin_pb2.stop_time_event_status] == kirin_pb2.DELETED
     assert pb_stop_time.arrival.Extensions[kirin_pb2.stop_time_event_status] == kirin_pb2.DELETED
 
+
+def test_populate_pb_for_added_trip():
+    """
+    For an added trip we don't call navitia to get a vj but initialise un vj only with 'id'
+    fill protobuf from trip_update
+    Verify protobuf
+    """
+    navitia_vj = {'id': 'vehicle_journey:1'}
+
+    with app.app_context():
+        trip_update = TripUpdate()
+        vj = VehicleJourney(navitia_vj,
+                            utc.localize(datetime.datetime(2015, 9, 8, 5, 10, 0)),
+                            utc.localize(datetime.datetime(2015, 9, 8, 8, 10, 0)),
+                            is_added=True)
+        trip_update.vj = vj
+        trip_update.status = 'add'
+        trip_update.effect = 'ADDITIONAL_SERVICE'
+        trip_update.physical_mode_id = 'physical_mode:LongDistanceTrain'
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
+        real_time_update.trip_updates.append(trip_update)
+        st = StopTimeUpdate({'id': 'sa:1'}, departure=_dt("8:15"), departure_delay=timedelta(minutes=5),
+                            arrival=None, arr_status='none', dep_status='add')
+        trip_update.stop_time_updates.append(st)
+
+        st = StopTimeUpdate({'id': 'sa:2'},
+                            departure=_dt("8:21"), departure_delay=timedelta(minutes=-40),
+                            arrival=_dt("8:20"), arrival_delay=timedelta(minutes=-40),
+                            message="bob's on the track", arr_status='add', dep_status='none')
+        trip_update.stop_time_updates.append(st)
+
+        db.session.add(real_time_update)
+        db.session.commit()
+
+        feed_entity = convert_to_gtfsrt(real_time_update.trip_updates)
+
+        assert feed_entity.header.incrementality == gtfs_realtime_pb2.FeedHeader.DIFFERENTIAL
+        assert feed_entity.header.gtfs_realtime_version, '1'
+        assert len(feed_entity.entity) == 1
+        pb_trip_update = feed_entity.entity[0].trip_update
+        assert pb_trip_update.trip.trip_id == 'vehicle_journey:1'
+        assert pb_trip_update.trip.start_date == '20150908'
+        assert pb_trip_update.HasExtension(kirin_pb2.trip_message) is False
+        assert pb_trip_update.trip.HasExtension(kirin_pb2.contributor) is False
+        assert pb_trip_update.trip.HasExtension(kirin_pb2.company_id) is False
+        assert pb_trip_update.HasExtension(kirin_pb2.effect) is True
+        assert pb_trip_update.Extensions[kirin_pb2.effect] == gtfs_realtime_pb2.Alert.ADDITIONAL_SERVICE
+        assert pb_trip_update.vehicle.Extensions[kirin_pb2.physical_mode_id] == 'physical_mode:LongDistanceTrain'
+
+        assert len(pb_trip_update.stop_time_update) == 2
+
+        pb_stop_time = pb_trip_update.stop_time_update[0]
+        assert pb_stop_time.stop_id == 'sa:1'
+        assert pb_stop_time.arrival.time == 0
+        assert pb_stop_time.arrival.delay == 0
+        assert pb_stop_time.departure.time == to_posix_time(_dt("8:15"))
+        assert pb_stop_time.departure.delay == 5*60
+        assert pb_stop_time.Extensions[kirin_pb2.stoptime_message] == ""
+        assert pb_stop_time.arrival.Extensions[kirin_pb2.stop_time_event_status] == kirin_pb2.SCHEDULED
+        assert pb_stop_time.departure.Extensions[kirin_pb2.stop_time_event_status] == kirin_pb2.ADDED
+
+        pb_stop_time = pb_trip_update.stop_time_update[1]
+        assert pb_stop_time.stop_id == 'sa:2'
+        assert pb_stop_time.arrival.time == to_posix_time(_dt("8:20"))
+        assert pb_stop_time.arrival.delay == -40*60
+        assert pb_stop_time.departure.time == to_posix_time(_dt("8:21"))
+        assert pb_stop_time.departure.delay == -40*60
+        assert pb_stop_time.Extensions[kirin_pb2.stoptime_message] == "bob's on the track"
+        assert pb_stop_time.arrival.Extensions[kirin_pb2.stop_time_event_status] == kirin_pb2.ADDED
+        assert pb_stop_time.departure.Extensions[kirin_pb2.stop_time_event_status] == kirin_pb2.SCHEDULED

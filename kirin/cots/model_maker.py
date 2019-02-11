@@ -46,7 +46,9 @@ from kirin.core import model
 from kirin.cots.message_handler import MessageHandler
 from kirin.exceptions import InvalidArguments
 from kirin.utils import record_internal_failure
-from kirin.core.types import TripEffect, ModificationType, get_higher_status, get_effect_by_stop_time_status
+from kirin.core.types import TripEffect, ModificationType, get_higher_status, get_effect_by_stop_time_status, \
+    get_mode_filter
+
 
 
 DEFAULT_COMPANY_ID = "1187"
@@ -313,6 +315,10 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             # the trip is created from scratch
             trip_update.effect = TripEffect.ADDITIONAL_SERVICE.name
             trip_update.status = ModificationType.add.name
+            cots_indicator = get_value(json_train, 'indicateurFer', nullable=True)
+            cots_mode = get_value(json_train, 'codeMarqueTransporteur', nullable=True)
+            trip_update.physical_mode_id = self._get_navitia_physical_mode(cots_indicator, cots_mode)
+
 
         # all other status is considered an 'update' of the trip_update and effect is calculated
         # from stop_time status list. This part is also done in kraken and is to be deleted later
@@ -484,4 +490,21 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
         })
         if companies:
             return companies[0].get("id", None)
+        return None
+
+    def _get_navitia_physical_mode(self, indicator=None, cots_mode=None):
+        """
+        Get a navitia physical_mode for the codes present in COTS ("indicateurFer" and "codeMarqueTransporteur")
+        If the physical_mode doesn't exist in navitia, another request is made default physical_mode
+        "physical_mode.id = physical_mode:LongDistanceTrain"
+        """
+        return self._request_navitia_physical_mode(indicator, cots_mode) or self._request_navitia_physical_mode()
+
+    def _request_navitia_physical_mode(self, indicator=None, cots_mode=None):
+        physical_modes = self.navitia.physical_modes(q={
+            'filter': get_mode_filter(indicator, cots_mode),
+            'count': '1'
+        })
+        if physical_modes:
+            return physical_modes[0].get("id", None)
         return None

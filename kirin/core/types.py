@@ -94,3 +94,30 @@ def get_effect_by_stop_time_status(status):
         ModificationType.deleted_for_detour.name: TripEffect.DETOUR.name
     }
     return status_to_effect.get(status, TripEffect.UNKNOWN_EFFECT.name)
+
+
+def get_railway_mode_filter(mode=None):
+    return {
+        'LYRIA': 'commercial_mode.id=commercial_mode:lyria',
+        'INTERCITES': 'commercial_mode.id=commercial_mode:intercites - physical_mode.id=physical_mode:LocalTrain',
+        'TER': 'commercial_mode.id=commercial_mode:ter - physical_mode.id=physical_mode:Coach',
+        'TGV': 'commercial_mode.id=commercial_mode:tgv - physical_mode.id=physical_mode:Coach'
+    }.get(mode, 'commercial_mode.id=commercial_mode:lyria')
+
+
+def get_route_mode_filter(mode=None):
+    return {
+        'LYRIA': 'commercial_mode.id=commercial_mode:lyria',
+        'INTERCITES': 'commercial_mode.id=commercial_mode:intercites - physical_mode.id=physical_mode:LocalTrain',
+        'TER': 'commercial_mode.id=commercial_mode:ter - physical_mode.id=physical_mode:LocalTrain',
+        'TGV': 'commercial_mode.id=commercial_mode:tgv - physical_mode.id=physical_mode:LongDistanceTrain'
+    }.get(mode, 'commercial_mode.id=commercial_mode:lyria')
+
+
+def get_mode_filter(indicator=None, mode=None):
+    if indicator is None:
+        return "all"
+    elif indicator == 'FERRE':
+        return get_railway_mode_filter(mode)
+    else:
+        return get_route_mode_filter(mode)
