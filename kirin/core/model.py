@@ -140,7 +140,7 @@ class VehicleJourney(db.Model):
         # For an added trip, we use utc_since_dt as in flux cots re-adjusted where as for existing one
         # compute start_timestamp (in UTC) from first stop_time, to be the closest AFTER provided utc_since_dt.
         if is_added:
-            self.start_timestamp = utc_since_dt - timedelta(hours=1)
+            self.start_timestamp = utc_since_dt
         else:
             first_stop_time = navitia_vj.get('stop_times', [{}])[0]
             start_time = first_stop_time['utc_arrival_time']  # converted in datetime.time() in python wrapper

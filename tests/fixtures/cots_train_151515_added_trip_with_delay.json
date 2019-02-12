@@ -1,6 +1,6 @@
 {
   "ressource": "courseOPE",
-  "mode": "creation",
+  "mode": "modification",
   "evt": [
     "PERTURBATION"
   ],
@@ -27,17 +27,13 @@
   "nouvelleVersion": {
     "codeCompagnieTransporteur": "1187",
     "codeMarqueTransporteur": "TGV",
-    "codeRelation": "671",
     "codeService": "A2018",
-    "codeSousRelation": "671100",
     "codeTransporteurResponsable": "1S",
     "dateDebutService": "2012-09-13",
-    "dateDerniereModification": "2019-01-23T08:35:06+0000",
     "dateFinService": "2012-12-31",
     "estDiscontinue": false,
     "estTechnique": false,
     "etat": "ACTIVE",
-    "idMotifInterneReference": 8,
     "idVersion": "c07a8b24-b1bb-454b-9d92-73d40de285ec",
     "identifiantDansSystemeCreateur": "784ec6d2-ba7b-4c6d-ab96-da03e163345a",
     "indicateurFer": "FERRE",
@@ -74,10 +70,11 @@
         "listeHoraireProjeteArrivee": [],
         "listeHoraireProjeteDepart": [
           {
-            "dateHeure": "2012-11-20T11:00:00+0000",
+            "dateHeure": "2012-11-20T11:15:00+0000",
             "dateHeureEmission": "2012-11-20T08:35:06+0000",
-            "pronosticBrut": 0,
-            "source": "IRE-GOP"
+            "pronosticBrut": 780,
+            "source": "IRE-GOP",
+            "pronosticIV": 900
           }
         ],
         "listeMotifArrivee": [],
@@ -104,27 +101,22 @@
           "nbJoursPasseMinuit": 0,
           "statutCirculationOPE": "CREATION"
         },
-        "horaireVoyageurDepart": {
-          "dateHeure": "2012-11-20T12:10:00+0000",
-          "heureLocale": "13:10:00",
-          "idFuseauHoraire": "Europe/Paris",
-          "nbJoursPasseMinuit": 0,
-          "statutCirculationOPE": "CREATION"
-        },
         "listeHoraireProjeteArrivee": [
           {
-            "dateHeure": "2012-11-20T12:00:00+0000",
+            "dateHeure": "2012-11-20T12:15:00+0000",
             "dateHeureEmission": "2012-11-20T08:35:06+0000",
-            "pronosticBrut": 0,
-            "source": "IRE-GOP"
+            "pronosticBrut": 780,
+            "source": "IRE-GOP",
+            "pronosticIV": 900
           }
         ],
         "listeHoraireProjeteDepart": [
           {
-            "dateHeure": "2012-11-20T12:10:00+0000",
+            "dateHeure": "2012-11-20T12:25:00+0000",
             "dateHeureEmission": "2012-11-20T08:35:06+0000",
-            "pronosticBrut": 0,
-            "source": "IRE-GOP"
+            "pronosticBrut": 780,
+            "source": "IRE-GOP",
+            "pronosticIV": 900
           }
         ],
         "listeMotifArrivee": [
@@ -142,7 +134,14 @@
           }
         ],
         "rang": 2,
-        "typeArret": "CH"
+        "typeArret": "CH",
+        "horaireVoyageurDepart": {
+          "dateHeure": "2012-11-20T12:10:00+0000",
+          "heureLocale": "13:10:00",
+          "idFuseauHoraire": "Europe/Paris",
+          "nbJoursPasseMinuit": 0,
+          "statutCirculationOPE": "CREATION"
+        }
       },
       {
         "@id": "1025211f-3543-452a-8d61-bd2f2868bad8",
@@ -157,27 +156,22 @@
           "nbJoursPasseMinuit": 0,
           "statutCirculationOPE": "CREATION"
         },
-        "horaireVoyageurDepart": {
-          "dateHeure": "2012-11-20T14:10:00+0000",
-          "heureLocale": "15:10:00",
-          "idFuseauHoraire": "Europe/Paris",
-          "nbJoursPasseMinuit": 0,
-          "statutCirculationOPE": "CREATION"
-        },
         "listeHoraireProjeteArrivee": [
           {
-            "dateHeure": "2012-11-20T14:00:00+0000",
+            "dateHeure": "2012-11-20T14:15:00+0000",
             "dateHeureEmission": "2012-11-20T08:35:06+0000",
-            "pronosticBrut": 0,
-            "source": "IRE-GOP"
+            "pronosticBrut": 780,
+            "source": "IRE-GOP",
+            "pronosticIV": 900
           }
         ],
         "listeHoraireProjeteDepart": [
           {
-            "dateHeure": "2012-11-20T14:10:00+0000",
+            "dateHeure": "2012-11-20T14:25:00+0000",
             "dateHeureEmission": "2012-11-20T08:35:06+0000",
-            "pronosticBrut": 0,
-            "source": "IRE-GOP"
+            "pronosticBrut": 780,
+            "source": "IRE-GOP",
+            "pronosticIV": 900
           }
         ],
         "listeMotifArrivee": [
@@ -195,7 +189,14 @@
           }
         ],
         "rang": 3,
-        "typeArret": "CH"
+        "typeArret": "CH",
+        "horaireVoyageurDepart": {
+          "dateHeure": "2012-11-20T14:10:00+0000",
+          "heureLocale": "15:10:00",
+          "idFuseauHoraire": "Europe/Paris",
+          "nbJoursPasseMinuit": 0,
+          "statutCirculationOPE": "CREATION"
+        }
       },
       {
         "@id": "06c8be2a-b35f-4aee-889a-b1965a040289",
@@ -210,27 +211,22 @@
           "nbJoursPasseMinuit": 0,
           "statutCirculationOPE": "CREATION"
         },
-        "horaireVoyageurDepart": {
-          "dateHeure": "2012-11-20T15:10:00+0000",
-          "heureLocale": "16:10:00",
-          "idFuseauHoraire": "Europe/Paris",
-          "nbJoursPasseMinuit": 0,
-          "statutCirculationOPE": "CREATION"
-        },
         "listeHoraireProjeteArrivee": [
           {
-            "dateHeure": "2012-11-20T15:10:00+0000",
+            "dateHeure": "2012-11-20T15:15:00+0000",
             "dateHeureEmission": "2012-11-20T08:35:06+0000",
-            "pronosticBrut": 0,
-            "source": "IRE-GOP"
+            "pronosticBrut": 780,
+            "source": "IRE-GOP",
+            "pronosticIV": 900
           }
         ],
         "listeHoraireProjeteDepart": [
           {
-            "dateHeure": "2012-11-20T15:10:00+0000",
+            "dateHeure": "2012-11-20T15:25:00+0000",
             "dateHeureEmission": "2012-11-20T08:35:06+0000",
-            "pronosticBrut": 0,
-            "source": "IRE-GOP"
+            "pronosticBrut": 780,
+            "source": "IRE-GOP",
+            "pronosticIV": 900
           }
         ],
         "listeMotifArrivee": [
@@ -248,7 +244,14 @@
           }
         ],
         "rang": 4,
-        "typeArret": "CH"
+        "typeArret": "CH",
+        "horaireVoyageurDepart": {
+          "dateHeure": "2012-11-20T15:10:00+0000",
+          "heureLocale": "16:10:00",
+          "idFuseauHoraire": "Europe/Paris",
+          "nbJoursPasseMinuit": 0,
+          "statutCirculationOPE": "CREATION"
+        }
       },
       {
         "@id": "0f4666b5-082f-4006-9e06-65702e45fdda",
@@ -265,10 +268,11 @@
         },
         "listeHoraireProjeteArrivee": [
           {
-            "dateHeure": "2012-11-20T16:00:00+0000",
+            "dateHeure": "2012-11-20T16:15:00+0000",
             "dateHeureEmission": "2012-11-20T08:35:06+0000",
-            "pronosticBrut": 0,
-            "source": "IRE-GOP"
+            "pronosticBrut": 780,
+            "source": "IRE-GOP",
+            "pronosticIV": 900
           }
         ],
         "listeHoraireProjeteDepart": [],
@@ -311,9 +315,13 @@
       }
     ],
     "numeroCourse": "151515",
-    "statutOperationnel": "AJOUTEE",
+    "statutOperationnel": "PERTURBEE",
     "systemeCreateur": "2148",
     "type": "COURSE_OPE",
-    "@id": "784ec6d2-ba7b-4c6d-ab96-da03e163345a"
+    "@id": "784ec6d2-ba7b-4c6d-ab96-da03e163345a",
+    "dateDerniereModification": "2019-01-23T08:35:06+0000",
+    "idMotifInterneReference": 8,
+    "codeRelation": "671",
+    "codeSousRelation": "671100"
   }
 }

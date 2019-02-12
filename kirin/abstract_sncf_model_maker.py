@@ -40,10 +40,12 @@ from abc import ABCMeta
 import six
 from kirin.core import model
 
+TRAIN_ID_FORMAT = 'OCE:SN:{}'
+
 
 def make_navitia_vj(headsign):
     navitia_vj = dict()
-    navitia_vj['id'] = 'OCE:SN:{}'.format(headsign)
+    navitia_vj['id'] = TRAIN_ID_FORMAT.format(headsign)
     return navitia_vj
 
 
@@ -106,7 +108,7 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
         self.navitia = nav
         self.contributor = contributor
 
-    def _get_navitia_vjs(self, headsign_str, utc_since_dt, utc_until_dt, status_op='PERTURBEE'):
+    def _get_navitia_vjs(self, headsign_str, utc_since_dt, utc_until_dt, is_added_trip=False):
         """
         Search for navitia's vehicle journeys with given headsigns, in the period provided
         :param utc_since_dt: UTC datetime that starts the search period.
@@ -132,8 +134,7 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
             log.debug('searching for vj {} during period [{} - {}] in navitia'.format(
                             train_number, extended_since_dt, extended_until_dt))
             # Don't call navitia for an added trip ("statutOperationnel" == "AJOUTEE")
-            is_added = (status_op == 'AJOUTEE')
-            if not is_added:
+            if not is_added_trip:
                 navitia_vjs = self.navitia.vehicle_journeys(q={
                     'headsign': train_number,
                     'since': to_navitia_str(extended_since_dt),
@@ -154,7 +155,7 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
             for nav_vj in navitia_vjs:
 
                 try:
-                    vj = model.VehicleJourney(nav_vj, extended_since_dt, extended_until_dt, is_added)
+                    vj = model.VehicleJourney(nav_vj, extended_since_dt, extended_until_dt, is_added_trip)
                     vjs[nav_vj['id']] = vj
                 except Exception as e:
                     logging.getLogger(__name__).exception(

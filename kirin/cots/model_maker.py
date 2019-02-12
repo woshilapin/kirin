@@ -37,7 +37,8 @@ from dateutil import parser, tz
 from flask.globals import current_app
 from pytz import utc
 
-from kirin.abstract_sncf_model_maker import AbstractSNCFKirinModelBuilder, get_navitia_stop_time_sncf
+from kirin.abstract_sncf_model_maker import AbstractSNCFKirinModelBuilder, get_navitia_stop_time_sncf, \
+    TRAIN_ID_FORMAT
 # For perf benches:
 # https://artem.krylysov.com/blog/2015/09/29/benchmark-python-json-libraries/
 import ujson
@@ -48,7 +49,7 @@ from kirin.exceptions import InvalidArguments
 from kirin.utils import record_internal_failure
 from kirin.core.types import TripEffect, ModificationType, get_higher_status, get_effect_by_stop_time_status, \
     get_mode_filter
-
+from datetime import timedelta
 
 
 DEFAULT_COMPANY_ID = "1187"
@@ -207,6 +208,38 @@ def _is_fully_added_pdp(pdp):
     return dep_arr_statuses and all(s == 'CREATION' for s in dep_arr_statuses)
 
 
+def _get_first_not_fully_added(list_pdps, hour_obj_name, is_added_trip=False):
+    """
+    Retrieve base-schedule's first departure and last arrival
+    """
+    # For an added trip we always take first stop_time.
+    if is_added_trip:
+        p = next(p for p in list_pdps)
+    else:
+        p = next(p for p in list_pdps if not _is_fully_added_pdp(p))
+    str_time = get_value(get_value(p, hour_obj_name), 'dateHeure') if p else None
+    return as_utc_dt(str_time) if str_time else None
+
+
+def _is_added_trip(train_numbers, dict_version, pdps):
+    """
+    Verify if trip in flux cots is a newly added or a modification on a newly added trip
+    :param dict_version: Value of attribut nouvelleVersion in Flux cots
+    :return: True or False
+    """
+    is_added_trip = get_value(dict_version, 'statutOperationnel', 'PERTURBEE') == 'AJOUTEE'
+    if is_added_trip:
+        return True
+    if not is_added_trip:
+        utc_vj_start = _get_first_not_fully_added(pdps, 'horaireVoyageurDepart', is_added_trip=True)
+        utc_vj_start = utc_vj_start - timedelta(hours=1)
+        train_id = TRAIN_ID_FORMAT.format(train_numbers)
+        db_trip_update = model.TripUpdate.find_by_dated_vj(train_id, utc_vj_start)
+        if db_trip_update and db_trip_update.status == 'add':
+            return True
+    return False
+
+
 class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
 
     def __init__(self, nav, contributor=None):
@@ -239,33 +272,23 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             raise InvalidArguments('No object "nouvelleVersion" available in feed provided')
 
         dict_version = get_value(json, 'nouvelleVersion')
-        status_op = get_value(dict_version, 'statutOperationnel', 'PERTURBEE')
-        vjs = self._get_vjs(dict_version, status_op=status_op)
-        trip_updates = [self._make_trip_update(dict_version, vj) for vj in vjs]
+        train_numbers = get_value(dict_version, 'numeroCourse')
+        pdps = _retrieve_interesting_pdp(get_value(dict_version, 'listePointDeParcours'))
+        if not pdps:
+            raise InvalidArguments('invalid json, "listePointDeParcours" has no valid stop_time in '
+                                   'json elt {elt}'.format(elt=ujson.dumps(dict_version)))
+
+        is_added_trip = _is_added_trip(train_numbers, dict_version, pdps)
+        vjs = self._get_vjs(train_numbers, pdps, is_added_trip=is_added_trip)
+        trip_updates = [self._make_trip_update(dict_version, vj, is_added_trip=is_added_trip) for vj in vjs]
 
         return trip_updates
 
-    def _get_vjs(self, json_train, status_op='PERTURBEE'):
-        train_numbers = get_value(json_train, 'numeroCourse')
-        pdps = _retrieve_interesting_pdp(get_value(json_train, 'listePointDeParcours'))
-        if not pdps:
-            raise InvalidArguments('invalid json, "listePointDeParcours" has no valid stop_time in '
-                                   'json elt {elt}'.format(elt=ujson.dumps(json_train)))
+    def _get_vjs(self, train_numbers,  pdps, is_added_trip=False):
+        utc_vj_start = _get_first_not_fully_added(pdps, 'horaireVoyageurDepart', is_added_trip=is_added_trip)
+        utc_vj_end = _get_first_not_fully_added(reversed(pdps), 'horaireVoyageurArrivee', is_added_trip=is_added_trip)
 
-        # retrieve base-schedule's first departure and last arrival
-        def get_first_not_fully_added(list_pdps, hour_obj_name):
-            # For an added trip we always take first stop_time.
-            if status_op == 'AJOUTEE':
-                p = next(p for p in list_pdps)
-            else:
-                p = next(p for p in list_pdps if not _is_fully_added_pdp(p))
-            str_time = get_value(get_value(p, hour_obj_name), 'dateHeure') if p else None
-            return as_utc_dt(str_time) if str_time else None
-
-        utc_vj_start = get_first_not_fully_added(pdps, 'horaireVoyageurDepart')
-        utc_vj_end = get_first_not_fully_added(reversed(pdps), 'horaireVoyageurArrivee')
-
-        return self._get_navitia_vjs(train_numbers, utc_vj_start, utc_vj_end, status_op=status_op)
+        return self._get_navitia_vjs(train_numbers, utc_vj_start, utc_vj_end, is_added_trip=is_added_trip)
 
     def _record_and_log(self, logger, log_str):
         log_dict = {'log': log_str}
@@ -288,7 +311,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             raise InvalidArguments('invalid cots: stop_point\'s({}) time is not consistent'
                                    .format(pdp_code))
 
-    def _make_trip_update(self, json_train, vj=None):
+    def _make_trip_update(self, json_train, vj=None, is_added_trip=False):
         """
         create the new TripUpdate object
         Following the COTS spec: https://github.com/CanalTP/kirin/blob/master/documentation/cots_connector.md
@@ -311,7 +334,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             trip_update.effect = TripEffect.NO_SERVICE.name
             return trip_update
 
-        elif trip_status == 'AJOUTEE':
+        elif is_added_trip:
             # the trip is created from scratch
             trip_update.effect = TripEffect.ADDITIONAL_SERVICE.name
             trip_update.status = ModificationType.add.name

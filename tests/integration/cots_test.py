@@ -991,13 +991,58 @@ def check_add_trip_151515():
     assert status[4].departure == datetime(2012, 11, 20, 16, 00)
 
 
+def check_add_trip_151515_with_delay():
+    trips = TripUpdate.query.all()
+    assert len(trips) == 1
+    assert trips[0].status == 'add'
+    assert trips[0].effect == 'ADDITIONAL_SERVICE'
+    assert trips[0].company_id == 'company:OCE:SN'
+    status = StopTimeUpdate.query.all()
+    assert len(status) == 5
+    assert status[0].arrival_status == 'none'
+    assert status[0].arrival == datetime(2012, 11, 20, 11, 15)
+    assert status[0].departure_status == 'add'
+    assert status[0].departure == datetime(2012, 11, 20, 11, 15)
+    assert status[1].arrival_status == 'add'
+    assert status[1].arrival == datetime(2012, 11, 20, 12, 15)
+    assert status[1].departure_status == 'add'
+    assert status[1].departure == datetime(2012, 11, 20, 12, 25)
+    assert status[2].arrival_status == 'add'
+    assert status[2].arrival == datetime(2012, 11, 20, 14, 15)
+    assert status[2].departure_status == 'add'
+    assert status[2].departure == datetime(2012, 11, 20, 14, 25)
+    assert status[3].arrival_status == 'add'
+    assert status[3].arrival == datetime(2012, 11, 20, 15, 15)
+    assert status[3].departure_status == 'add'
+    assert status[3].departure == datetime(2012, 11, 20, 15, 25)
+    assert status[4].arrival_status == 'add'
+    assert status[4].arrival == datetime(2012, 11, 20, 16, 15)
+    assert status[4].departure_status == 'none'
+    assert status[4].departure == datetime(2012, 11, 20, 16, 15)
+
+
 def test_cots_for_added_trip():
     """
-     A simple trip add with 5 stop_times all existing in navitia
+     1. A simple trip add with 5 stop_times all existing in navitia
+     2. Trip modified with 15 minutes delay in each stop_times
     """
     cots_add_file = get_fixture_data('cots_train_151515_added_trip.json')
     res = api_post('/cots', data=cots_add_file)
     assert res == 'OK'
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) == 1
+        check_add_trip_151515()
+
+    cots_add_file = get_fixture_data('cots_train_151515_added_trip_with_delay.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 2
+        check_add_trip_151515_with_delay()
+
+    cots_add_file = get_fixture_data('cots_train_151515_added_trip_to_normal.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 3
         check_add_trip_151515()
