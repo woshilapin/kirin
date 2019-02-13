@@ -56,6 +56,7 @@ import st_0087_683573_BV
 import st_0087_686667_BV
 import st_0087_751008_BV
 import physical_mode_LongDistanceTrain
+import st_0087_543009_BV
 import logging
 
 mocks = [
@@ -85,7 +86,8 @@ mocks = [
     st_0087_683573_BV.response,
     st_0087_319012_00.response,
     st_0087_318964_BV.response,
-    physical_mode_LongDistanceTrain.response
+    physical_mode_LongDistanceTrain.response,
+    st_0087_543009_BV.response
 ]
 _mock_navitia_call = {}
 for r in mocks:
