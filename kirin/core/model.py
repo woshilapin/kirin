@@ -106,7 +106,7 @@ class VehicleJourney(db.Model):
     db.UniqueConstraint(navitia_trip_id, start_timestamp,
                         name='vehicle_journey_navitia_trip_id_start_timestamp_idx')
 
-    def __init__(self, navitia_vj, utc_since_dt, utc_until_dt, is_added=False):
+    def __init__(self, navitia_vj, utc_since_dt, utc_until_dt):
         """
         Create a circulation (VJ on a given day) from:
             * the navitia VJ (circulation times without a specific day)
@@ -133,13 +133,9 @@ class VehicleJourney(db.Model):
         if 'trip' in navitia_vj and 'id' in navitia_vj['trip']:
             self.navitia_trip_id = navitia_vj['trip']['id']
 
-        # For an added trip we don't have vehicle_journey in navitia and id is generated from headsign
-        elif 'id' in navitia_vj:
-            self.navitia_trip_id = navitia_vj['id']
-
         # For an added trip, we use utc_since_dt as in flux cots re-adjusted where as for existing one
         # compute start_timestamp (in UTC) from first stop_time, to be the closest AFTER provided utc_since_dt.
-        if is_added:
+        if not navitia_vj.get('stop_times', None):
             self.start_timestamp = utc_since_dt
         else:
             first_stop_time = navitia_vj.get('stop_times', [{}])[0]
@@ -314,6 +310,12 @@ class TripUpdate(db.Model, TimestampMixin):
     def find_by_dated_vj(cls, navitia_trip_id, start_timestamp):
         return cls.query.join(VehicleJourney).filter(VehicleJourney.navitia_trip_id == navitia_trip_id,
                                                      VehicleJourney.start_timestamp == start_timestamp).first()
+
+    @classmethod
+    def find_by_vj_period(cls, navitia_trip_id, start_date, end_date):
+        return cls.query.join(VehicleJourney).filter(VehicleJourney.navitia_trip_id == navitia_trip_id,
+                                                     VehicleJourney.start_timestamp >= start_date,
+                                                     VehicleJourney.start_timestamp <= end_date).first()
 
     @classmethod
     def find_by_dated_vjs(cls, id_timestamp_tuples):

@@ -38,6 +38,8 @@ import datetime
 from kirin import app, db
 from kirin import gtfs_realtime_pb2, kirin_pb2
 from tests.check_utils import _dt
+from kirin.abstract_sncf_model_maker import make_navitia_empty_vj
+
 
 def test_populate_pb_with_one_stop_time():
     """
@@ -423,18 +425,17 @@ def test_populate_pb_deleted_stop_times_status():
 
 def test_populate_pb_for_added_trip():
     """
-    For an added trip we don't call navitia to get a vj but initialise un vj only with 'id'
-    fill protobuf from trip_update
+    For an added trip we don't call navitia to get a vj instead we create and initialize one vj only with 'id'
+    Fill protobuf from trip_update
     Verify protobuf
     """
-    navitia_vj = {'id': 'vehicle_journey:1'}
+    navitia_vj = make_navitia_empty_vj('vehicle_journey:1')
 
     with app.app_context():
         trip_update = TripUpdate()
         vj = VehicleJourney(navitia_vj,
                             utc.localize(datetime.datetime(2015, 9, 8, 5, 10, 0)),
-                            utc.localize(datetime.datetime(2015, 9, 8, 8, 10, 0)),
-                            is_added=True)
+                            utc.localize(datetime.datetime(2015, 9, 8, 8, 10, 0)))
         trip_update.vj = vj
         trip_update.status = 'add'
         trip_update.effect = 'ADDITIONAL_SERVICE'
@@ -460,7 +461,7 @@ def test_populate_pb_for_added_trip():
         assert feed_entity.header.gtfs_realtime_version, '1'
         assert len(feed_entity.entity) == 1
         pb_trip_update = feed_entity.entity[0].trip_update
-        assert pb_trip_update.trip.trip_id == 'vehicle_journey:1'
+        assert pb_trip_update.trip.trip_id == 'OCE:SN:vehicle_journey:1'
         assert pb_trip_update.trip.start_date == '20150908'
         assert pb_trip_update.HasExtension(kirin_pb2.trip_message) is False
         assert pb_trip_update.trip.HasExtension(kirin_pb2.contributor) is False

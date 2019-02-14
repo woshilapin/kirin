@@ -31,6 +31,9 @@
 
 from enum import Enum
 from kirin import kirin_pb2
+from datetime import timedelta
+
+COTS_SEARCH_MARGIN = timedelta(hours=1)
 
 
 class ModificationType(Enum):
@@ -96,28 +99,8 @@ def get_effect_by_stop_time_status(status):
     return status_to_effect.get(status, TripEffect.UNKNOWN_EFFECT.name)
 
 
-def get_railway_mode_filter(mode=None):
+def get_mode_filter(indicator=None):
     return {
-        'LYRIA': 'commercial_mode.id=commercial_mode:lyria',
-        'INTERCITES': 'commercial_mode.id=commercial_mode:intercites - physical_mode.id=physical_mode:LocalTrain',
-        'TER': 'commercial_mode.id=commercial_mode:ter - physical_mode.id=physical_mode:Coach',
-        'TGV': 'commercial_mode.id=commercial_mode:tgv - physical_mode.id=physical_mode:Coach'
-    }.get(mode, 'commercial_mode.id=commercial_mode:lyria')
-
-
-def get_route_mode_filter(mode=None):
-    return {
-        'LYRIA': 'commercial_mode.id=commercial_mode:lyria',
-        'INTERCITES': 'commercial_mode.id=commercial_mode:intercites - physical_mode.id=physical_mode:LocalTrain',
-        'TER': 'commercial_mode.id=commercial_mode:ter - physical_mode.id=physical_mode:LocalTrain',
-        'TGV': 'commercial_mode.id=commercial_mode:tgv - physical_mode.id=physical_mode:LongDistanceTrain'
-    }.get(mode, 'commercial_mode.id=commercial_mode:lyria')
-
-
-def get_mode_filter(indicator=None, mode=None):
-    if indicator is None:
-        return "all"
-    elif indicator == 'FERRE':
-        return get_railway_mode_filter(mode)
-    else:
-        return get_route_mode_filter(mode)
+        'FERRE': 'physical_mode.id=physical_mode:LongDistanceTrain',
+        'ROUTIER': 'physical_mode.id=physical_mode:Coach'
+    }.get(indicator, 'all')

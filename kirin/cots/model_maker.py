@@ -48,8 +48,7 @@ from kirin.cots.message_handler import MessageHandler
 from kirin.exceptions import InvalidArguments
 from kirin.utils import record_internal_failure
 from kirin.core.types import TripEffect, ModificationType, get_higher_status, get_effect_by_stop_time_status, \
-    get_mode_filter
-from datetime import timedelta
+    get_mode_filter, COTS_SEARCH_MARGIN
 
 
 DEFAULT_COMPANY_ID = "1187"
@@ -208,15 +207,15 @@ def _is_fully_added_pdp(pdp):
     return dep_arr_statuses and all(s == 'CREATION' for s in dep_arr_statuses)
 
 
-def _get_first_not_fully_added(list_pdps, hour_obj_name, is_added_trip=False):
+def _get_first_stop(list_pdps, hour_obj_name, skip_fully_added_stops=True):
     """
     Retrieve base-schedule's first departure and last arrival
     """
-    # For an added trip we always take first stop_time.
-    if is_added_trip:
-        p = next(p for p in list_pdps)
-    else:
+    if skip_fully_added_stops:
         p = next(p for p in list_pdps if not _is_fully_added_pdp(p))
+    else:
+        p = next(p for p in list_pdps)
+
     str_time = get_value(get_value(p, hour_obj_name), 'dateHeure') if p else None
     return as_utc_dt(str_time) if str_time else None
 
@@ -231,10 +230,11 @@ def _is_added_trip(train_numbers, dict_version, pdps):
     if is_added_trip:
         return True
     if not is_added_trip:
-        utc_vj_start = _get_first_not_fully_added(pdps, 'horaireVoyageurDepart', is_added_trip=True)
-        utc_vj_start = utc_vj_start - timedelta(hours=1)
+        utc_vj_start = _get_first_stop(pdps, 'horaireVoyageurDepart', skip_fully_added_stops=False)
         train_id = TRAIN_ID_FORMAT.format(train_numbers)
-        db_trip_update = model.TripUpdate.find_by_dated_vj(train_id, utc_vj_start)
+        db_trip_update = model.TripUpdate.find_by_vj_period(train_id,
+                                                            start_date=utc_vj_start-COTS_SEARCH_MARGIN,
+                                                            end_date=utc_vj_start+COTS_SEARCH_MARGIN)
         if db_trip_update and db_trip_update.status == 'add':
             return True
     return False
@@ -285,8 +285,8 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
         return trip_updates
 
     def _get_vjs(self, train_numbers,  pdps, is_added_trip=False):
-        utc_vj_start = _get_first_not_fully_added(pdps, 'horaireVoyageurDepart', is_added_trip=is_added_trip)
-        utc_vj_end = _get_first_not_fully_added(reversed(pdps), 'horaireVoyageurArrivee', is_added_trip=is_added_trip)
+        utc_vj_start = _get_first_stop(pdps, 'horaireVoyageurDepart', skip_fully_added_stops=not is_added_trip)
+        utc_vj_end = _get_first_stop(reversed(pdps), 'horaireVoyageurArrivee', skip_fully_added_stops=not is_added_trip)
 
         return self._get_navitia_vjs(train_numbers, utc_vj_start, utc_vj_end, is_added_trip=is_added_trip)
 
@@ -311,7 +311,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             raise InvalidArguments('invalid cots: stop_point\'s({}) time is not consistent'
                                    .format(pdp_code))
 
-    def _make_trip_update(self, json_train, vj=None, is_added_trip=False):
+    def _make_trip_update(self, json_train, vj, is_added_trip=False):
         """
         create the new TripUpdate object
         Following the COTS spec: https://github.com/CanalTP/kirin/blob/master/documentation/cots_connector.md
@@ -338,10 +338,8 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             # the trip is created from scratch
             trip_update.effect = TripEffect.ADDITIONAL_SERVICE.name
             trip_update.status = ModificationType.add.name
-            cots_indicator = get_value(json_train, 'indicateurFer', nullable=True)
-            cots_mode = get_value(json_train, 'codeMarqueTransporteur', nullable=True)
-            trip_update.physical_mode_id = self._get_navitia_physical_mode(cots_indicator, cots_mode)
-
+            cots_physical_mode = get_value(json_train, 'indicateurFer', nullable=True)
+            trip_update.physical_mode_id = self._get_navitia_physical_mode(cots_physical_mode)
 
         # all other status is considered an 'update' of the trip_update and effect is calculated
         # from stop_time status list. This part is also done in kraken and is to be deleted later
@@ -456,7 +454,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             last_stop_time_depart = projected_stop_time['Depart']
 
         # Calculates effect from stop_time status list(this work is also done in kraken and has to be deleted)
-        if trip_update.effect != TripEffect.ADDITIONAL_SERVICE.name:
+        if trip_update.effect == TripEffect.MODIFIED_SERVICE.name:
             trip_update.effect = get_effect_by_stop_time_status(highest_st_status)
         return trip_update
 
@@ -471,14 +469,10 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
 
         Error messages are also returned as 'missing stop point', 'duplicate stops'
         """
-        if vj and vj.navitia_vj:
-            nav_st, log_dict = get_navitia_stop_time_sncf(cr=get_value(pdp, 'cr'),
-                                                          ci=get_value(pdp, 'ci'),
-                                                          ch=get_value(pdp, 'ch'),
-                                                          nav_vj=vj.navitia_vj)
-        else:
-            nav_st = None
-
+        nav_st, log_dict = get_navitia_stop_time_sncf(cr=get_value(pdp, 'cr'),
+                                                      ci=get_value(pdp, 'ci'),
+                                                      ch=get_value(pdp, 'ch'),
+                                                      nav_vj=vj.navitia_vj)
         if not nav_st:
             nav_stop, log_dict = self._request_navitia_stop_point(cr=get_value(pdp, 'cr'),
                                                                   ci=get_value(pdp, 'ci'),
@@ -515,17 +509,17 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             return companies[0].get("id", None)
         return None
 
-    def _get_navitia_physical_mode(self, indicator=None, cots_mode=None):
+    def _get_navitia_physical_mode(self, indicator=None):
         """
-        Get a navitia physical_mode for the codes present in COTS ("indicateurFer" and "codeMarqueTransporteur")
+        Get a navitia physical_mode for the codes present in COTS ("indicateurFer" : FERRE / ROUTIER)
         If the physical_mode doesn't exist in navitia, another request is made default physical_mode
-        "physical_mode.id = physical_mode:LongDistanceTrain"
+        with filter="all"
         """
-        return self._request_navitia_physical_mode(indicator, cots_mode) or self._request_navitia_physical_mode()
+        return self._request_navitia_physical_mode(indicator) or self._request_navitia_physical_mode()
 
-    def _request_navitia_physical_mode(self, indicator=None, cots_mode=None):
+    def _request_navitia_physical_mode(self, indicator=None):
         physical_modes = self.navitia.physical_modes(q={
-            'filter': get_mode_filter(indicator, cots_mode),
+            'filter': get_mode_filter(indicator),
             'count': '1'
         })
         if physical_modes:

@@ -43,10 +43,9 @@ from kirin.core import model
 TRAIN_ID_FORMAT = 'OCE:SN:{}'
 
 
-def make_navitia_vj(headsign):
-    navitia_vj = dict()
-    navitia_vj['id'] = TRAIN_ID_FORMAT.format(headsign)
-    return navitia_vj
+def make_navitia_empty_vj(headsign):
+    headsign = TRAIN_ID_FORMAT.format(headsign)
+    return {"id": headsign, "trip": {"id": headsign}}
 
 
 def to_navitia_str(dt):
@@ -150,12 +149,12 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
                                                              u=extended_until_dt))
                     record_internal_failure('missing train', contributor=self.contributor)
             else:
-                navitia_vjs = [make_navitia_vj(train_number)]
+                navitia_vjs = [make_navitia_empty_vj(train_number)]
 
             for nav_vj in navitia_vjs:
 
                 try:
-                    vj = model.VehicleJourney(nav_vj, extended_since_dt, extended_until_dt, is_added_trip)
+                    vj = model.VehicleJourney(nav_vj, extended_since_dt, extended_until_dt)
                     vjs[nav_vj['id']] = vj
                 except Exception as e:
                     logging.getLogger(__name__).exception(

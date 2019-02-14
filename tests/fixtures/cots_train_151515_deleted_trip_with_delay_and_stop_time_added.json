@@ -34,6 +34,7 @@
     "estDiscontinue": false,
     "estTechnique": false,
     "etat": "ACTIVE",
+    "idMotifInterneReference": 8,
     "idVersion": "c07a8b24-b1bb-454b-9d92-73d40de285ec",
     "identifiantDansSystemeCreateur": "784ec6d2-ba7b-4c6d-ab96-da03e163345a",
     "indicateurFer": "FERRE",
@@ -101,6 +102,13 @@
           "nbJoursPasseMinuit": 0,
           "statutCirculationOPE": "SUPPRESSION"
         },
+        "horaireVoyageurDepart": {
+          "dateHeure": "2012-11-20T11:40:00+0000",
+          "heureLocale": "14:40:00",
+          "idFuseauHoraire": "Europe/Paris",
+          "nbJoursPasseMinuit": 0,
+          "statutCirculationOPE": "SUPPRESSION"
+        },
         "listeHoraireProjeteArrivee": [
           {
             "dateHeure": "2012-11-20T11:45:00+0000",
@@ -134,14 +142,7 @@
           }
         ],
         "rang": 2,
-        "typeArret": "CH",
-        "horaireVoyageurDepart": {
-          "dateHeure": "2012-11-20T11:40:00+0000",
-          "heureLocale": "14:40:00",
-          "idFuseauHoraire": "Europe/Paris",
-          "nbJoursPasseMinuit": 0,
-          "statutCirculationOPE": "SUPPRESSION"
-        }
+        "typeArret": "CH"
       },
       {
         "@id": "1022221f-3223-423a-8541-b32f2878b8d8",
@@ -357,15 +358,15 @@
           }
         ],
         "listeJourRegimeFacultatif": [],
+        "porteur": true,
+        "decalagePasseMinuit": 0,
         "pointDebutUtilisationSillon": {
           "@id": "50f31367-af56-4c08-9bf8-423bf3856dfc"
         },
         "pointFinUtilisationSillon": {
           "@id": "0f4666b5-082f-4006-9e06-65702e45fdda"
         },
-        "porteur": true,
         "rangPRDebutUtilisationSillon": 1,
-        "decalagePasseMinuit": 0,
         "rangPRFinUtilisationSillon": 210
       }
     ],
@@ -375,7 +376,6 @@
     "type": "COURSE_OPE",
     "@id": "784ec6d2-ba7b-4c6d-ab96-da03e163345a",
     "dateDerniereModification": "2019-01-23T08:35:06+0000",
-    "idMotifInterneReference": 8,
     "codeRelation": "671",
     "codeSousRelation": "671100"
   }

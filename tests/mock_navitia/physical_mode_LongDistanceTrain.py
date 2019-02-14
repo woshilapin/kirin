@@ -34,7 +34,7 @@ import navitia_response
 response = navitia_response.NavitiaResponse()
 
 response.queries = [
-    'physical_modes/?filter=commercial_mode.id=commercial_mode:tgv - physical_mode.id=physical_mode:Coach&count=1'
+    'physical_modes/?filter=physical_mode.id=physical_mode:LongDistanceTrain&count=1'
 ]
 
 response.response_code = 200
