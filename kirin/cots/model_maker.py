@@ -360,7 +360,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
         # manage realtime information stop_time by stop_time
         for pdp in pdps:
             # retrieve navitia's stop_point corresponding to the current COTS pdp
-            nav_stop, log_dict = self._get_navitia_stop_point(pdp, vj)
+            nav_stop, log_dict = self._get_navitia_stop_point(pdp, vj.navitia_vj)
             projected_stop_time = {'Arrivee': None, 'Depart': None}  # used to check consistency
 
             if log_dict:
@@ -472,7 +472,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
         nav_st, log_dict = get_navitia_stop_time_sncf(cr=get_value(pdp, 'cr'),
                                                       ci=get_value(pdp, 'ci'),
                                                       ch=get_value(pdp, 'ch'),
-                                                      nav_vj=nav_vj.navitia_vj)
+                                                      nav_vj=nav_vj)
         if not nav_st:
             nav_stop, log_dict = self._request_navitia_stop_point(cr=get_value(pdp, 'cr'),
                                                                   ci=get_value(pdp, 'ci'),
