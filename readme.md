@@ -221,7 +221,7 @@ If the COTS was successfully sent and processed by Kirin, the http response 200 
 
 ### Alembic database revisions
 
-To generate a new revision script for database (after an upgrade of the model.py file):
+To generate a new database revision script (after an upgrade of the model.py file):
 ```
 honcho run ./manage.py db migrate
 ```
@@ -241,7 +241,7 @@ Kirin is split in 4 separate "components", as seen in honcho's Procfile.
 
 Its roles are:
 * display the `/status`.
-* provide a POST endpoint for each type of realtime provider accepted.  
+* provide a POST endpoint for each type of accepted realtime provider.  
   On given endpoints, the webservice receives and directly processes the feed.
   The result is then saved in db and sent to corresponding Navitia's Kraken.
   It is mainly used for COTS and IRE.
@@ -258,7 +258,7 @@ There can be several of these (if they are behind a load-balancer).
 Its role is to provide all information available in db for a given provider in the rabbitmq queue, so
 that Kraken can restart fully aware of realtime.
 
-There can be several of these if load is important.
+There can be several of these if the load is important.
 
 #### Kirin-beat
 
@@ -272,10 +272,10 @@ There is only one of these on each platform.
 
 > Alias 'worker'
 
-Its role is to poll an external location and check if new information were published.
-In that case worker processes it then stores the result in db and sends the corresponding info to Kraken.
+Its role is to poll an external location and check if new information was published.
+In that case, the worker processes it, stores the result in db and sends the corresponding info to Kraken.
 
-There can be several of these if load is important. At least one per provider polled is recommended.
+There can be several of these if the load is important. At least one per polled provider is recommended.
 
 
 ### Tests
