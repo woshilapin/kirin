@@ -38,7 +38,7 @@ from flask.globals import current_app
 from pytz import utc
 
 from kirin.abstract_sncf_model_maker import AbstractSNCFKirinModelBuilder, get_navitia_stop_time_sncf, \
-    TRAIN_ID_FORMAT
+    TRAIN_ID_FORMAT, SNCF_SEARCH_MARGIN
 # For perf benches:
 # https://artem.krylysov.com/blog/2015/09/29/benchmark-python-json-libraries/
 import ujson
@@ -48,8 +48,7 @@ from kirin.cots.message_handler import MessageHandler
 from kirin.exceptions import InvalidArguments
 from kirin.utils import record_internal_failure
 from kirin.core.types import TripEffect, ModificationType, get_higher_status, get_effect_by_stop_time_status, \
-    get_mode_filter, COTS_SEARCH_MARGIN
-
+    get_mode_filter
 
 DEFAULT_COMPANY_ID = "1187"
 
@@ -207,10 +206,7 @@ def _is_fully_added_pdp(pdp):
     return dep_arr_statuses and all(s == 'CREATION' for s in dep_arr_statuses)
 
 
-def _get_first_stop(list_pdps, hour_obj_name, skip_fully_added_stops=True):
-    """
-    Retrieve base-schedule's first departure and last arrival
-    """
+def _get_first_stop_datetime(list_pdps, hour_obj_name, skip_fully_added_stops=True):
     if skip_fully_added_stops:
         p = next(p for p in list_pdps if not _is_fully_added_pdp(p))
     else:
@@ -230,11 +226,13 @@ def _is_added_trip(train_numbers, dict_version, pdps):
     if is_added_trip:
         return True
     if not is_added_trip:
-        utc_vj_start = _get_first_stop(pdps, 'horaireVoyageurDepart', skip_fully_added_stops=False)
+        utc_vj_start = _get_first_stop_datetime(pdps, 'horaireVoyageurDepart', skip_fully_added_stops=False)
+        utc_vj_end = _get_first_stop_datetime(reversed(pdps), 'horaireVoyageurArrivee',
+                                              skip_fully_added_stops=False)
         train_id = TRAIN_ID_FORMAT.format(train_numbers)
-        db_trip_update = model.TripUpdate.find_by_vj_period(train_id,
-                                                            start_date=utc_vj_start-COTS_SEARCH_MARGIN,
-                                                            end_date=utc_vj_start+COTS_SEARCH_MARGIN)
+        db_trip_update = model.TripUpdate.find_vj_by_period(train_id,
+                                                            start_date=utc_vj_start-SNCF_SEARCH_MARGIN,
+                                                            end_date=utc_vj_end+SNCF_SEARCH_MARGIN)
         if db_trip_update and db_trip_update.status == 'add':
             return True
     return False
@@ -285,8 +283,10 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
         return trip_updates
 
     def _get_vjs(self, train_numbers,  pdps, is_added_trip=False):
-        utc_vj_start = _get_first_stop(pdps, 'horaireVoyageurDepart', skip_fully_added_stops=not is_added_trip)
-        utc_vj_end = _get_first_stop(reversed(pdps), 'horaireVoyageurArrivee', skip_fully_added_stops=not is_added_trip)
+        utc_vj_start = _get_first_stop_datetime(pdps, 'horaireVoyageurDepart',
+                                                skip_fully_added_stops=not is_added_trip)
+        utc_vj_end = _get_first_stop_datetime(reversed(pdps), 'horaireVoyageurArrivee',
+                                              skip_fully_added_stops=not is_added_trip)
 
         return self._get_navitia_vjs(train_numbers, utc_vj_start, utc_vj_end, is_added_trip=is_added_trip)
 
@@ -458,7 +458,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             trip_update.effect = get_effect_by_stop_time_status(highest_st_status)
         return trip_update
 
-    def _get_navitia_stop_point(self, pdp, vj=None):
+    def _get_navitia_stop_point(self, pdp, nav_vj):
         """
         Get a navitia stop point from the stop_time in a 'Point de Parcours' dict.
         The dict MUST contain cr, ci, ch tags.
@@ -472,7 +472,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
         nav_st, log_dict = get_navitia_stop_time_sncf(cr=get_value(pdp, 'cr'),
                                                       ci=get_value(pdp, 'ci'),
                                                       ch=get_value(pdp, 'ch'),
-                                                      nav_vj=vj.navitia_vj)
+                                                      nav_vj=nav_vj.navitia_vj)
         if not nav_st:
             nav_stop, log_dict = self._request_navitia_stop_point(cr=get_value(pdp, 'cr'),
                                                                   ci=get_value(pdp, 'ci'),
@@ -513,7 +513,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
         """
         Get a navitia physical_mode for the codes present in COTS ("indicateurFer" : FERRE / ROUTIER)
         If the physical_mode doesn't exist in navitia, another request is made default physical_mode
-        with filter="all"
+        with filter=physical_mode.id=physical_mode:LongDistanceTrain
         """
         return self._request_navitia_physical_mode(indicator) or self._request_navitia_physical_mode()
 

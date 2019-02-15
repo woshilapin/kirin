@@ -106,7 +106,7 @@ class VehicleJourney(db.Model):
     db.UniqueConstraint(navitia_trip_id, start_timestamp,
                         name='vehicle_journey_navitia_trip_id_start_timestamp_idx')
 
-    def __init__(self, navitia_vj, utc_since_dt, utc_until_dt):
+    def __init__(self, navitia_vj, utc_since_dt, utc_until_dt, vj_start_dt=None):
         """
         Create a circulation (VJ on a given day) from:
             * the navitia VJ (circulation times without a specific day)
@@ -128,15 +128,16 @@ class VehicleJourney(db.Model):
             typically the "since" parameter of the search in navitia.
         :param utc_until_dt: UTC datetime AFTER start of considered circulation,
             typically the "until" parameter of the search in navitia.
+        :param vj_start_dt: UTC datetime of the first stop_time of vj.
         """
         self.id = gen_uuid()
         if 'trip' in navitia_vj and 'id' in navitia_vj['trip']:
             self.navitia_trip_id = navitia_vj['trip']['id']
 
-        # For an added trip, we use utc_since_dt as in flux cots re-adjusted where as for existing one
+        # For an added trip, we use vj_start_dt as in flux cots where as for existing one
         # compute start_timestamp (in UTC) from first stop_time, to be the closest AFTER provided utc_since_dt.
-        if not navitia_vj.get('stop_times', None):
-            self.start_timestamp = utc_since_dt
+        if not navitia_vj.get('stop_times', None) and vj_start_dt:
+            self.start_timestamp = vj_start_dt
         else:
             first_stop_time = navitia_vj.get('stop_times', [{}])[0]
             start_time = first_stop_time['utc_arrival_time']  # converted in datetime.time() in python wrapper
@@ -312,7 +313,7 @@ class TripUpdate(db.Model, TimestampMixin):
                                                      VehicleJourney.start_timestamp == start_timestamp).first()
 
     @classmethod
-    def find_by_vj_period(cls, navitia_trip_id, start_date, end_date):
+    def find_vj_by_period(cls, navitia_trip_id, start_date, end_date):
         return cls.query.join(VehicleJourney).filter(VehicleJourney.navitia_trip_id == navitia_trip_id,
                                                      VehicleJourney.start_timestamp >= start_date,
                                                      VehicleJourney.start_timestamp <= end_date).first()

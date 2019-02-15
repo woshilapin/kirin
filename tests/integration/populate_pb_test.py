@@ -434,8 +434,9 @@ def test_populate_pb_for_added_trip():
     with app.app_context():
         trip_update = TripUpdate()
         vj = VehicleJourney(navitia_vj,
-                            utc.localize(datetime.datetime(2015, 9, 8, 5, 10, 0)),
-                            utc.localize(datetime.datetime(2015, 9, 8, 8, 10, 0)))
+                            utc_since_dt=utc.localize(datetime.datetime(2015, 9, 8, 5, 10, 0)),
+                            utc_until_dt=utc.localize(datetime.datetime(2015, 9, 8, 8, 10, 0)),
+                            vj_start_dt=utc.localize(datetime.datetime(2015, 9, 8, 5, 10, 0)))
         trip_update.vj = vj
         trip_update.status = 'add'
         trip_update.effect = 'ADDITIONAL_SERVICE'

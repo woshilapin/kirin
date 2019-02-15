@@ -31,9 +31,6 @@
 
 from enum import Enum
 from kirin import kirin_pb2
-from datetime import timedelta
-
-COTS_SEARCH_MARGIN = timedelta(hours=1)
 
 
 class ModificationType(Enum):
@@ -103,4 +100,4 @@ def get_mode_filter(indicator=None):
     return {
         'FERRE': 'physical_mode.id=physical_mode:LongDistanceTrain',
         'ROUTIER': 'physical_mode.id=physical_mode:Coach'
-    }.get(indicator, 'all')
+    }.get(indicator, 'physical_mode.id=physical_mode:LongDistanceTrain')
