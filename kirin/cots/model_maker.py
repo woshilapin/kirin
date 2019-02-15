@@ -120,7 +120,7 @@ def as_utc_dt(str_time):
     try:
         return parser.parse(str_time, dayfirst=False, yearfirst=True, ignoretz=False).astimezone(utc)
     except Exception as e:
-        raise InvalidArguments('impossible to parse timezoned datetime from "{s}": {m}'
+        raise InvalidArguments('Impossible to parse timezoned datetime from "{s}": {m}'
                                .format(s=str_time, m=e.message))
 
 
