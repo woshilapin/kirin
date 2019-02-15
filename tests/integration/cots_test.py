@@ -188,6 +188,36 @@ def test_cots_delayed_then_ok(mock_rabbitmq):
     assert mock_rabbitmq.call_count == 2
 
 
+def test_cots_bad_tz(mock_rabbitmq):
+    """
+    We use a "normal" feed (no delay), but:
+    * on stop 3, no TZ is provided (check no bad crash: all feed rejected)
+    """
+    cots_96231 = get_fixture_data('cots_train_96231_normal_bad_tz.json')
+    res, status = api_post('/cots', check=False, data=cots_96231)
+
+    assert status == 400
+    assert 'impossible to parse timezoned datetime' in res.get('error')
+    assert mock_rabbitmq.call_count == 0
+
+
+def test_cots_paris_tz(mock_rabbitmq):
+    """
+    We use a "normal" feed (no delay), but:
+    * on stop 2, TZ is +0100 (and not the usual +0000)
+    """
+    cots_96231 = get_fixture_data('cots_train_96231_normal_paris_tz.json')
+    res = api_post('/cots', data=cots_96231)
+    assert res == 'OK'
+
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 1
+        assert len(TripUpdate.query.all()) == 1
+        assert len(StopTimeUpdate.query.all()) == 6
+    check_db_96231_normal(contributor='realtime.cots')
+    assert mock_rabbitmq.call_count == 1
+
+
 def test_cots_partial_removal_delayed_then_partial_removal_ok(mock_rabbitmq):
     """
 
