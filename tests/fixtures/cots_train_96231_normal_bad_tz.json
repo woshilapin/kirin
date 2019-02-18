@@ -96,7 +96,7 @@
                     "nbJoursPasseMinuit":0
                 },
                 "horaireVoyageurDepart":{
-                    "dateHeure":"2015-09-21T14:30:00+0000",
+                    "dateHeure":"2015-09-21T14:30:00",
                     "heureLocale":"16:30:00",
                     "idFuseauHoraire":"Europe/Paris",
                     "nbJoursPasseMinuit":0
