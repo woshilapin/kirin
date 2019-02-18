@@ -118,7 +118,11 @@ def _retrieve_interesting_pdp(list_pdp):
 
 
 def as_utc_dt(str_time):
-    return parser.parse(str_time, dayfirst=False, yearfirst=True, ignoretz=False).astimezone(utc)
+    try:
+        return parser.parse(str_time, dayfirst=False, yearfirst=True, ignoretz=False).astimezone(utc)
+    except Exception as e:
+        raise InvalidArguments('Impossible to parse timezoned datetime from "{s}": {m}'
+                               .format(s=str_time, m=e.message))
 
 
 def as_duration(seconds):
