@@ -109,7 +109,7 @@
         "ch": "BV",
         "timeZoneLocale": "Europe/Paris",
         "horaireVoyageurArrivee": {
-          "dateHeure": "2012-11-20T14:00:00+0000",
+          "dateHeure": "2012-11-20T16:00:00+0200",
           "heureLocale": "15:00:00",
           "idFuseauHoraire": "Europe/Paris",
           "nbJoursPasseMinuit": 0,
@@ -122,7 +122,7 @@
         "rang": 3,
         "typeArret": "CH",
         "horaireVoyageurDepart": {
-          "dateHeure": "2012-11-20T14:10:00+0000",
+          "dateHeure": "2012-11-20T16:10:00+0200",
           "heureLocale": "15:10:00",
           "idFuseauHoraire": "Europe/Paris",
           "nbJoursPasseMinuit": 0,
@@ -136,7 +136,7 @@
         "ch": "00",
         "timeZoneLocale": "Europe/Paris",
         "horaireVoyageurArrivee": {
-          "dateHeure": "2012-11-20T15:00:00+0000",
+          "dateHeure": "2012-11-20T17:00:00+0200",
           "heureLocale": "16:00:00",
           "idFuseauHoraire": "Europe/Paris",
           "nbJoursPasseMinuit": 0,
@@ -149,7 +149,7 @@
         "rang": 4,
         "typeArret": "CH",
         "horaireVoyageurDepart": {
-          "dateHeure": "2012-11-20T15:10:00+0000",
+          "dateHeure": "2012-11-20T17:10:00+0200",
           "heureLocale": "16:10:00",
           "idFuseauHoraire": "Europe/Paris",
           "nbJoursPasseMinuit": 0,
@@ -163,7 +163,7 @@
         "ch": "BV",
         "timeZoneLocale": "Europe/Paris",
         "horaireVoyageurArrivee": {
-          "dateHeure": "2012-11-20T16:00:00+0000",
+          "dateHeure": "2012-11-20T18:00:00+0200",
           "heureLocale": "17:00:00",
           "idFuseauHoraire": "Europe/Paris",
           "nbJoursPasseMinuit": 0,

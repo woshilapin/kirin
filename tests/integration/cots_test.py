@@ -1055,32 +1055,32 @@ def check_add_trip_151515_with_delay_and_an_add():
     assert trips[0].status == 'add'
     assert trips[0].effect == 'ADDITIONAL_SERVICE'
     assert trips[0].company_id == 'company:OCE:SN'
-    stop_times = StopTimeUpdate.query.all()
-    assert len(stop_times ) == 6
-    assert stop_times [0].arrival_status == 'none'
-    assert stop_times [0].arrival == datetime(2012, 11, 20, 11, 15)
-    assert stop_times [0].departure_status == 'add'
-    assert stop_times [0].departure == datetime(2012, 11, 20, 11, 15)
-    assert stop_times [1].arrival_status == 'add'
-    assert stop_times [1].arrival == datetime(2012, 11, 20, 11, 45)
-    assert stop_times [1].departure_status == 'add'
-    assert stop_times [1].departure == datetime(2012, 11, 20, 11, 55)
-    assert stop_times [2].arrival_status == 'add'
-    assert stop_times [2].arrival == datetime(2012, 11, 20, 12, 15)
-    assert stop_times [2].departure_status == 'add'
-    assert stop_times [2].departure == datetime(2012, 11, 20, 12, 25)
-    assert stop_times [3].arrival_status == 'add'
-    assert stop_times [3].arrival == datetime(2012, 11, 20, 14, 15)
-    assert stop_times [3].departure_status == 'add'
-    assert stop_times [3].departure == datetime(2012, 11, 20, 14, 25)
-    assert stop_times [4].arrival_status == 'add'
-    assert stop_times [4].arrival == datetime(2012, 11, 20, 15, 15)
-    assert stop_times [4].departure_status == 'add'
-    assert stop_times [4].departure == datetime(2012, 11, 20, 15, 25)
-    assert stop_times [5].arrival_status == 'add'
-    assert stop_times [5].arrival == datetime(2012, 11, 20, 16, 15)
-    assert stop_times [5].departure_status == 'none'
-    assert stop_times [5].departure == datetime(2012, 11, 20, 16, 15)
+    stop_time = StopTimeUpdate.query.all()
+    assert len(stop_time) == 6
+    assert stop_time[0].arrival_status == 'none'
+    assert stop_time[0].arrival == datetime(2012, 11, 20, 11, 15)
+    assert stop_time[0].departure_status == 'add'
+    assert stop_time[0].departure == datetime(2012, 11, 20, 11, 15)
+    assert stop_time[1].arrival_status == 'add'
+    assert stop_time[1].arrival == datetime(2012, 11, 20, 11, 45)
+    assert stop_time[1].departure_status == 'add'
+    assert stop_time[1].departure == datetime(2012, 11, 20, 11, 55)
+    assert stop_time[2].arrival_status == 'add'
+    assert stop_time[2].arrival == datetime(2012, 11, 20, 12, 15)
+    assert stop_time[2].departure_status == 'add'
+    assert stop_time[2].departure == datetime(2012, 11, 20, 12, 25)
+    assert stop_time[3].arrival_status == 'add'
+    assert stop_time[3].arrival == datetime(2012, 11, 20, 14, 15)
+    assert stop_time[3].departure_status == 'add'
+    assert stop_time[3].departure == datetime(2012, 11, 20, 14, 25)
+    assert stop_time[4].arrival_status == 'add'
+    assert stop_time[4].arrival == datetime(2012, 11, 20, 15, 15)
+    assert stop_time[4].departure_status == 'add'
+    assert stop_time[4].departure == datetime(2012, 11, 20, 15, 25)
+    assert stop_time[5].arrival_status == 'add'
+    assert stop_time[5].arrival == datetime(2012, 11, 20, 16, 15)
+    assert stop_time[5].departure_status == 'none'
+    assert stop_time[5].departure == datetime(2012, 11, 20, 16, 15)
 
 
 def test_cots_for_added_trip_chain_type_1():
