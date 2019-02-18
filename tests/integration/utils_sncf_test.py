@@ -589,7 +589,7 @@ def check_db_96231_trip_removal():
         assert db_trip_removal.vj.get_start_timestamp() == datetime(2015, 9, 21, 15, 21, tzinfo=utc)
         assert db_trip_removal.vj_id == db_trip_removal.vj.id
         assert db_trip_removal.status == 'delete'
-        assert db_trip_removal.effect == 'SIGNIFICANT_DELAYS'
+        assert db_trip_removal.effect == 'NO_SERVICE'
         assert db_trip_removal.message is None
         # full trip removal : no stop_time to precise
         assert len(db_trip_removal.stop_time_updates) == 0

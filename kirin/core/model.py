@@ -106,7 +106,7 @@ class VehicleJourney(db.Model):
     db.UniqueConstraint(navitia_trip_id, start_timestamp,
                         name='vehicle_journey_navitia_trip_id_start_timestamp_idx')
 
-    def __init__(self, navitia_vj, utc_since_dt, utc_until_dt):
+    def __init__(self, navitia_vj, utc_since_dt, utc_until_dt, vj_start_dt=None):
         """
         Create a circulation (VJ on a given day) from:
             * the navitia VJ (circulation times without a specific day)
@@ -128,26 +128,32 @@ class VehicleJourney(db.Model):
             typically the "since" parameter of the search in navitia.
         :param utc_until_dt: UTC datetime AFTER start of considered circulation,
             typically the "until" parameter of the search in navitia.
+        :param vj_start_dt: UTC datetime of the first stop_time of vj.
         """
         self.id = gen_uuid()
         if 'trip' in navitia_vj and 'id' in navitia_vj['trip']:
             self.navitia_trip_id = navitia_vj['trip']['id']
 
+        # For an added trip, we use vj_start_dt as in flux cots where as for existing one
         # compute start_timestamp (in UTC) from first stop_time, to be the closest AFTER provided utc_since_dt.
-        first_stop_time = navitia_vj.get('stop_times', [{}])[0]
-        start_time = first_stop_time['utc_arrival_time']  # converted in datetime.time() in python wrapper
-        if start_time is None:
-            start_time = first_stop_time['utc_departure_time']  # converted in datetime.time() in python wrapper
-        self.start_timestamp = utc.localize(datetime.datetime.combine(utc_since_dt.date(), start_time))
-        # if since = 20010102T2300 and start_time = 0200, actual start_timestamp = 20010103T0200.
-        # So adding one day to start_timestamp obtained (20010102T0200) if it's before since.
-        if self.start_timestamp < utc_since_dt:
-            self.start_timestamp += timedelta(days=1)
-        # simple consistency check (for now): the start timestamp must also be BEFORE utc_until_dt
-        if utc_until_dt < self.start_timestamp:
-            msg = 'impossible to calculate the circulation date of vj: {} on period [{}, {}]'.format(
-                        navitia_vj.get('id'), utc_since_dt, utc_until_dt)
-            raise ObjectNotFound(msg)
+        if not navitia_vj.get('stop_times', None) and vj_start_dt:
+            self.start_timestamp = vj_start_dt
+        else:
+            first_stop_time = navitia_vj.get('stop_times', [{}])[0]
+            start_time = first_stop_time['utc_arrival_time']  # converted in datetime.time() in python wrapper
+            if start_time is None:
+                start_time = first_stop_time['utc_departure_time']  # converted in datetime.time() in python wrapper
+            self.start_timestamp = utc.localize(datetime.datetime.combine(utc_since_dt.date(), start_time))
+
+            # if since = 20010102T2300 and start_time = 0200, actual start_timestamp = 20010103T0200.
+            # So adding one day to start_timestamp obtained (20010102T0200) if it's before since.
+            if self.start_timestamp < utc_since_dt:
+                self.start_timestamp += timedelta(days=1)
+            # simple consistency check (for now): the start timestamp must also be BEFORE utc_until_dt
+            if utc_until_dt < self.start_timestamp:
+                msg = 'impossible to calculate the circulation date of vj: {} on period [{}, {}]'.format(
+                    navitia_vj.get('id'), utc_since_dt, utc_until_dt)
+                raise ObjectNotFound(msg)
 
         self.navitia_vj = navitia_vj  # Not persisted
 
@@ -191,6 +197,7 @@ class StopTimeUpdate(db.Model, TimestampMixin):
                  dep_status='none', arr_status='none',
                  message=None, order=None):
         self.id = gen_uuid()
+        # Not persisted in the table stop_time_update
         self.navitia_stop = navitia_stop
         self.stop_id = navitia_stop['id']
         self.departure_status = dep_status
@@ -286,14 +293,16 @@ class TripUpdate(db.Model, TimestampMixin):
                                         cascade='all, delete-orphan')
     company_id = db.Column(db.Text, nullable=True)
     effect = db.Column(Db_TripEffect, nullable=True)
+    physical_mode_id = db.Column(db.Text, nullable=True)
 
-    def __init__(self, vj=None, status='none', contributor=None, company_id=None, effect=None):
+    def __init__(self, vj=None, status='none', contributor=None, company_id=None, effect=None, physical_mode_id=None):
         self.created_at = datetime.datetime.utcnow()
         self.vj = vj
         self.status = status
         self.contributor = contributor
         self.company_id = company_id
         self.effect = effect
+        self.physical_mode_id = physical_mode_id
 
     def __repr__(self):
         return '<TripUpdate %r>' % self.vj_id
@@ -302,6 +311,12 @@ class TripUpdate(db.Model, TimestampMixin):
     def find_by_dated_vj(cls, navitia_trip_id, start_timestamp):
         return cls.query.join(VehicleJourney).filter(VehicleJourney.navitia_trip_id == navitia_trip_id,
                                                      VehicleJourney.start_timestamp == start_timestamp).first()
+
+    @classmethod
+    def find_vj_by_period(cls, navitia_trip_id, start_date, end_date):
+        return cls.query.join(VehicleJourney).filter(VehicleJourney.navitia_trip_id == navitia_trip_id,
+                                                     VehicleJourney.start_timestamp >= start_date,
+                                                     VehicleJourney.start_timestamp <= end_date).first()
 
     @classmethod
     def find_by_dated_vjs(cls, id_timestamp_tuples):

@@ -94,3 +94,10 @@ def get_effect_by_stop_time_status(status):
         ModificationType.deleted_for_detour.name: TripEffect.DETOUR.name
     }
     return status_to_effect.get(status, TripEffect.UNKNOWN_EFFECT.name)
+
+
+def get_mode_filter(indicator=None):
+    return {
+        'FERRE': 'physical_mode.id=physical_mode:LongDistanceTrain',
+        'ROUTIER': 'physical_mode.id=physical_mode:Coach'
+    }.get(indicator, 'physical_mode.id=physical_mode:LongDistanceTrain')

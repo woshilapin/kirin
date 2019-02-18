@@ -406,6 +406,7 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=False):
     res_stoptime_updates = []
 
     res.status = new_trip_update.status
+    res.effect = new_trip_update.effect
     if new_trip_update.message is not None or is_new_complete:
         res.message = new_trip_update.message
     res.contributor = new_trip_update.contributor

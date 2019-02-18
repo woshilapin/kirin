@@ -37,7 +37,8 @@ from dateutil import parser, tz
 from flask.globals import current_app
 from pytz import utc
 
-from kirin.abstract_sncf_model_maker import AbstractSNCFKirinModelBuilder, get_navitia_stop_time_sncf
+from kirin.abstract_sncf_model_maker import AbstractSNCFKirinModelBuilder, get_navitia_stop_time_sncf, \
+    TRAIN_ID_FORMAT, SNCF_SEARCH_MARGIN
 # For perf benches:
 # https://artem.krylysov.com/blog/2015/09/29/benchmark-python-json-libraries/
 import ujson
@@ -46,8 +47,8 @@ from kirin.core import model
 from kirin.cots.message_handler import MessageHandler
 from kirin.exceptions import InvalidArguments
 from kirin.utils import record_internal_failure
-from kirin.core.types import TripEffect, ModificationType, get_higher_status, get_effect_by_stop_time_status
-
+from kirin.core.types import TripEffect, ModificationType, get_higher_status, get_effect_by_stop_time_status, \
+    get_mode_filter
 
 DEFAULT_COMPANY_ID = "1187"
 
@@ -205,6 +206,38 @@ def _is_fully_added_pdp(pdp):
     return dep_arr_statuses and all(s == 'CREATION' for s in dep_arr_statuses)
 
 
+def _get_first_stop_datetime(list_pdps, hour_obj_name, skip_fully_added_stops=True):
+    if skip_fully_added_stops:
+        p = next(p for p in list_pdps if not _is_fully_added_pdp(p))
+    else:
+        p = next(p for p in list_pdps)
+
+    str_time = get_value(get_value(p, hour_obj_name), 'dateHeure') if p else None
+    return as_utc_dt(str_time) if str_time else None
+
+
+def _is_added_trip(train_numbers, dict_version, pdps):
+    """
+    Verify if trip in flux cots is a newly added or a modification on a newly added trip
+    :param dict_version: Value of attribut nouvelleVersion in Flux cots
+    :return: True or False
+    """
+    is_added_trip = get_value(dict_version, 'statutOperationnel', 'PERTURBEE') == 'AJOUTEE'
+    if is_added_trip:
+        return True
+    if not is_added_trip:
+        utc_vj_start = _get_first_stop_datetime(pdps, 'horaireVoyageurDepart', skip_fully_added_stops=False)
+        utc_vj_end = _get_first_stop_datetime(reversed(pdps), 'horaireVoyageurArrivee',
+                                              skip_fully_added_stops=False)
+        train_id = TRAIN_ID_FORMAT.format(train_numbers)
+        db_trip_update = model.TripUpdate.find_vj_by_period(train_id,
+                                                            start_date=utc_vj_start-SNCF_SEARCH_MARGIN,
+                                                            end_date=utc_vj_end+SNCF_SEARCH_MARGIN)
+        if db_trip_update and db_trip_update.status == 'add':
+            return True
+    return False
+
+
 class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
 
     def __init__(self, nav, contributor=None):
@@ -237,29 +270,25 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             raise InvalidArguments('No object "nouvelleVersion" available in feed provided')
 
         dict_version = get_value(json, 'nouvelleVersion')
-        vjs = self._get_vjs(dict_version)
+        train_numbers = get_value(dict_version, 'numeroCourse')
+        pdps = _retrieve_interesting_pdp(get_value(dict_version, 'listePointDeParcours'))
+        if not pdps:
+            raise InvalidArguments('invalid json, "listePointDeParcours" has no valid stop_time in '
+                                   'json elt {elt}'.format(elt=ujson.dumps(dict_version)))
 
-        trip_updates = [self._make_trip_update(vj, dict_version) for vj in vjs]
+        is_added_trip = _is_added_trip(train_numbers, dict_version, pdps)
+        vjs = self._get_vjs(train_numbers, pdps, is_added_trip=is_added_trip)
+        trip_updates = [self._make_trip_update(dict_version, vj, is_added_trip=is_added_trip) for vj in vjs]
 
         return trip_updates
 
-    def _get_vjs(self, json_train):
-        train_numbers = get_value(json_train, 'numeroCourse')
-        pdps = _retrieve_interesting_pdp(get_value(json_train, 'listePointDeParcours'))
-        if not pdps:
-            raise InvalidArguments('invalid json, "listePointDeParcours" has no valid stop_time in '
-                                   'json elt {elt}'.format(elt=ujson.dumps(json_train)))
+    def _get_vjs(self, train_numbers,  pdps, is_added_trip=False):
+        utc_vj_start = _get_first_stop_datetime(pdps, 'horaireVoyageurDepart',
+                                                skip_fully_added_stops=not is_added_trip)
+        utc_vj_end = _get_first_stop_datetime(reversed(pdps), 'horaireVoyageurArrivee',
+                                              skip_fully_added_stops=not is_added_trip)
 
-        # retrieve base-schedule's first departure and last arrival
-        def get_first_not_fully_added(list_pdps, hour_obj_name):
-            p = next(p for p in list_pdps if not _is_fully_added_pdp(p))
-            str_time = get_value(get_value(p, hour_obj_name), 'dateHeure') if p else None
-            return as_utc_dt(str_time) if str_time else None
-
-        utc_vj_start = get_first_not_fully_added(pdps, 'horaireVoyageurDepart')
-        utc_vj_end = get_first_not_fully_added(reversed(pdps), 'horaireVoyageurArrivee')
-
-        return self._get_navitia_vjs(train_numbers, utc_vj_start, utc_vj_end)
+        return self._get_navitia_vjs(train_numbers, utc_vj_start, utc_vj_end, is_added_trip=is_added_trip)
 
     def _record_and_log(self, logger, log_str):
         log_dict = {'log': log_str}
@@ -282,7 +311,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             raise InvalidArguments('invalid cots: stop_point\'s({}) time is not consistent'
                                    .format(pdp_code))
 
-    def _make_trip_update(self, vj, json_train):
+    def _make_trip_update(self, json_train, vj, is_added_trip=False):
         """
         create the new TripUpdate object
         Following the COTS spec: https://github.com/CanalTP/kirin/blob/master/documentation/cots_connector.md
@@ -305,19 +334,20 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             trip_update.effect = TripEffect.NO_SERVICE.name
             return trip_update
 
-        elif trip_status == 'AJOUTEE':
+        elif is_added_trip:
             # the trip is created from scratch
-            # not handled yet
-            self._record_and_log(logger, 'nouvelleVersion/statutOperationnel == "AJOUTEE" is not handled (yet)')
             trip_update.effect = TripEffect.ADDITIONAL_SERVICE.name
-            return trip_update
+            trip_update.status = ModificationType.add.name
+            cots_physical_mode = get_value(json_train, 'indicateurFer', nullable=True)
+            trip_update.physical_mode_id = self._get_navitia_physical_mode(cots_physical_mode)
 
         # all other status is considered an 'update' of the trip_update and effect is calculated
         # from stop_time status list. This part is also done in kraken and is to be deleted later
         # Ordered stop_time status= 'nochange', 'add', 'delete', 'update'
         # 'nochange' or 'update' -> SIGNIFICANT_DELAYS, add -> MODIFIED_SERVICE, delete = DETOUR
-        trip_update.status = ModificationType.update.name
-        trip_update.effect = TripEffect.MODIFIED_SERVICE.name
+        else:
+            trip_update.status = ModificationType.update.name
+            trip_update.effect = TripEffect.MODIFIED_SERVICE.name
 
         # Initialize stop_time status to nochange
         highest_st_status = ModificationType.none.name
@@ -424,7 +454,8 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             last_stop_time_depart = projected_stop_time['Depart']
 
         # Calculates effect from stop_time status list(this work is also done in kraken and has to be deleted)
-        trip_update.effect = get_effect_by_stop_time_status(highest_st_status)
+        if trip_update.effect == TripEffect.MODIFIED_SERVICE.name:
+            trip_update.effect = get_effect_by_stop_time_status(highest_st_status)
         return trip_update
 
     def _get_navitia_stop_point(self, pdp, nav_vj):
@@ -476,4 +507,21 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
         })
         if companies:
             return companies[0].get("id", None)
+        return None
+
+    def _get_navitia_physical_mode(self, indicator=None):
+        """
+        Get a navitia physical_mode for the codes present in COTS ("indicateurFer" : FERRE / ROUTIER)
+        If the physical_mode doesn't exist in navitia, another request is made default physical_mode
+        with filter=physical_mode.id=physical_mode:LongDistanceTrain
+        """
+        return self._request_navitia_physical_mode(indicator) or self._request_navitia_physical_mode()
+
+    def _request_navitia_physical_mode(self, indicator=None):
+        physical_modes = self.navitia.physical_modes(q={
+            'filter': get_mode_filter(indicator),
+            'count': '1'
+        })
+        if physical_modes:
+            return physical_modes[0].get("id", None)
         return None
