@@ -227,18 +227,20 @@ def _is_added_trip(train_numbers, dict_version, pdps):
     :return: True or False
     """
     is_added_trip = get_value(dict_version, 'statutOperationnel', 'PERTURBEE') == 'AJOUTEE'
-    if is_added_trip:
+
+    # We have to verify if the trip exist in database
+    utc_vj_start = _get_first_stop_datetime(pdps, 'horaireVoyageurDepart', skip_fully_added_stops=False)
+    utc_vj_end = _get_first_stop_datetime(reversed(pdps), 'horaireVoyageurArrivee',
+                                          skip_fully_added_stops=False)
+    train_id = TRAIN_ID_FORMAT.format(train_numbers)
+    db_trip_update = model.TripUpdate.find_vj_by_period(train_id,
+                                                        start_date=utc_vj_start-SNCF_SEARCH_MARGIN,
+                                                        end_date=utc_vj_end+SNCF_SEARCH_MARGIN)
+    trip_in_db = db_trip_update and db_trip_update.status == 'add'
+    if is_added_trip and trip_in_db:
+        raise InvalidArguments('Trip with id {} for Insertion already exist in database'.format(train_numbers))
+    if is_added_trip or trip_in_db:
         return True
-    if not is_added_trip:
-        utc_vj_start = _get_first_stop_datetime(pdps, 'horaireVoyageurDepart', skip_fully_added_stops=False)
-        utc_vj_end = _get_first_stop_datetime(reversed(pdps), 'horaireVoyageurArrivee',
-                                              skip_fully_added_stops=False)
-        train_id = TRAIN_ID_FORMAT.format(train_numbers)
-        db_trip_update = model.TripUpdate.find_vj_by_period(train_id,
-                                                            start_date=utc_vj_start-SNCF_SEARCH_MARGIN,
-                                                            end_date=utc_vj_end+SNCF_SEARCH_MARGIN)
-        if db_trip_update and db_trip_update.status == 'add':
-            return True
     return False
 
 

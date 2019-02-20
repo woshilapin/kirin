@@ -1217,3 +1217,22 @@ def test_cots_for_added_trip_chain_type_3():
         assert trips[0].company_id == 'company:OCE:SN'
         stop_times = StopTimeUpdate.query.all()
         assert len(stop_times) == 0
+
+
+def test_cots_add_same_trip_more_than_once():
+    """
+     1. A simple trip add with 5 stop_times all existing in navitia
+     2. add the same trip as above
+     3. add the same trip as above
+    """
+    cots_add_file = get_fixture_data('cots_train_151515_added_trip.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 1
+        check_add_trip_151515()
+
+    cots_add_file = get_fixture_data('cots_train_151515_added_trip.json')
+    res, status = api_post('/cots', check=False, data=cots_add_file)
+    assert status == 400
+    assert 'Trip with id 151515 for Insertion already exist in database' in res.get('error')
