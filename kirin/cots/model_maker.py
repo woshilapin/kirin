@@ -236,9 +236,11 @@ def _is_added_trip(train_numbers, dict_version, pdps):
     db_trip_update = model.TripUpdate.find_vj_by_period(train_id,
                                                         start_date=utc_vj_start-SNCF_SEARCH_MARGIN,
                                                         end_date=utc_vj_end+SNCF_SEARCH_MARGIN)
-    trip_in_db = db_trip_update and db_trip_update.status == 'add'
+    if db_trip_update and db_trip_update.status == ModificationType.delete.name:
+        raise InvalidArguments('Invalid action, trip {} already deleted in database'.format(train_numbers))
+    trip_in_db = db_trip_update and db_trip_update.status == ModificationType.add.name
     if is_added_trip and trip_in_db:
-        raise InvalidArguments('Trip with id {} for Insertion already exist in database'.format(train_numbers))
+        raise InvalidArguments('Invalid action, trip {} already exist in database'.format(train_numbers))
     if is_added_trip or trip_in_db:
         return True
     return False
