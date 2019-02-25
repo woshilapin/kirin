@@ -1115,9 +1115,10 @@ def check_add_trip_151515_with_delay_and_an_add():
 
 def test_cots_for_added_trip_chain_type_1():
     """
-     1. A simple trip add with 5 stop_times all existing in navitia
-     2. Trip modified with 15 minutes delay in each stop_times
-     3. Return to normal
+    Test for case 11 from the file "Enchainement Cas_API_20181010.xlsx"
+    1. A simple trip add with 5 stop_times all existing in navitia
+    2. Trip modified with 15 minutes delay in each stop_times
+    3. Return to normal
     """
     cots_add_file = get_fixture_data('cots_train_151515_added_trip.json')
     res = api_post('/cots', data=cots_add_file)
@@ -1143,10 +1144,11 @@ def test_cots_for_added_trip_chain_type_1():
 
 def test_cots_for_added_trip_chain_type_2():
     """
-     1. A simple trip add with 5 stop_times all existing in navitia
-     2. Trip modified with 15 minutes delay in each stop_times
-     3. Trip modified with a stop_time deleted in the above flux cots
-     4. Return to normal
+    Test for case 12 from the file "Enchainement Cas_API_20181010.xlsx"
+    1. A simple trip add with 5 stop_times all existing in navitia
+    2. Trip modified with 15 minutes delay in each stop_times
+    3. Trip modified with a stop_time deleted in the above flux cots
+    4. Return to normal
     """
     cots_add_file = get_fixture_data('cots_train_151515_added_trip.json')
     res = api_post('/cots', data=cots_add_file)
@@ -1179,11 +1181,12 @@ def test_cots_for_added_trip_chain_type_2():
 
 def test_cots_for_added_trip_chain_type_3():
     """
-     1. A simple trip add with 5 stop_times all existing in navitia
-     2. Trip modified with 15 minutes delay in each stop_times
-     3. Trip modified with a new stop_time added in the above flux cots
-     4. Delete the trip with "statutCirculationOPE": "SUPPRESSION" in all stop_times
-     """
+    Test for case 2 from the file "Enchainement Cas_API_20181010.xlsx"
+    1. A simple trip add with 5 stop_times all existing in navitia
+    2. Trip modified with 15 minutes delay in each stop_times
+    3. Trip modified with a new stop_time added in the above flux cots
+    4. Delete the trip with "statutCirculationOPE": "SUPPRESSION" in all stop_times
+    """
     cots_add_file = get_fixture_data('cots_train_151515_added_trip.json')
     res = api_post('/cots', data=cots_add_file)
     assert res == 'OK'

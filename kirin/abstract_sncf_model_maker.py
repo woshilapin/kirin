@@ -39,13 +39,16 @@ from kirin.exceptions import ObjectNotFound
 from abc import ABCMeta
 import six
 from kirin.core import model
+from enum import Enum
 
 TRAIN_ID_FORMAT = 'OCE:SN:{}'
 SNCF_SEARCH_MARGIN = timedelta(hours=1)
-ADDED_TRIP = 'AJOUTEE'
-DELETED_TRIP = 'SUPPRIMEE'
-MODIFIED_TRIP = 'PERTURBEE'
 
+
+class TripStatus(Enum):
+    AJOUTEE = 1,
+    SUPPRIMEE = 2,
+    PERTURBEE = 3
 
 
 def make_navitia_empty_vj(headsign):

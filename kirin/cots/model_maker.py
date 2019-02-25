@@ -38,7 +38,7 @@ from flask.globals import current_app
 from pytz import utc
 
 from kirin.abstract_sncf_model_maker import AbstractSNCFKirinModelBuilder, get_navitia_stop_time_sncf, \
-    TRAIN_ID_FORMAT, SNCF_SEARCH_MARGIN, ADDED_TRIP, MODIFIED_TRIP, DELETED_TRIP
+    TRAIN_ID_FORMAT, SNCF_SEARCH_MARGIN, TripStatus
 # For perf benches:
 # https://artem.krylysov.com/blog/2015/09/29/benchmark-python-json-libraries/
 import ujson
@@ -226,7 +226,7 @@ def _is_added_trip(train_numbers, dict_version, pdps):
     :param dict_version: Value of attribut nouvelleVersion in Flux cots
     :return: True or False
     """
-    cots_trip_status = get_value(dict_version, 'statutOperationnel', MODIFIED_TRIP)
+    cots_trip_status = get_value(dict_version, 'statutOperationnel',  TripStatus.PERTURBEE.name)
 
     # We have to verify if the trip exists in database
     utc_vj_start = _get_first_stop_datetime(pdps, 'horaireVoyageurDepart', skip_fully_added_stops=False)
@@ -238,14 +238,20 @@ def _is_added_trip(train_numbers, dict_version, pdps):
                                                           end_date=utc_vj_end+SNCF_SEARCH_MARGIN)
 
     if trip_added_in_db:
-        if cots_trip_status == ADDED_TRIP and trip_added_in_db.status == ModificationType.add.name:
+        # Raise exception on not permitted actions
+        # No addition multiple times
+        # No update or delete on trip already deleted.
+        if cots_trip_status == TripStatus.AJOUTEE.name and trip_added_in_db.status == ModificationType.add.name:
             raise InvalidArguments('Invalid action, trip {} can not be added multiple times'.format(train_numbers))
-        elif cots_trip_status != ADDED_TRIP and trip_added_in_db.status == ModificationType.delete.name:
+        elif cots_trip_status != TripStatus.AJOUTEE.name and trip_added_in_db.status == ModificationType.delete.name:
             raise InvalidArguments('Invalid action, trip {} already deleted in database'.format(train_numbers))
-        return True
-    elif cots_trip_status == ADDED_TRIP:
-        return True
-    return False
+
+        # Can we handle as an added trip
+        return (trip_added_in_db.status == ModificationType.add.name) or \
+               (cots_trip_status == TripStatus.AJOUTEE.name and
+                trip_added_in_db.status == ModificationType.delete.name)
+    else:
+        return cots_trip_status == TripStatus.AJOUTEE.name
 
 
 class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
@@ -336,7 +342,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
 
         trip_status = get_value(json_train, 'statutOperationnel')
 
-        if trip_status == DELETED_TRIP:
+        if trip_status == TripStatus.SUPPRIMEE.name:
             # the whole trip is deleted
             trip_update.status = ModificationType.delete.name
             trip_update.stop_time_updates = []
