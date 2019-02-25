@@ -42,6 +42,10 @@ from kirin.core import model
 
 TRAIN_ID_FORMAT = 'OCE:SN:{}'
 SNCF_SEARCH_MARGIN = timedelta(hours=1)
+ADDED_TRIP = 'AJOUTEE'
+DELETED_TRIP = 'SUPPRIMEE'
+MODIFIED_TRIP = 'PERTURBEE'
+
 
 
 def make_navitia_empty_vj(headsign):

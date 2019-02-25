@@ -1234,7 +1234,7 @@ def test_cots_add_same_trip_more_than_once():
     cots_add_file = get_fixture_data('cots_train_151515_added_trip.json')
     res, status = api_post('/cots', check=False, data=cots_add_file)
     assert status == 400
-    assert 'Invalid action, trip 151515 already exist in database' in res.get('error')
+    assert 'Invalid action, trip 151515 can not be added multiple times' in res.get('error')
 
 
 def test_cots_delete_added_trip_more_than_once():
@@ -1242,6 +1242,7 @@ def test_cots_delete_added_trip_more_than_once():
      1. A simple trip add with 5 stop_times all existing in navitia
      2. delete the trip recently added
      3. re-delete the trip recently added and then deleted
+     4. Adding back the same trip after the delete
     """
     cots_add_file = get_fixture_data('cots_train_151515_added_trip.json')
     res = api_post('/cots', data=cots_add_file)
@@ -1267,3 +1268,10 @@ def test_cots_delete_added_trip_more_than_once():
     res, status = api_post('/cots', check=False, data=cots_delete_file)
     assert status == 400
     assert 'Invalid action, trip 151515 already deleted in database' in res.get('error')
+
+    cots_add_file = get_fixture_data('cots_train_151515_added_trip.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 4
+        check_add_trip_151515()

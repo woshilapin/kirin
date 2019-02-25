@@ -38,7 +38,7 @@ from flask.globals import current_app
 from pytz import utc
 
 from kirin.abstract_sncf_model_maker import AbstractSNCFKirinModelBuilder, get_navitia_stop_time_sncf, \
-    TRAIN_ID_FORMAT, SNCF_SEARCH_MARGIN
+    TRAIN_ID_FORMAT, SNCF_SEARCH_MARGIN, ADDED_TRIP, MODIFIED_TRIP, DELETED_TRIP
 # For perf benches:
 # https://artem.krylysov.com/blog/2015/09/29/benchmark-python-json-libraries/
 import ujson
@@ -222,26 +222,28 @@ def _get_first_stop_datetime(list_pdps, hour_obj_name, skip_fully_added_stops=Tr
 
 def _is_added_trip(train_numbers, dict_version, pdps):
     """
-    Verify if trip in flux cots is a newly added or a modification on a newly added trip
+    Verify if trip in flux cots is a newly added and permitted possible actions
     :param dict_version: Value of attribut nouvelleVersion in Flux cots
     :return: True or False
     """
-    is_added_trip = get_value(dict_version, 'statutOperationnel', 'PERTURBEE') == 'AJOUTEE'
+    cots_trip_status = get_value(dict_version, 'statutOperationnel', MODIFIED_TRIP)
 
-    # We have to verify if the trip exist in database
+    # We have to verify if the trip exists in database
     utc_vj_start = _get_first_stop_datetime(pdps, 'horaireVoyageurDepart', skip_fully_added_stops=False)
     utc_vj_end = _get_first_stop_datetime(reversed(pdps), 'horaireVoyageurArrivee',
                                           skip_fully_added_stops=False)
     train_id = TRAIN_ID_FORMAT.format(train_numbers)
-    db_trip_update = model.TripUpdate.find_vj_by_period(train_id,
-                                                        start_date=utc_vj_start-SNCF_SEARCH_MARGIN,
-                                                        end_date=utc_vj_end+SNCF_SEARCH_MARGIN)
-    if db_trip_update and db_trip_update.status == ModificationType.delete.name:
-        raise InvalidArguments('Invalid action, trip {} already deleted in database'.format(train_numbers))
-    trip_in_db = db_trip_update and db_trip_update.status == ModificationType.add.name
-    if is_added_trip and trip_in_db:
-        raise InvalidArguments('Invalid action, trip {} already exist in database'.format(train_numbers))
-    if is_added_trip or trip_in_db:
+    trip_added_in_db = model.TripUpdate.find_vj_by_period(train_id,
+                                                          start_date=utc_vj_start-SNCF_SEARCH_MARGIN,
+                                                          end_date=utc_vj_end+SNCF_SEARCH_MARGIN)
+
+    if trip_added_in_db:
+        if cots_trip_status == ADDED_TRIP and trip_added_in_db.status == ModificationType.add.name:
+            raise InvalidArguments('Invalid action, trip {} can not be added multiple times'.format(train_numbers))
+        elif cots_trip_status != ADDED_TRIP and trip_added_in_db.status == ModificationType.delete.name:
+            raise InvalidArguments('Invalid action, trip {} already deleted in database'.format(train_numbers))
+        return True
+    elif cots_trip_status == ADDED_TRIP:
         return True
     return False
 
@@ -324,7 +326,6 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
         create the new TripUpdate object
         Following the COTS spec: https://github.com/CanalTP/kirin/blob/master/documentation/cots_connector.md
         """
-        logger = logging.getLogger(__name__)
         trip_update = model.TripUpdate(vj=vj)
         trip_update.contributor = self.contributor
         trip_message_id = get_value(json_train, 'idMotifInterneReference', nullable=True)
@@ -335,7 +336,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
 
         trip_status = get_value(json_train, 'statutOperationnel')
 
-        if trip_status == 'SUPPRIMEE':
+        if trip_status == DELETED_TRIP:
             # the whole trip is deleted
             trip_update.status = ModificationType.delete.name
             trip_update.stop_time_updates = []
