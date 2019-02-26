@@ -238,7 +238,7 @@ def _is_added_trip(train_numbers, dict_version, pdps):
                                                           end_date=utc_vj_end+SNCF_SEARCH_MARGIN)
 
     if trip_added_in_db:
-        # Raise exception on not permitted actions
+        # Raise exception on forbidden / inconsistent actions
         # No addition multiple times
         # No update or delete on trip already deleted.
         if cots_trip_status == TripStatus.AJOUTEE.name and trip_added_in_db.status == ModificationType.add.name:
@@ -246,7 +246,7 @@ def _is_added_trip(train_numbers, dict_version, pdps):
         elif cots_trip_status != TripStatus.AJOUTEE.name and trip_added_in_db.status == ModificationType.delete.name:
             raise InvalidArguments('Invalid action, trip {} already deleted in database'.format(train_numbers))
 
-        # Can we handle as an added trip
+        # Should be handled as an added trip
         return (trip_added_in_db.status == ModificationType.add.name) or \
                (cots_trip_status == TripStatus.AJOUTEE.name and
                 trip_added_in_db.status == ModificationType.delete.name)

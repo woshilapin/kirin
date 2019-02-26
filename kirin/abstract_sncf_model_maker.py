@@ -46,9 +46,9 @@ SNCF_SEARCH_MARGIN = timedelta(hours=1)
 
 
 class TripStatus(Enum):
-    AJOUTEE = 1,
-    SUPPRIMEE = 2,
-    PERTURBEE = 3
+    AJOUTEE = 1,    # Added
+    SUPPRIMEE = 2,  # Deleted
+    PERTURBEE = 3   # Modified or Impacted
 
 
 def make_navitia_empty_vj(headsign):
