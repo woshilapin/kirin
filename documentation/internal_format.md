@@ -41,6 +41,7 @@ contributor | String, Optional | Identifier of the realtime connector. It must b
 company_id | String, Optional | Identifier of the transport operator found in Navitia for this trip.
 stop_time_updates | List | List of `StopTimeUpdate` provided by this bloc of data
 effect | Enum, optional | Effect to be displayed in navitia (Possible values are `NO_SERVICE`, `REDUCED_SERVICE`, `SIGNIFICANT_DELAYS`, `DETOUR`, `ADDITIONAL_SERVICE`, `MODIFIED_SERVICE`, `OTHER_EFFECT`, `UNKNOWN_EFFECT`, `STOP_MOVED`)
+physical_mode_id | String, Optional | Identifier of the physical mode found in Navitia for this trip
 
 ### VehicleJourney
 Property | TYpe | Description
