@@ -38,7 +38,9 @@ physical_mode_id | *nouvelleVersion/indicateurFer* | Id of the physical mode ass
 
 **Setting the trip effect**
 
-Effect is set to `ADDITIONAL_SERVICE` when the trip status is `add` and `NO_SERVICE` when the trip status is `delete`. Otherwise, the trip effect is calculated based on the status at the stops of the Trip in the following order:
+Effect is set to `ADDITIONAL_SERVICE` when the trip status is `add` and `NO_SERVICE` when the trip status is `delete`. 
+
+Otherwise, the trip effect is calculated based on the statuses at the stops of the Trip in the following order:
 * the effect is set to `DETOUR`, when the status at some stop is `added_for_detour` or `delete_for_detour`
 * otherwise, the effect is set to `REDUCED_SERVICE`, when the status at some stop is `delete`
 * otherwise, the effect is set to `MODIFIED_SERVICE`, when the status at some stop is `add`
@@ -116,12 +118,8 @@ For the **arrival_delay**, the same rule applies with the *sourceHoraireProjeteA
 
 The departure/arrival status at a stop of the `VehicleJourney` follows the trip status when the latter is set to `add` or `delete`. Otherwise, the status may vary depending on the departure/arrival time updates or delays provided at the level of the station.
 
-The departure status is resolved with regard to the field *horaireVoyageurDepart/statutCirculationOPE*:
+The departure (resp. arrival) status is resolved with regard to the field *horaireVoyageurDepart/statutCirculationOPE* (resp. *horaireVoyageurArrivee/statutCirculationOPE*):
 * status is set to `add` when the field value is `CREATION`, `added_for_detour` when the field value is `DETOURNEMENT`, `delete` when the field value is `SUPPRESSION`, `deleted_for_detour` when the field value is `SUPPRESSION_DETOURNEMENT` and `update` otherwise.
-* status is set to `none` when the departure delay is set to 0 or when this is the last stop of the `VehicleJourney`.
+* status is set to `none` when the departure (resp. arrival) delay is set to 0 or when this is the last (resp. first) stop of the `VehicleJourney`.
 
-The arrival status is resolved with regard to the field *horaireVoyageurArrivee/statutCirculationOPE*:
-* status is set to `add` when the field value is `CREATION`, `added_for_detour` when the field value is `DETOURNEMENT`, `delete` when the field value is `SUPPRESSION`, `deleted_for_detour` when the field value is `SUPPRESSION_DETOURNEMENT` and `update` otherwise.
-* status is set to `none` when the arrival delay is set to 0 or when this is the first stop of the `VehicleJourney`.
-
-Note that in case of a sequence of COTS streams concerning the same trip, added or deleted stops always keep their status in later instances. For example, given a COTS stream specifying a new destination for a trip (last stop with a *horaireVoyageurArrivee/statutCirculationOPE* set to `CREATION`), if a later stream updates the delay or even adds more stops, the previously destination stop will still be seen as new.
+Note that in case of a sequence of COTS streams concerning the same trip, added or deleted stops always keep their statuses in the following feeds. For example, given a COTS stream specifying a new destination for a trip (last stop with a *horaireVoyageurArrivee/statutCirculationOPE* set to `CREATION`), if a later stream updates the delay or even adds more stops, the previously added destination stop will still have its *horaireVoyageurArrivee/statutCirculationOPE* set to `CREATION`.
