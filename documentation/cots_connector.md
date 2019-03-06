@@ -27,12 +27,25 @@ A COTS feed can udpate more than one `VehicleJourney`, see below for the mapping
 
 Kirin property | COTS object | Comment/Mapping rule
 --- | --- | ---
-vj_id | | Id of the `VehicleJourney` in Navitia updated by this `TripUpdate`. See below for the mapping method.
+vj_id |  | Id of the `VehicleJourney` in Navitia updated by this `TripUpdate`. See below for the mapping method.
 status | *nouvelleVersion/statutOperationnel* | Status is set to `add` when value is `AJOUTEE`, `delete` when value is `SUPPRIMEE`, and `update` in every other case.
 message | *nouvelleVersion/idMotifInterneReference* | Reference to the field `labelExt` of the *parametreLIV* feed having the same `id`. If no matching `id` is found, the message is left empty.
 contributor |  | Fixed value specified in the configuration of Kirin.
-company_id |  | Id of the transport operator that runs the `VehicleJourney` in Navitia. If no associated operator is found in Navitia, then the id of the SNCF is used by default. See below for the mapping method.
+company_id | *nouvelleVersion/codeCompagnieTransporteur* | Id of the transport operator that runs the `VehicleJourney` in Navitia. If no associated operator is found in Navitia, then the id of the SNCF is used by default. See below for the mapping method.
 stop_time_updates |  | List of arrival/departure time updates at stops for this trip, see `StopTimeUpdates` below.
+effect |  | See below for the mapping method.
+physical_mode_id | *nouvelleVersion/indicateurFer* | Id of the physical mode associated with the `VehicleJourney` in Navitia. See below for the mapping method.
+
+**Setting the trip effect**
+
+Effect is set to `ADDITIONAL_SERVICE` when the trip status is `add` and `NO_SERVICE` when the trip status is `delete`. 
+
+Otherwise, the trip effect is calculated based on the statuses at the stops of the Trip in the following order:
+* the effect is set to `DETOUR`, when the status at some stops is `added_for_detour` or `delete_for_detour`
+* otherwise, the effect is set to `REDUCED_SERVICE`, when the status at some stop is `delete`
+* otherwise, the effect is set to `MODIFIED_SERVICE`, when the status at some stop is `add`
+* otherwise, the effect is set to `SIGNIFICANT_DELAYS`, when the status at some stop is `update`
+* otherwise, the effect is set to `UNKNOWN_EFFECT`.
 
 ### VehicleJourney
 #### Searching for corresponding VehicleJourneys in Navitia
@@ -53,10 +66,12 @@ When base_schedule information is modified with adapted data (when a strike is s
 
 **Use of *nouvelleVersion/indicateurFer***
 
-*nouvelleVersion/indicateurFer* should be used to narrow the research to rail or road trips. All the physical modes in Navitia are listed in [NTFS specifications](https://github.com/CanalTP/navitia/blob/dev/documentation/ntfs/ntfs_fr.md#physical_modestxt-requis).
+In case of an updated trip, *nouvelleVersion/indicateurFer* should be used to narrow the research to rail or road trips in Navitia. All the physical modes in Navitia are listed in [NTFS specifications](https://github.com/CanalTP/navitia/blob/dev/documentation/ntfs/ntfs_fr.md#physical_modestxt-requis).
 
 When *nouvelleVersion/indicateurFer* is set to `FERRE`, use only corresponding physical modes : LocalTrain, LongDistanceTrain, Metro, RapidTransit, RailShuttle, Train, Tramway.
 Otherwise, the previously listed modes should be removed.
+
+In case of a trip addition, when the *nouvelleVersion/indicateurFer* is set to `FERRE`, the default physical mode is `Train`. Otherwise, the COTS stream is ignored. The creation of road trips will be covered in a later version of the connector.
 
 **Use of *nouvelleVersion/codeCompagnieTransporteur***
 
@@ -103,10 +118,8 @@ For the **arrival_delay**, the same rule applies with the *sourceHoraireProjeteA
 
 The departure/arrival status at a stop of the `VehicleJourney` follows the trip status when the latter is set to `add` or `delete`. Otherwise, the status may vary depending on the departure/arrival time updates or delays provided at the level of the station.
 
-The departure status is resolved with regard to the field *horaireVoyageurDepart/statutCirculationOPE*:
-* status is set to `add` when the field value is `CREATION`, `delete` when the field value is `SUPPRESSION` or `SUPPRESSION_DETOURNEMENT` and `update` otherwise.
-* status is set to `none` when the departure delay is set to 0 or when this is the last stop of the `VehicleJourney`.
+The departure (resp. arrival) status is resolved with regard to the field *horaireVoyageurDepart/statutCirculationOPE* (resp. *horaireVoyageurArrivee/statutCirculationOPE*):
+* status is set to `add` when the field value is `CREATION`, `added_for_detour` when the field value is `DETOURNEMENT`, `delete` when the field value is `SUPPRESSION`, `deleted_for_detour` when the field value is `SUPPRESSION_DETOURNEMENT` and `update` otherwise.
+* status is set to `none` when the departure (resp. arrival) delay is set to 0 or when this is the last (resp. first) stop of the `VehicleJourney`.
 
-The arrival status is resolved with regard to the field *horaireVoyageurArrivee/statutCirculationOPE*:
-* status is set to `add` when the field value is `CREATION`, `delete` when the field value is `SUPPRESSION` or `SUPPRESSION_DETOURNEMENT` and `update` otherwise.
-* status is set to `none` when the arrival delay is set to 0 or when this is the first stop of the `VehicleJourney`.
+Note that in case of a sequence of COTS streams concerning the same trip, added or deleted stops always keep their statuses in the following feeds. For example, given a COTS stream specifying a new destination for a trip (last stop with a *horaireVoyageurArrivee/statutCirculationOPE* set to `CREATION`), if a later stream updates the delay or even adds more stops, the previously added destination stop will still have its *horaireVoyageurArrivee/statutCirculationOPE* set to `CREATION`.
