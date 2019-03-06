@@ -1115,9 +1115,10 @@ def check_add_trip_151515_with_delay_and_an_add():
 
 def test_cots_for_added_trip_chain_type_1():
     """
-     1. A simple trip add with 5 stop_times all existing in navitia
-     2. Trip modified with 15 minutes delay in each stop_times
-     3. Return to normal
+    Test for case 11 from the file "Enchainement Cas_API_20181010.xlsx"
+    1. A simple trip add with 5 stop_times all existing in navitia
+    2. Trip modified with 15 minutes delay in each stop_times
+    3. Return to normal
     """
     cots_add_file = get_fixture_data('cots_train_151515_added_trip.json')
     res = api_post('/cots', data=cots_add_file)
@@ -1143,10 +1144,11 @@ def test_cots_for_added_trip_chain_type_1():
 
 def test_cots_for_added_trip_chain_type_2():
     """
-     1. A simple trip add with 5 stop_times all existing in navitia
-     2. Trip modified with 15 minutes delay in each stop_times
-     3. Trip modified with a stop_time deleted in the above flux cots
-     4. Return to normal
+    Test for case 12 from the file "Enchainement Cas_API_20181010.xlsx"
+    1. A simple trip add with 5 stop_times all existing in navitia
+    2. Trip modified with 15 minutes delay in each stop_times
+    3. Trip modified with a stop_time deleted in the above flux cots
+    4. Return to normal
     """
     cots_add_file = get_fixture_data('cots_train_151515_added_trip.json')
     res = api_post('/cots', data=cots_add_file)
@@ -1179,11 +1181,12 @@ def test_cots_for_added_trip_chain_type_2():
 
 def test_cots_for_added_trip_chain_type_3():
     """
-     1. A simple trip add with 5 stop_times all existing in navitia
-     2. Trip modified with 15 minutes delay in each stop_times
-     3. Trip modified with a new stop_time added in the above flux cots
-     4. Delete the trip with "statutCirculationOPE": "SUPPRESSION" in all stop_times
-     """
+    Test for case 2 from the file "Enchainement Cas_API_20181010.xlsx"
+    1. A simple trip add with 5 stop_times all existing in navitia
+    2. Trip modified with 15 minutes delay in each stop_times
+    3. Trip modified with a new stop_time added in the above flux cots
+    4. Delete the trip with "statutCirculationOPE": "SUPPRESSION" in all stop_times
+    """
     cots_add_file = get_fixture_data('cots_train_151515_added_trip.json')
     res = api_post('/cots', data=cots_add_file)
     assert res == 'OK'
@@ -1217,3 +1220,61 @@ def test_cots_for_added_trip_chain_type_3():
         assert trips[0].company_id == 'company:OCE:SN'
         stop_times = StopTimeUpdate.query.all()
         assert len(stop_times) == 0
+
+
+def test_cots_add_same_trip_more_than_once():
+    """
+     1. A simple trip add with 5 stop_times all existing in navitia
+     2. add the same trip as above
+    """
+    cots_add_file = get_fixture_data('cots_train_151515_added_trip.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 1
+        check_add_trip_151515()
+
+    cots_add_file = get_fixture_data('cots_train_151515_added_trip.json')
+    res, status = api_post('/cots', check=False, data=cots_add_file)
+    assert status == 400
+    assert 'Invalid action, trip 151515 can not be added multiple times' in res.get('error')
+
+
+def test_cots_delete_added_trip_more_than_once():
+    """
+     1. A simple trip add with 5 stop_times all existing in navitia
+     2. delete the trip recently added
+     3. re-delete the trip recently added and then deleted
+     4. Adding back the same trip after the delete
+    """
+    cots_add_file = get_fixture_data('cots_train_151515_added_trip.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 1
+        check_add_trip_151515()
+
+    cots_delete_file = get_fixture_data('cots_train_151515_deleted_trip_with_delay_and_stop_time_added.json')
+    res = api_post('/cots', data=cots_delete_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 2
+        trips = TripUpdate.query.all()
+        assert len(trips) == 1
+        assert trips[0].status == 'delete'
+        assert trips[0].effect == 'NO_SERVICE'
+        assert trips[0].company_id == 'company:OCE:SN'
+        stop_times = StopTimeUpdate.query.all()
+        assert len(stop_times) == 0
+
+    cots_delete_file = get_fixture_data('cots_train_151515_deleted_trip_with_delay_and_stop_time_added.json')
+    res, status = api_post('/cots', check=False, data=cots_delete_file)
+    assert status == 400
+    assert 'Invalid action, trip 151515 already deleted in database' in res.get('error')
+
+    cots_add_file = get_fixture_data('cots_train_151515_added_trip.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 4
+        check_add_trip_151515()
