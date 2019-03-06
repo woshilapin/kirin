@@ -41,7 +41,7 @@ physical_mode_id | *nouvelleVersion/indicateurFer* | Id of the physical mode ass
 Effect is set to `ADDITIONAL_SERVICE` when the trip status is `add` and `NO_SERVICE` when the trip status is `delete`. 
 
 Otherwise, the trip effect is calculated based on the statuses at the stops of the Trip in the following order:
-* the effect is set to `DETOUR`, when the status at some stop is `added_for_detour` or `delete_for_detour`
+* the effect is set to `DETOUR`, when the status at some stops is `added_for_detour` or `delete_for_detour`
 * otherwise, the effect is set to `REDUCED_SERVICE`, when the status at some stop is `delete`
 * otherwise, the effect is set to `MODIFIED_SERVICE`, when the status at some stop is `add`
 * otherwise, the effect is set to `SIGNIFICANT_DELAYS`, when the status at some stop is `update`
