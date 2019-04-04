@@ -1301,3 +1301,23 @@ def test_cots_add_trip_in_coach():
         assert trips[0].physical_mode_id == 'physical_mode:Coach'
         stop_times = StopTimeUpdate.query.all()
         assert len(stop_times) == 5
+
+
+def test_cots_add_trip_with_unknown_mode():
+    """
+     1. A simple trip add with 5 stop_times all existing in navitia with "indicateurFer": "TOTO"
+     kirin uses physical_mode:LongDistanceTrain as default physical_mode if it exists in kraken
+    """
+    cots_add_file = get_fixture_data('cots_train_151515_added_trip_with_unknown_mode.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 1
+        trips = TripUpdate.query.all()
+        assert len(trips) == 1
+        assert trips[0].status == 'add'
+        assert trips[0].effect == 'ADDITIONAL_SERVICE'
+        assert trips[0].company_id == 'company:OCE:SN'
+        assert trips[0].physical_mode_id == 'physical_mode:LongDistanceTrain'
+        stop_times = StopTimeUpdate.query.all()
+        assert len(stop_times) == 5
