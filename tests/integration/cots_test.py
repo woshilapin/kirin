@@ -997,6 +997,7 @@ def check_add_trip_151515():
     assert trips[0].status == 'add'
     assert trips[0].effect == 'ADDITIONAL_SERVICE'
     assert trips[0].company_id == 'company:OCE:SN'
+    assert trips[0].physical_mode_id == 'physical_mode:LongDistanceTrain'
     stop_times = StopTimeUpdate.query.all()
     assert len(stop_times) == 5
     assert stop_times[0].arrival_status == 'none'
@@ -1027,6 +1028,7 @@ def check_add_trip_151515_with_delay():
     assert trips[0].status == 'add'
     assert trips[0].effect == 'ADDITIONAL_SERVICE'
     assert trips[0].company_id == 'company:OCE:SN'
+    assert trips[0].physical_mode_id == 'physical_mode:LongDistanceTrain'
     stop_times = StopTimeUpdate.query.all()
     assert len(stop_times) == 5
     assert stop_times[0].arrival_status == 'none'
@@ -1057,6 +1059,7 @@ def check_add_trip_151515_with_delay_and_a_delete():
     assert trips[0].status == 'add'
     assert trips[0].effect == 'ADDITIONAL_SERVICE'
     assert trips[0].company_id == 'company:OCE:SN'
+    assert trips[0].physical_mode_id == 'physical_mode:LongDistanceTrain'
     stop_times = StopTimeUpdate.query.all()
     assert len(stop_times) == 5
     assert stop_times[0].arrival_status == 'none'
@@ -1085,6 +1088,7 @@ def check_add_trip_151515_with_delay_and_an_add():
     assert trips[0].status == 'add'
     assert trips[0].effect == 'ADDITIONAL_SERVICE'
     assert trips[0].company_id == 'company:OCE:SN'
+    assert trips[0].physical_mode_id == 'physical_mode:LongDistanceTrain'
     stop_time = StopTimeUpdate.query.all()
     assert len(stop_time) == 6
     assert stop_time[0].arrival_status == 'none'
@@ -1278,3 +1282,42 @@ def test_cots_delete_added_trip_more_than_once():
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) == 4
         check_add_trip_151515()
+
+
+def test_cots_add_trip_in_coach():
+    """
+     1. A simple trip add with 5 stop_times all existing in navitia with "indicateurFer": "ROUTIER"
+    """
+    cots_add_file = get_fixture_data('cots_train_151515_added_trip_in_coach.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 1
+        trips = TripUpdate.query.all()
+        assert len(trips) == 1
+        assert trips[0].status == 'add'
+        assert trips[0].effect == 'ADDITIONAL_SERVICE'
+        assert trips[0].company_id == 'company:OCE:SN'
+        assert trips[0].physical_mode_id == 'physical_mode:Coach'
+        stop_times = StopTimeUpdate.query.all()
+        assert len(stop_times) == 5
+
+
+def test_cots_add_trip_with_unknown_mode():
+    """
+     1. A simple trip add with 5 stop_times all existing in navitia with "indicateurFer": "TOTO"
+     kirin uses physical_mode:LongDistanceTrain as default physical_mode if it exists in kraken
+    """
+    cots_add_file = get_fixture_data('cots_train_151515_added_trip_with_unknown_mode.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 1
+        trips = TripUpdate.query.all()
+        assert len(trips) == 1
+        assert trips[0].status == 'add'
+        assert trips[0].effect == 'ADDITIONAL_SERVICE'
+        assert trips[0].company_id == 'company:OCE:SN'
+        assert trips[0].physical_mode_id == 'physical_mode:LongDistanceTrain'
+        stop_times = StopTimeUpdate.query.all()
+        assert len(stop_times) == 5
