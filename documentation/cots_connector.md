@@ -77,6 +77,16 @@ In case of a trip addition, when the *nouvelleVersion/indicateurFer* is set to `
 
 The operator associated to the considered Navitia trips should have a complementary code of type `RefProd` that matches the value of *nouvelleVersion/codeCompagnieTransporteur*. If the field is empty in the COTS stream, then the value `1187` that corresponds to the SNCF operator is used.
 
+#### Creating a new VehicleJourney for Navitia
+In case of a trip addition (trip status is set to `add`), a complete `VehicleJourney` needs to be sent to Navitia using the available information in the COTS stream.
+* The new trip is associated with the SNCF operator.
+* The trip headsign is derived from the train number in *nouvelleVersion/numeroCourse*.
+* The physical mode is set to `Coach` when the value of *nouvelleVersion/indicateurFer* is `ROUTIER`, otherwise the physical mode is set to `LongDistanceTrain`.
+* A new dataset as well as a new service attached to the new trip must be created in Navitia.
+* The new trip is attached to a new route named after the origin and destination stops.
+* The new route is attached to a new line.
+* The commercial mode of the new line is determined based on the value of *nouvelleVersion/codeMarqueTransporteur*. When the value is `TER`, if the *nouvelleVersion/indicateurFer* is `FERRE`, then the commercial mode is set to `Train TER`. In case of a new road trip, the commercial mode is set to `Car TER`. In all other cases, the commercial mode is set after the value of *nouvelleVersion/codeMarqueTransporteur*.
+
 #### Recording the VehicleJourneys 
 Each `VehicleJourney` found in Navitia corresponding to the COTS stream is recorded, so that they are all impacted.
 
