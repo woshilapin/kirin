@@ -1760,3 +1760,78 @@ def test_manage_db_with_http_error_with_insert():
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().status == 'KO'
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().error == 'Http Error'
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().created_at != created_at
+
+
+@pytest.fixture()
+def pass_midnight_negative_delay_utc_gtfs_rt_data():
+    """
+    Add tests for pass-midnight UTC on an early passing VJ (negative delay)
+    """
+    feed = deepcopy(pass_midnight_gtfs_rt_data())
+    feed.header.timestamp = to_posix_time(datetime.datetime(year=2012, month=6, day=16, hour=1))
+    feed.entity[0].trip_update.trip.trip_id = "Code-pass-midnight-UTC"
+
+    for stu in feed.entity[0].trip_update.stop_time_update:
+        stu.arrival.delay = -60
+        stu.departure.delay = -60
+
+    return feed
+
+
+def test_gtfs_pass_midnight_negative_delay_utc_model_builder(pass_midnight_negative_delay_utc_gtfs_rt_data):
+    """
+    test the model builder with a pass-midnight UTC gtfs-rt
+    """
+    tester = app.test_client()
+    resp = tester.post('/gtfs_rt', data=pass_midnight_negative_delay_utc_gtfs_rt_data.SerializeToString())
+    assert resp.status_code == 200
+
+    with app.app_context():
+        trip_updates = TripUpdate.query.all()
+
+        assert len(trip_updates) == 1
+        assert len(trip_updates[0].stop_time_updates) == 5
+        assert RealTimeUpdate.query.first().status == 'OK'
+
+        first_stop = trip_updates[0].stop_time_updates[0]
+        assert first_stop.stop_id == 'StopR1'
+        assert first_stop.arrival_status == 'update'
+        assert first_stop.arrival_delay == timedelta(minutes=-1)
+        assert first_stop.departure_status == 'update'
+        assert first_stop.departure_delay == timedelta(minutes=-1)
+        assert first_stop.message is None
+
+        second_stop = trip_updates[0].stop_time_updates[1]
+        assert second_stop.stop_id == 'StopR2'
+        assert second_stop.arrival_status == 'update'
+        assert second_stop.arrival_delay == timedelta(minutes=-1)
+        assert second_stop.departure_status == 'update'
+        assert second_stop.departure_delay == timedelta(minutes=-1)
+        assert second_stop.message is None
+
+        second_stop = trip_updates[0].stop_time_updates[2]
+        assert second_stop.stop_id == 'StopR2-bis'
+        assert second_stop.arrival_status == 'update'
+        assert second_stop.arrival_delay == timedelta(minutes=-1)
+        assert second_stop.departure_status == 'update'
+        assert second_stop.departure_delay == timedelta(minutes=-1)
+        assert second_stop.message is None
+
+        third_stop = trip_updates[0].stop_time_updates[3]
+        assert third_stop.stop_id == 'StopR3'
+        assert third_stop.arrival_status == 'update'
+        assert third_stop.arrival_delay == timedelta(minutes=-1)
+        assert third_stop.departure_status == 'update'
+        assert third_stop.departure_delay == timedelta(minutes=-1)
+        assert third_stop.message is None
+
+        fourth_stop = trip_updates[0].stop_time_updates[4]
+        assert fourth_stop.stop_id == 'StopR4'
+        assert fourth_stop.arrival_status == 'update'
+        assert fourth_stop.arrival_delay == timedelta(minutes=-1)
+        assert fourth_stop.departure_status == 'update'
+        assert fourth_stop.departure_delay == timedelta(minutes=-1)
+        assert fourth_stop.message is None
+
+        # feed = convert_to_gtfsrt(trip_updates)
+        # assert feed.entity[0].trip_update.trip.start_date == u'20120615'  # must be UTC start date
