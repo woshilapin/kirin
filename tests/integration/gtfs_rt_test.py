@@ -1833,5 +1833,5 @@ def test_gtfs_pass_midnight_negative_delay_utc_model_builder(pass_midnight_negat
         assert fourth_stop.departure_delay == timedelta(minutes=-1)
         assert fourth_stop.message is None
 
-        # feed = convert_to_gtfsrt(trip_updates)
-        # assert feed.entity[0].trip_update.trip.start_date == u'20120615'  # must be UTC start date
+        feed = convert_to_gtfsrt(trip_updates)
+        assert feed.entity[0].trip_update.trip.start_date == u'20120615'  # must be UTC start date
