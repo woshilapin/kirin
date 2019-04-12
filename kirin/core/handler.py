@@ -448,7 +448,7 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=False):
         # (after delay it may be inconsistent but it is corrected later in the process)
         # it is not a pass-midnight if after delay it is consistent
         # (in case of stop add, comparing before delay is pointless)
-        date = datetime.date(1, 1, 1)
+        date = datetime.date(2000, 1, 1)
         return (prev_stop_event.time > next_stop_event.time) and \
                (datetime.datetime.combine(date, prev_stop_event.time) + prev_stop_event.delay
                 > datetime.datetime.combine(date, next_stop_event.time) + next_stop_event.delay)
