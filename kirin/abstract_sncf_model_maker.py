@@ -125,6 +125,9 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
         """
         log = logging.getLogger(__name__)
 
+        if (utc_since_dt is None) or (utc_until_dt is None):
+            return []
+
         vjs = {}
         # to get the date of the vj we use the start/end of the vj + some tolerance
         # since the SNCF data and navitia data might not be synchronized

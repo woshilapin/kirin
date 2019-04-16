@@ -212,9 +212,9 @@ def _is_fully_added_pdp(pdp):
 
 def _get_first_stop_datetime(list_pdps, hour_obj_name, skip_fully_added_stops=True):
     if skip_fully_added_stops:
-        p = next(p for p in list_pdps if not _is_fully_added_pdp(p))
+        p = next((p for p in list_pdps if not _is_fully_added_pdp(p)), None)
     else:
-        p = next(p for p in list_pdps)
+        p = next((p for p in list_pdps), None)
 
     str_time = get_value(get_value(p, hour_obj_name), 'dateHeure') if p else None
     return as_utc_dt(str_time) if str_time else None
