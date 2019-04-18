@@ -355,6 +355,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             trip_update.status = ModificationType.add.name
             cots_physical_mode = get_value(json_train, 'indicateurFer', nullable=True)
             trip_update.physical_mode_id = self._get_navitia_physical_mode(cots_physical_mode)
+            trip_update.label = get_value(json_train, 'numeroCourse', nullable=True)
 
         # all other status is considered an 'update' of the trip_update and effect is calculated
         # from stop_time status list. This part is also done in kraken and is to be deleted later

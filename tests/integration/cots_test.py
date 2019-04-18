@@ -587,6 +587,8 @@ def test_cots_added_stop_time():
         assert TripUpdate.query.all()[0].status == 'update'
         assert TripUpdate.query.all()[0].effect == 'MODIFIED_SERVICE'
         assert TripUpdate.query.all()[0].company_id == 'company:OCE:SN'
+        assert TripUpdate.query.all()[0].physical_mode_id is None
+        assert TripUpdate.query.all()[0].label is None
         assert len(StopTimeUpdate.query.all()) == 7
         assert StopTimeUpdate.query.all()[3].arrival_status == 'add'
         assert StopTimeUpdate.query.all()[3].arrival == datetime(2015, 9, 21, 16, 2)
@@ -709,6 +711,8 @@ def test_cots_added_stop_time_first_position_then_delete_it():
         assert TripUpdate.query.all()[0].status == 'update'
         assert TripUpdate.query.all()[0].effect == 'REDUCED_SERVICE'
         assert TripUpdate.query.all()[0].company_id == 'company:OCE:TH'
+        assert TripUpdate.query.all()[0].physical_mode_id is None
+        assert TripUpdate.query.all()[0].label is None
         assert len(StopTimeUpdate.query.all()) == 7
         assert StopTimeUpdate.query.all()[0].arrival_status == 'none'
         assert StopTimeUpdate.query.all()[0].departure_status == 'delete'
@@ -732,6 +736,8 @@ def test_cots_added_stop_time_last_position():
         assert TripUpdate.query.all()[0].status == 'update'
         assert TripUpdate.query.all()[0].effect == 'MODIFIED_SERVICE'
         assert TripUpdate.query.all()[0].company_id == 'company:OCE:SN'
+        assert TripUpdate.query.all()[0].physical_mode_id is None
+        assert TripUpdate.query.all()[0].label is None
         assert len(StopTimeUpdate.query.all()) == 7
         assert StopTimeUpdate.query.all()[6].departure_status == 'none'
         assert StopTimeUpdate.query.all()[6].arrival_status == 'add'
@@ -799,6 +805,8 @@ def test_cots_add_stop_time_without_delay():
         assert TripUpdate.query.all()[0].status == 'update'
         assert TripUpdate.query.all()[0].effect == 'MODIFIED_SERVICE'
         assert TripUpdate.query.all()[0].company_id == 'company:OCE:TH'
+        assert TripUpdate.query.all()[0].physical_mode_id is None
+        assert TripUpdate.query.all()[0].label is None
         assert len(StopTimeUpdate.query.all()) == 7
         assert StopTimeUpdate.query.all()[3].arrival_status == 'add'
         assert StopTimeUpdate.query.all()[3].arrival == datetime(2015, 9, 21, 16, 2)
@@ -828,6 +836,8 @@ def check_add_no_delays_96231():
     assert trips[0].status == 'update'
     assert trips[0].effect == 'MODIFIED_SERVICE'
     assert trips[0].company_id == 'company:OCE:SN'
+    assert trips[0].physical_mode_id is None
+    assert trips[0].label is None
     stus = StopTimeUpdate.query.all()
     assert len(stus) == 7
     assert stus[0].arrival_status == 'none'
@@ -866,6 +876,8 @@ def check_add_with_delays_96231():
     assert trips[0].status == 'update'
     assert trips[0].effect == 'MODIFIED_SERVICE'
     assert trips[0].company_id == 'company:OCE:SN'
+    assert trips[0].physical_mode_id is None
+    assert trips[0].label is None
     stus = StopTimeUpdate.query.all()
     assert len(stus) == 7
     assert stus[0].arrival_status == 'none'
@@ -998,6 +1010,7 @@ def check_add_trip_151515():
     assert trips[0].effect == 'ADDITIONAL_SERVICE'
     assert trips[0].company_id == 'company:OCE:SN'
     assert trips[0].physical_mode_id == 'physical_mode:LongDistanceTrain'
+    assert trips[0].label == '151515'
     stop_times = StopTimeUpdate.query.all()
     assert len(stop_times) == 5
     assert stop_times[0].arrival_status == 'none'
@@ -1029,6 +1042,7 @@ def check_add_trip_151515_with_delay():
     assert trips[0].effect == 'ADDITIONAL_SERVICE'
     assert trips[0].company_id == 'company:OCE:SN'
     assert trips[0].physical_mode_id == 'physical_mode:LongDistanceTrain'
+    assert trips[0].label == '151515'
     stop_times = StopTimeUpdate.query.all()
     assert len(stop_times) == 5
     assert stop_times[0].arrival_status == 'none'
@@ -1060,6 +1074,7 @@ def check_add_trip_151515_with_delay_and_a_delete():
     assert trips[0].effect == 'ADDITIONAL_SERVICE'
     assert trips[0].company_id == 'company:OCE:SN'
     assert trips[0].physical_mode_id == 'physical_mode:LongDistanceTrain'
+    assert trips[0].label == '151515'
     stop_times = StopTimeUpdate.query.all()
     assert len(stop_times) == 5
     assert stop_times[0].arrival_status == 'none'
@@ -1089,6 +1104,7 @@ def check_add_trip_151515_with_delay_and_an_add():
     assert trips[0].effect == 'ADDITIONAL_SERVICE'
     assert trips[0].company_id == 'company:OCE:SN'
     assert trips[0].physical_mode_id == 'physical_mode:LongDistanceTrain'
+    assert trips[0].label == '151515'
     stop_time = StopTimeUpdate.query.all()
     assert len(stop_time) == 6
     assert stop_time[0].arrival_status == 'none'
@@ -1299,6 +1315,7 @@ def test_cots_add_trip_in_coach():
         assert trips[0].effect == 'ADDITIONAL_SERVICE'
         assert trips[0].company_id == 'company:OCE:SN'
         assert trips[0].physical_mode_id == 'physical_mode:Coach'
+        assert trips[0].label == '151515'
         stop_times = StopTimeUpdate.query.all()
         assert len(stop_times) == 5
 
@@ -1319,5 +1336,6 @@ def test_cots_add_trip_with_unknown_mode():
         assert trips[0].effect == 'ADDITIONAL_SERVICE'
         assert trips[0].company_id == 'company:OCE:SN'
         assert trips[0].physical_mode_id == 'physical_mode:LongDistanceTrain'
+        assert trips[0].label == '151515'
         stop_times = StopTimeUpdate.query.all()
         assert len(stop_times) == 5
