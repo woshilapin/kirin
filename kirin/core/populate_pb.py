@@ -130,6 +130,8 @@ def fill_trip_update(pb_trip_update, trip_update):
         pb_trip_update.Extensions[kirin_pb2.effect] = get_trip_event(trip_update.effect)
     if trip_update.physical_mode_id:
         pb_trip_update.vehicle.Extensions[kirin_pb2.physical_mode_id] = trip_update.physical_mode_id
+    if trip_update.headsign:
+        pb_trip_update.Extensions[kirin_pb2.headsign] = trip_update.headsign
 
     vj = trip_update.vj
     if vj:
