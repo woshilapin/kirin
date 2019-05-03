@@ -35,7 +35,7 @@ from datetime import timedelta
 import jmespath
 
 from kirin.utils import record_internal_failure
-from kirin.exceptions import ObjectNotFound
+from kirin.exceptions import ObjectNotFound, InvalidArguments
 from abc import ABCMeta
 import six
 from kirin.core import model
@@ -143,16 +143,15 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
 
             log.debug('searching for vj {} during period [{} - {}] in navitia'.format(
                             train_number, extended_since_dt, extended_until_dt))
-            # Don't call navitia for an added trip ("statutOperationnel" == "AJOUTEE")
-            if not is_added_trip:
-                navitia_vjs = self.navitia.vehicle_journeys(q={
-                    'headsign': train_number,
-                    'since': to_navitia_str(extended_since_dt),
-                    'until': to_navitia_str(extended_until_dt),
-                    'depth': '2',  # we need this depth to get the stoptime's stop_area
-                    'show_codes': 'true'  # we need the stop_points CRCICH codes
-                })
 
+            navitia_vjs = self.navitia.vehicle_journeys(q={
+                'headsign': train_number,
+                'since': to_navitia_str(extended_since_dt),
+                'until': to_navitia_str(extended_until_dt),
+                'depth': '2',  # we need this depth to get the stoptime's stop_area
+                'show_codes': 'true'  # we need the stop_points CRCICH codes
+            })
+            if not is_added_trip:
                 if not navitia_vjs:
                     logging.getLogger(__name__).info('impossible to find train {t} on [{s}, {u}['
                                                      .format(t=train_number,
@@ -160,6 +159,8 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
                                                              u=extended_until_dt))
                     record_internal_failure('missing train', contributor=self.contributor)
             else:
+                if navitia_vjs:
+                    raise InvalidArguments('Invalid action, trip {} already present in navitia'.format(train_number))
                 navitia_vjs = [make_navitia_empty_vj(train_number)]
 
             for nav_vj in navitia_vjs:

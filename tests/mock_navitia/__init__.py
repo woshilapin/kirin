@@ -58,6 +58,7 @@ import st_0087_751008_BV
 import physical_mode_LongDistanceTrain
 import physical_mode_Coach
 import st_0087_543009_BV
+import vj_unknown_object
 import logging
 
 mocks = [
@@ -90,6 +91,7 @@ mocks = [
     physical_mode_LongDistanceTrain.response,
     st_0087_543009_BV.response,
     physical_mode_Coach.response,
+    vj_unknown_object.response,
 ]
 _mock_navitia_call = {}
 for r in mocks:

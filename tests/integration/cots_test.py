@@ -1339,3 +1339,22 @@ def test_cots_add_trip_with_unknown_mode():
         assert trips[0].headsign == '151515'
         stop_times = StopTimeUpdate.query.all()
         assert len(stop_times) == 5
+
+
+def test_cots_add_trip_existing_in_navitia():
+    """
+    A simple trip add existing in navitia
+    Kirin verifies the presence of the vehicle_journey for a trip to be added
+    and rejects the trip if present.
+    """
+    cots_add_file = get_fixture_data('cots_train_6113_add_trip_present_in_navitia.json')
+    res, status = api_post('/cots', check=False, data=cots_add_file)
+    assert status == 400
+    assert res.get('message') == 'Invalid arguments'
+    assert 'error' in res
+    assert u'Invalid action, trip 6113 already present in navitia' in res.get('error')
+
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 1
+        assert len(TripUpdate.query.all()) == 0
+        assert len(StopTimeUpdate.query.all()) == 0
