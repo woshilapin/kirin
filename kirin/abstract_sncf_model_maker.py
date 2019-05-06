@@ -51,6 +51,12 @@ class TripStatus(Enum):
     PERTURBEE = 3   # Modified or Impacted
 
 
+class ActionOnTrip(Enum):
+    NOT_ADDED = 1,
+    FIRST_TIME_ADDED = 2,
+    PREVIOUSLY_ADDED = 3
+
+
 def make_navitia_empty_vj(headsign):
     headsign = TRAIN_ID_FORMAT.format(headsign)
     return {"id": headsign, "trip": {"id": headsign}}
@@ -115,7 +121,7 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
         self.navitia = nav
         self.contributor = contributor
 
-    def _get_navitia_vjs(self, headsign_str, utc_since_dt, utc_until_dt, is_added_trip=False):
+    def _get_navitia_vjs(self, headsign_str, utc_since_dt, utc_until_dt, action_on_trip=ActionOnTrip.NOT_ADDED.name):
         """
         Search for navitia's vehicle journeys with given headsigns, in the period provided
         :param utc_since_dt: UTC datetime that starts the search period.
@@ -151,16 +157,19 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
                 'depth': '2',  # we need this depth to get the stoptime's stop_area
                 'show_codes': 'true'  # we need the stop_points CRCICH codes
             })
-            if not is_added_trip:
+
+            if action_on_trip == ActionOnTrip.NOT_ADDED.name:
                 if not navitia_vjs:
                     logging.getLogger(__name__).info('impossible to find train {t} on [{s}, {u}['
                                                      .format(t=train_number,
                                                              s=extended_since_dt,
                                                              u=extended_until_dt))
                     record_internal_failure('missing train', contributor=self.contributor)
+
             else:
-                if navitia_vjs:
+                if action_on_trip == ActionOnTrip.FIRST_TIME_ADDED.name and navitia_vjs:
                     raise InvalidArguments('Invalid action, trip {} already present in navitia'.format(train_number))
+
                 navitia_vjs = [make_navitia_empty_vj(train_number)]
 
             for nav_vj in navitia_vjs:

@@ -38,7 +38,7 @@ from flask.globals import current_app
 from pytz import utc
 
 from kirin.abstract_sncf_model_maker import AbstractSNCFKirinModelBuilder, get_navitia_stop_time_sncf, \
-    TRAIN_ID_FORMAT, SNCF_SEARCH_MARGIN, TripStatus
+    TRAIN_ID_FORMAT, SNCF_SEARCH_MARGIN, TripStatus, ActionOnTrip
 # For perf benches:
 # https://artem.krylysov.com/blog/2015/09/29/benchmark-python-json-libraries/
 import ujson
@@ -220,7 +220,7 @@ def _get_first_stop_datetime(list_pdps, hour_obj_name, skip_fully_added_stops=Tr
     return as_utc_dt(str_time) if str_time else None
 
 
-def _is_added_trip(train_numbers, dict_version, pdps):
+def _get_action_on_trip(train_numbers, dict_version, pdps):
     """
     Verify if trip in flux cots is a newly added and permitted possible actions
     :param dict_version: Value of attribut nouvelleVersion in Flux cots
@@ -237,6 +237,7 @@ def _is_added_trip(train_numbers, dict_version, pdps):
                                                           start_date=utc_vj_start-SNCF_SEARCH_MARGIN,
                                                           end_date=utc_vj_end+SNCF_SEARCH_MARGIN)
 
+    action_on_trip = ActionOnTrip.NOT_ADDED.name
     if trip_added_in_db:
         # Raise exception on forbidden / inconsistent actions
         # No addition multiple times
@@ -247,11 +248,14 @@ def _is_added_trip(train_numbers, dict_version, pdps):
             raise InvalidArguments('Invalid action, trip {} already deleted in database'.format(train_numbers))
 
         # Should be handled as an added trip
-        return (trip_added_in_db.status == ModificationType.add.name) or \
-               (cots_trip_status == TripStatus.AJOUTEE.name and
-                trip_added_in_db.status == ModificationType.delete.name)
+        if (trip_added_in_db.status == ModificationType.add.name) or \
+                (cots_trip_status == TripStatus.AJOUTEE.name and
+                 trip_added_in_db.status == ModificationType.delete.name):
+            action_on_trip = ActionOnTrip.PREVIOUSLY_ADDED.name
     else:
-        return cots_trip_status == TripStatus.AJOUTEE.name
+        if cots_trip_status == TripStatus.AJOUTEE.name:
+            action_on_trip = ActionOnTrip.FIRST_TIME_ADDED.name
+    return action_on_trip
 
 
 class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
@@ -292,19 +296,19 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             raise InvalidArguments('invalid json, "listePointDeParcours" has no valid stop_time in '
                                    'json elt {elt}'.format(elt=ujson.dumps(dict_version)))
 
-        is_added_trip = _is_added_trip(train_numbers, dict_version, pdps)
-        vjs = self._get_vjs(train_numbers, pdps, is_added_trip=is_added_trip)
-        trip_updates = [self._make_trip_update(dict_version, vj, is_added_trip=is_added_trip) for vj in vjs]
+        action_on_trip = _get_action_on_trip(train_numbers, dict_version, pdps)
+        vjs = self._get_vjs(train_numbers, pdps, action_on_trip=action_on_trip)
+        trip_updates = [self._make_trip_update(dict_version, vj, action_on_trip=action_on_trip) for vj in vjs]
 
         return trip_updates
 
-    def _get_vjs(self, train_numbers,  pdps, is_added_trip=False):
+    def _get_vjs(self, train_numbers,  pdps, action_on_trip=ActionOnTrip.NOT_ADDED.name):
         utc_vj_start = _get_first_stop_datetime(pdps, 'horaireVoyageurDepart',
-                                                skip_fully_added_stops=not is_added_trip)
+                                                skip_fully_added_stops=(action_on_trip == ActionOnTrip.NOT_ADDED.name))
         utc_vj_end = _get_first_stop_datetime(reversed(pdps), 'horaireVoyageurArrivee',
-                                              skip_fully_added_stops=not is_added_trip)
+                                              skip_fully_added_stops=(action_on_trip == ActionOnTrip.NOT_ADDED.name))
 
-        return self._get_navitia_vjs(train_numbers, utc_vj_start, utc_vj_end, is_added_trip=is_added_trip)
+        return self._get_navitia_vjs(train_numbers, utc_vj_start, utc_vj_end, action_on_trip=action_on_trip)
 
     def _record_and_log(self, logger, log_str):
         log_dict = {'log': log_str}
@@ -327,7 +331,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             raise InvalidArguments('invalid cots: stop_point\'s({}) time is not consistent'
                                    .format(pdp_code))
 
-    def _make_trip_update(self, json_train, vj, is_added_trip=False):
+    def _make_trip_update(self, json_train, vj, action_on_trip=ActionOnTrip.NOT_ADDED.name):
         """
         create the new TripUpdate object
         Following the COTS spec: https://github.com/CanalTP/kirin/blob/master/documentation/cots_connector.md
@@ -349,7 +353,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             trip_update.effect = TripEffect.NO_SERVICE.name
             return trip_update
 
-        elif is_added_trip:
+        elif action_on_trip != ActionOnTrip.NOT_ADDED.name:
             # the trip is created from scratch
             trip_update.effect = TripEffect.ADDITIONAL_SERVICE.name
             trip_update.status = ModificationType.add.name
