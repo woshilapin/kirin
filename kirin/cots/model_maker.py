@@ -33,6 +33,8 @@ from __future__ import absolute_import, print_function, division
 
 import logging
 from datetime import datetime
+from operator import itemgetter
+
 from dateutil import parser, tz
 from flask.globals import current_app
 from pytz import utc
@@ -77,8 +79,8 @@ def is_station(pdp):
 
 def _retrieve_interesting_pdp(list_pdp):
     """
-    Filter "Points de Parcours" (corresponding to stop_times in Navitia) to get only the relevant ones from
-    a Navitia's perspective (stations, where travelers can hop on or hop off)
+    Filter and sort "Points de Parcours" (corresponding to stop_times in Navitia) to get only the relevant
+    ones from a Navitia's perspective (stations, where travelers can hop on or hop off)
     Context: COTS may contain operating informations, useless for traveler
     :param list_pdp: an array of "Point de Parcours" (typically the one from the feed)
     :return: Filtered array
@@ -87,7 +89,8 @@ def _retrieve_interesting_pdp(list_pdp):
     """
     res = []
     picked_one = False
-    for idx, pdp in enumerate(list_pdp):
+    sorted_list_pdp = sorted(list_pdp, key=itemgetter('rang'))
+    for idx, pdp in enumerate(sorted_list_pdp):
         # At start, do not consume until there's a departure time (horaireVoyageurDepart)
         if not picked_one and not get_value(pdp, 'horaireVoyageurDepart', nullable=True):
             continue
@@ -108,7 +111,7 @@ def _retrieve_interesting_pdp(list_pdp):
         if not get_value(pdp, 'horaireVoyageurArrivee', nullable=True):
             has_following_arrival = any(
                 get_value(follow_pdp, 'horaireVoyageurArrivee', nullable=True) and is_station(follow_pdp)
-                for follow_pdp in list_pdp[idx:])
+                for follow_pdp in sorted_list_pdp[idx:])
             if not has_following_arrival:
                 break
 
