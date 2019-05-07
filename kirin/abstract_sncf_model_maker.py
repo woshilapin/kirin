@@ -52,9 +52,9 @@ class TripStatus(Enum):
 
 
 class ActionOnTrip(Enum):
-    NOT_ADDED = 1,
-    FIRST_TIME_ADDED = 2,
-    PREVIOUSLY_ADDED = 3
+    NOT_ADDED = 1,          #
+    FIRST_TIME_ADDED = 2,   # Add trip for the first time / delete followed by add
+    PREVIOUSLY_ADDED = 3    # add followed by update
 
 
 def make_navitia_empty_vj(headsign):

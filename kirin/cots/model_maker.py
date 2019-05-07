@@ -247,11 +247,14 @@ def _get_action_on_trip(train_numbers, dict_version, pdps):
         elif cots_trip_status != TripStatus.AJOUTEE.name and trip_added_in_db.status == ModificationType.delete.name:
             raise InvalidArguments('Invalid action, trip {} already deleted in database'.format(train_numbers))
 
-        # Should be handled as an added trip
-        if (trip_added_in_db.status == ModificationType.add.name) or \
-                (cots_trip_status == TripStatus.AJOUTEE.name and
-                 trip_added_in_db.status == ModificationType.delete.name):
+        # Trip deleted followed by add should be handled as FIRST_TIME_ADDED
+        if (cots_trip_status == TripStatus.AJOUTEE.name and
+                trip_added_in_db.status == ModificationType.delete.name):
+            action_on_trip = ActionOnTrip.FIRST_TIME_ADDED.name
+        # Trip already added should be handled as PREVIOUSLY_ADDED
+        elif trip_added_in_db.status == ModificationType.add.name:
             action_on_trip = ActionOnTrip.PREVIOUSLY_ADDED.name
+
     else:
         if cots_trip_status == TripStatus.AJOUTEE.name:
             action_on_trip = ActionOnTrip.FIRST_TIME_ADDED.name
