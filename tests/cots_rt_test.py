@@ -46,6 +46,9 @@ def test_retrieve_interesting_pdp():
     7th is a regular final traveler stop > keeping it
     8th is a station, doesn't have arrival time nor do the following stops > NOT interesting
     9th is in the same situation than 8th > NOT interesting
+
+    This also tests that they are sorted according to 'rang':
+    [2nd, 4th, 5th, 7th] are indexed [1, 3, 8, 5] initially
     """
     list_pdp = [
         {'@id': '1st', 'rang': 1, 'typeArret': 'CD'},
@@ -55,13 +58,13 @@ def test_retrieve_interesting_pdp():
         {'@id': '4th', 'rang': 4,
          'horaireVoyageurArrivee': {'dateHeure': '2018-09-01T12:04:00+0000'},
          'horaireVoyageurDepart': {'dateHeure': '2018-09-01T12:04:30+0000'}},
-        {'@id': '5th', 'rang': 5, 'typeArret': 'FH',
-         'horaireVoyageurDepart': {'dateHeure': '2018-09-01T12:05:00+0000'}},
         {'@id': '6th', 'rang': 6, 'typeArret': 'TOTO',
          'horaireVoyageurDepart': {'dateHeure': '2018-09-01T12:06:00+0000'}},
         {'@id': '7th', 'rang': 7, 'typeArret': 'CD',
          'horaireVoyageurArrivee': {'dateHeure': '2018-09-01T12:07:00+0000'}},
         {'@id': '8th', 'rang': 8, 'typeArret': None,
          'horaireVoyageurDepart': {'dateHeure': '2018-09-01T12:08:00+0000'}},
-        {'@id': '9th', 'rang': 9, 'typeArret': ''}]
-    assert _retrieve_interesting_pdp(list_pdp) == [list_pdp[1], list_pdp[3], list_pdp[4], list_pdp[6]]
+        {'@id': '9th', 'rang': 9, 'typeArret': ''},
+        {'@id': '5th', 'rang': 5, 'typeArret': 'FH',
+         'horaireVoyageurDepart': {'dateHeure': '2018-09-01T12:05:00+0000'}}]
+    assert _retrieve_interesting_pdp(list_pdp) == [list_pdp[1], list_pdp[3], list_pdp[8], list_pdp[5]]
