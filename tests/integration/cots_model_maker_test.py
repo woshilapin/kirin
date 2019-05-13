@@ -31,10 +31,12 @@ from datetime import timedelta
 import pytest
 
 from kirin import db, app
-from kirin.core import model
-from kirin.cots import KirinModelBuilder
+from kirin.core import model, handle
+from kirin.cots import KirinModelBuilder, model_maker
 from tests.check_utils import get_fixture_data, dumb_nav_wrapper
 from tests.integration.utils_cots_test import requests_mock_cause_message
+from kirin.abstract_sncf_model_maker import ActionOnTrip
+import json
 
 
 @pytest.fixture(scope='function', autouse=True)
@@ -136,3 +138,61 @@ def test_cots_train_trip_removal(mock_navitia_fixture):
         assert len(trip_up.stop_time_updates) == 0
         # verify trip_update effect:
         assert trip_up.effect == 'NO_SERVICE'
+
+
+def test_get_action_on_trip_add(mock_navitia_fixture):
+    """
+    Test the function _get_action_on_trip with different type of flux cots
+    returns:
+    1. Fist trip add(AJOUTEE)->  FIRST_TIME_ADDED
+    2. Add followed by update (PERTURBEE) -> PREVIOUSLY_ADDED
+    3. Delete followed by add -> FIRST_TIME_ADDED
+    """
+
+    with app.app_context():
+        # Test for the first add: should be FIRST_TIME_ADDED
+        input_trip_add = get_fixture_data('cots_train_151515_added_trip.json')
+        json_data = json.loads(input_trip_add)
+        dict_version = model_maker.get_value(json_data, 'nouvelleVersion')
+        train_numbers = model_maker.get_value(dict_version, 'numeroCourse')
+        pdps = model_maker._retrieve_interesting_pdp(model_maker.get_value(dict_version, 'listePointDeParcours'))
+
+        action_on_trip = model_maker._get_action_on_trip(train_numbers, dict_version, pdps)
+        assert action_on_trip == ActionOnTrip.FIRST_TIME_ADDED.name
+
+        # Test for add followed by update should be PREVIOUSLY_ADDED
+        rt_update = model.RealTimeUpdate(input_trip_add, connector='cots', contributor='realtime.cots')
+        trip_updates = KirinModelBuilder(dumb_nav_wrapper()).build(rt_update)
+        _, log_dict = handle(rt_update, trip_updates, 'realtime.cots', is_new_complete=True)
+
+        input_update_added_trip = get_fixture_data('cots_train_151515_added_trip_with_delay.json')
+        json_data = json.loads(input_update_added_trip)
+        dict_version = model_maker.get_value(json_data, 'nouvelleVersion')
+        train_numbers = model_maker.get_value(dict_version, 'numeroCourse')
+        pdps = model_maker._retrieve_interesting_pdp(model_maker.get_value(dict_version, 'listePointDeParcours'))
+
+        action_on_trip = model_maker._get_action_on_trip(train_numbers, dict_version, pdps)
+        assert action_on_trip == ActionOnTrip.PREVIOUSLY_ADDED.name
+
+        # Clean database for further test
+        tables = [str(table) for table in db.metadata.sorted_tables]
+        db.session.execute('TRUNCATE {} CASCADE;'.format(', '.join(tables)))
+        db.session.commit()
+
+        # Delete the recently added trip followed by add: should be FIRST_TIME_ADDED
+        rt_update = model.RealTimeUpdate(input_trip_add, connector='cots', contributor='realtime.cots')
+        trip_updates = KirinModelBuilder(dumb_nav_wrapper()).build(rt_update)
+        _, log_dict = handle(rt_update, trip_updates, 'realtime.cots', is_new_complete=True)
+        input_trip_delete = get_fixture_data('cots_train_151515_deleted_trip_with_delay_and_stop_time_added.json')
+        rt_update = model.RealTimeUpdate(input_trip_delete, connector='cots', contributor='realtime.cots')
+        trip_updates = KirinModelBuilder(dumb_nav_wrapper()).build(rt_update)
+        _, log_dict = handle(rt_update, trip_updates, 'realtime.cots', is_new_complete=True)
+
+        input_added_trip = get_fixture_data('cots_train_151515_added_trip.json')
+        json_data = json.loads(input_added_trip)
+        dict_version = model_maker.get_value(json_data, 'nouvelleVersion')
+        train_numbers = model_maker.get_value(dict_version, 'numeroCourse')
+        pdps = model_maker._retrieve_interesting_pdp(model_maker.get_value(dict_version, 'listePointDeParcours'))
+
+        action_on_trip = model_maker._get_action_on_trip(train_numbers, dict_version, pdps)
+        assert action_on_trip == ActionOnTrip.FIRST_TIME_ADDED.name

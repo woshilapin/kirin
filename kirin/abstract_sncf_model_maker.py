@@ -35,7 +35,7 @@ from datetime import timedelta
 import jmespath
 
 from kirin.utils import record_internal_failure
-from kirin.exceptions import ObjectNotFound
+from kirin.exceptions import ObjectNotFound, InvalidArguments
 from abc import ABCMeta
 import six
 from kirin.core import model
@@ -49,6 +49,12 @@ class TripStatus(Enum):
     AJOUTEE = 1,    # Added
     SUPPRIMEE = 2,  # Deleted
     PERTURBEE = 3   # Modified or Impacted
+
+
+class ActionOnTrip(Enum):
+    NOT_ADDED = 1,          #
+    FIRST_TIME_ADDED = 2,   # Add trip for the first time / delete followed by add
+    PREVIOUSLY_ADDED = 3    # add followed by update
 
 
 def make_navitia_empty_vj(headsign):
@@ -115,7 +121,7 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
         self.navitia = nav
         self.contributor = contributor
 
-    def _get_navitia_vjs(self, headsign_str, utc_since_dt, utc_until_dt, is_added_trip=False):
+    def _get_navitia_vjs(self, headsign_str, utc_since_dt, utc_until_dt, action_on_trip=ActionOnTrip.NOT_ADDED.name):
         """
         Search for navitia's vehicle journeys with given headsigns, in the period provided
         :param utc_since_dt: UTC datetime that starts the search period.
@@ -143,23 +149,27 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
 
             log.debug('searching for vj {} during period [{} - {}] in navitia'.format(
                             train_number, extended_since_dt, extended_until_dt))
-            # Don't call navitia for an added trip ("statutOperationnel" == "AJOUTEE")
-            if not is_added_trip:
-                navitia_vjs = self.navitia.vehicle_journeys(q={
-                    'headsign': train_number,
-                    'since': to_navitia_str(extended_since_dt),
-                    'until': to_navitia_str(extended_until_dt),
-                    'depth': '2',  # we need this depth to get the stoptime's stop_area
-                    'show_codes': 'true'  # we need the stop_points CRCICH codes
-                })
 
+            navitia_vjs = self.navitia.vehicle_journeys(q={
+                'headsign': train_number,
+                'since': to_navitia_str(extended_since_dt),
+                'until': to_navitia_str(extended_until_dt),
+                'depth': '2',  # we need this depth to get the stoptime's stop_area
+                'show_codes': 'true'  # we need the stop_points CRCICH codes
+            })
+
+            if action_on_trip == ActionOnTrip.NOT_ADDED.name:
                 if not navitia_vjs:
                     logging.getLogger(__name__).info('impossible to find train {t} on [{s}, {u}['
                                                      .format(t=train_number,
                                                              s=extended_since_dt,
                                                              u=extended_until_dt))
                     record_internal_failure('missing train', contributor=self.contributor)
+
             else:
+                if action_on_trip == ActionOnTrip.FIRST_TIME_ADDED.name and navitia_vjs:
+                    raise InvalidArguments('Invalid action, trip {} already present in navitia'.format(train_number))
+
                 navitia_vjs = [make_navitia_empty_vj(train_number)]
 
             for nav_vj in navitia_vjs:
