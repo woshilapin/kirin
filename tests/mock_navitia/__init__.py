@@ -34,6 +34,7 @@ import vj_6111
 import vj_6112
 import vj_6113
 import vj_6114
+import vj_8837
 import vj_96231
 import vj_870154
 import vj_840426
@@ -58,6 +59,7 @@ import st_0087_751008_BV
 import physical_mode_LongDistanceTrain
 import physical_mode_Coach
 import st_0087_543009_BV
+import st_0087_215632_00
 import vj_unknown_object
 import logging
 
@@ -67,6 +69,7 @@ mocks = [
     vj_6112.response,
     vj_6113.response,
     vj_6114.response,
+    vj_8837.response,
     vj_96231.response,
     vj_870154.response,
     vj_840426.response,
@@ -90,6 +93,7 @@ mocks = [
     st_0087_318964_BV.response,
     physical_mode_LongDistanceTrain.response,
     st_0087_543009_BV.response,
+    st_0087_215632_00.response,
     physical_mode_Coach.response,
     vj_unknown_object.response,
 ]

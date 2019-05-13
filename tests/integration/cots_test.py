@@ -1358,3 +1358,36 @@ def test_cots_add_trip_existing_in_navitia():
         assert len(RealTimeUpdate.query.all()) == 1
         assert len(TripUpdate.query.all()) == 0
         assert len(StopTimeUpdate.query.all()) == 0
+
+
+def test_cots_update_trip_with_delay_pass_midnight_on_first_station():
+    """
+    A trip with delay on first station having pass midnight towards the next day
+    """
+    cots_update_file = get_fixture_data('cots_train_8837_pass_midnight_at_first_station.json')
+    res = api_post('/cots', data=cots_update_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 1
+        trips = TripUpdate.query.all()
+        assert len(trips) == 1
+        assert trips[0].status == 'update'
+        assert trips[0].effect == 'DETOUR'
+        stop_times = StopTimeUpdate.query.all()
+        assert len(stop_times) == 4
+        assert stop_times[0].arrival_status == 'none'
+        assert stop_times[0].arrival == datetime(2012, 11, 19, 23, 45)
+        assert stop_times[0].departure_status == 'deleted_for_detour'
+        assert stop_times[0].departure == datetime(2012, 11, 19, 23, 45)
+        assert stop_times[1].arrival_status == 'added_for_detour'
+        assert stop_times[1].arrival == datetime(2012, 11, 20, 0, 15)
+        assert stop_times[1].departure_status == 'added_for_detour'
+        assert stop_times[1].departure == datetime(2012, 11, 20, 0, 15)
+        assert stop_times[2].arrival_status == 'none'
+        assert stop_times[2].arrival == datetime(2012, 11, 20, 0, 34)
+        assert stop_times[2].departure_status == 'none'
+        assert stop_times[2].departure == datetime(2012, 11, 20, 0, 35)
+        assert stop_times[3].arrival_status == 'none'
+        assert stop_times[3].arrival == datetime(2012, 11, 20, 1, 15)
+        assert stop_times[3].departure_status == 'none'
+        assert stop_times[3].departure == datetime(2012, 11, 20, 1, 15)
