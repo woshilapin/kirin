@@ -1375,14 +1375,18 @@ def test_cots_update_trip_with_delay_pass_midnight_on_first_station():
         assert trips[0].effect == 'DETOUR'
         stop_times = StopTimeUpdate.query.all()
         assert len(stop_times) == 4
+        # First station is deleted for detour
         assert stop_times[0].arrival_status == 'none'
         assert stop_times[0].arrival == datetime(2012, 11, 19, 23, 45)
         assert stop_times[0].departure_status == 'deleted_for_detour'
         assert stop_times[0].departure == datetime(2012, 11, 19, 23, 45)
+        # Second station is added for detour with a delay of 30 minutes pass midnight
+        # towards next day
         assert stop_times[1].arrival_status == 'added_for_detour'
         assert stop_times[1].arrival == datetime(2012, 11, 20, 0, 15)
         assert stop_times[1].departure_status == 'added_for_detour'
         assert stop_times[1].departure == datetime(2012, 11, 20, 0, 15)
+        # Not any change on the other two stations
         assert stop_times[2].arrival_status == 'none'
         assert stop_times[2].arrival == datetime(2012, 11, 20, 0, 34)
         assert stop_times[2].departure_status == 'none'
