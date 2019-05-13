@@ -1362,7 +1362,9 @@ def test_cots_add_trip_existing_in_navitia():
 
 def test_cots_update_trip_with_delay_pass_midnight_on_first_station():
     """
-    A trip with delay on first station having pass midnight towards the next day
+    Disruption on a base-schedule VJ that was past-midnight.
+    The disruption changes the first station and delays it so that the realtime VJ is not past-midnight anymore.
+    Testing that the realtime VJ is circulating on the right day (so one day after the base-schedule VJ).
     """
     cots_update_file = get_fixture_data('cots_train_8837_pass_midnight_at_first_station.json')
     res = api_post('/cots', data=cots_update_file)
