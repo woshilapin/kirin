@@ -1,0 +1,231 @@
+{
+  "ressource": "courseOPE",
+  "mode": "creation",
+  "evt": [
+    "PERTURBATION"
+  ],
+  "PdPObserveArrivee": [],
+  "PdPObserveDepart": [],
+  "PdPPronosticBrutArrivee": [
+    "0f4666b5-082f-4006-9e06-65702e45fdda",
+    "06c8be2a-b35f-4aee-889a-b1965a040289"
+  ],
+  "PdPPronosticBrutDepart": [
+    "a75a7cd7-8428-4c45-ab0d-dc21a4ccc928",
+    "06c8be2a-b35f-4aee-889a-b1965a040289"
+  ],
+  "PdPPronosticIVArrivee": [
+    "a75a7cd7-8428-4c45-ab0d-dc21a4ccc928",
+    "06c8be2a-b35f-4aee-889a-b1965a040289"
+  ],
+  "PdPPronosticIVDepart": [
+    "a75a7cd7-8428-4c45-ab0d-dc21a4ccc928",
+    "06c8be2a-b35f-4aee-889a-b1965a040289"
+  ],
+  "PdPImpacteDepart": [],
+  "PdPImpacteArrivee": [],
+  "nouvelleVersion": {
+    "codeCompagnieTransporteur": "1187",
+    "codeMarqueTransporteur": "TGV",
+    "codeRelation": "671",
+    "codeService": "A2018",
+    "codeTransporteurResponsable": "1S",
+    "dateDebutService": "2012-09-13",
+    "dateDerniereModification": "2019-01-23T08:35:06+0000",
+    "dateFinService": "2012-12-31",
+    "estDiscontinue": false,
+    "estTechnique": false,
+    "etat": "ACTIVE",
+    "idMotifInterneReference": 8,
+    "idVersion": "c07a8b24-b1bb-454b-9d92-73d40de285ec",
+    "identifiantDansSystemeCreateur": "784ec6d2-ba7b-4c6d-ab96-da03e163345a",
+    "indicateurFer": "FERRE",
+    "listeCouplageCourseOPE": [],
+    "listeCodeTransporteurAssocie": [],
+    "listeEvenement": [],
+    "listeJourRegimeDApplication": [
+      {
+        "date": "2012-11-20"
+      }
+    ],
+    "listeJourRegimeFacultatif": [],
+    "listeMotif": [
+      {
+        "dateHeureDeclaration": "2012-11-20T08:35:06+0000",
+        "idMotifInterne": 8,
+        "source": "IRE-GOP"
+      }
+    ],
+    "listePointDeParcours": [
+      {
+        "@id": "c1e2630a-d92a-4e0a-9010-a4e11c0fc777",
+        "cr": "0080",
+        "ci": "203422",
+        "ch": "BV",
+        "horaireVoyageurDepart": {
+          "dateHeure": "2012-11-19T23:45:00+0000",
+          "heureLocale": "00:45:00",
+          "idFuseauHoraire": "Europe/Paris",
+          "nbJoursPasseMinuit": 0,
+          "statutCirculationOPE": "SUPPRESSION_DETOURNEMENT"
+        },
+        "listeHoraireProjeteArrivee": [],
+        "listeHoraireProjeteDepart": [],
+        "listeMotifArrivee": [],
+        "listeMotifDepart": [
+          {
+            "dateHeureDeclaration": "2012-11-20T08:35:06+0000",
+            "idMotifInterne": 78,
+            "source": "IRE-GOP"
+          }
+        ],
+        "rang": 1,
+        "typeArret": "CH",
+        "timeZoneLocale": "Europe/Paris"
+      },
+      {
+        "@id": "5168b9d7-34b9-45d8-b434-88577c26bd73",
+        "cr": "0087",
+        "ci": "215632",
+        "ch": "00",
+        "horaireVoyageurDepart": {
+          "dateHeure": "2012-11-20T00:15:00+0000",
+          "heureLocale": "01:15:00",
+          "idFuseauHoraire": "Europe/Paris",
+          "nbJoursPasseMinuit": 0,
+          "statutCirculationOPE": "DETOURNEMENT"
+        },
+        "listeHoraireProjeteArrivee": [],
+        "listeHoraireProjeteDepart": [],
+        "listeMotifArrivee": [],
+        "listeMotifDepart": [],
+        "rang": 2,
+        "typeArret": "CH",
+        "horaireVoyageurArrivee": {
+          "dateHeure": "2012-11-20T00:15:00+0000",
+          "heureLocale": "01:15:00",
+          "idFuseauHoraire": "Europe/Paris",
+          "nbJoursPasseMinuit": 0,
+          "statutCirculationOPE": "DETOURNEMENT"
+        },
+        "arretFacultatif": false,
+        "categorieStatistiqueArrivee": "LVK",
+        "categorieStatistiqueDepart": "LVK",
+        "horaireProductionArrivee": {
+          "idFuseauHoraire": "Europe/Paris",
+          "heureIncertaine": false,
+          "heureLocale": "01:15:00",
+          "nbJoursPasseMinuit": 0
+        },
+        "horaireProductionDepart": {
+          "idFuseauHoraire": "Europe/Paris",
+          "heureIncertaine": false,
+          "heureLocale": "01:15:00",
+          "nbJoursPasseMinuit": 0
+        },
+        "idMotifInterneDepartReference": 3,
+        "idMotifInterneArriveeReference": 3
+      },
+      {
+        "@id": "1022221f-3223-423a-8541-b32f2878b8d8",
+        "cr": "0080",
+        "ci": "205815",
+        "ch": "BV",
+        "horaireVoyageurArrivee": {
+          "dateHeure": "2012-11-20T00:34:00+0000",
+          "heureLocale": "01:34:00",
+          "idFuseauHoraire": "Europe/Paris",
+          "nbJoursPasseMinuit": 0
+        },
+        "listeHoraireProjeteArrivee": [],
+        "listeHoraireProjeteDepart": [],
+        "listeMotifArrivee": [
+          {
+            "dateHeureDeclaration": "2012-11-20T08:35:06+0000",
+            "idMotifInterne": 78,
+            "source": "IRE-GOP"
+          }
+        ],
+        "listeMotifDepart": [
+          {
+            "dateHeureDeclaration": "2012-11-20T08:35:06+0000",
+            "idMotifInterne": 78,
+            "source": "IRE-GOP"
+          }
+        ],
+        "rang": 3,
+        "typeArret": "CH",
+        "timeZoneLocale": "Europe/Paris",
+        "horaireVoyageurDepart": {
+          "dateHeure": "2012-11-20T00:35:00+0000",
+          "heureLocale": "01:35:00",
+          "idFuseauHoraire": "Europe/Paris",
+          "nbJoursPasseMinuit": 0
+        }
+      },
+      {
+        "@id": "1025211f-3543-452a-8d61-bd2f2868bad8",
+        "cr": "0080",
+        "ci": "205427",
+        "ch": "BV",
+        "horaireVoyageurArrivee": {
+          "dateHeure": "2012-11-20T01:15:00+0000",
+          "heureLocale": "02:15:00",
+          "idFuseauHoraire": "Europe/Paris",
+          "nbJoursPasseMinuit": 0
+        },
+        "listeHoraireProjeteArrivee": [],
+        "listeHoraireProjeteDepart": [],
+        "listeMotifArrivee": [
+          {
+            "dateHeureDeclaration": "2012-11-20T08:35:06+0000",
+            "idMotifInterne": 78,
+            "source": "IRE-GOP"
+          }
+        ],
+        "listeMotifDepart": [
+          {
+            "dateHeureDeclaration": "2012-11-20T08:35:06+0000",
+            "idMotifInterne": 78,
+            "source": "IRE-GOP"
+          }
+        ],
+        "rang": 4,
+        "typeArret": "CH",
+        "timeZoneLocale": "Europe/Paris"
+      }
+    ],
+    "listeService": [],
+    "listeSubstitutionCourse": [],
+    "listeUtilisationSillon": [
+      {
+        "identifiantSillon": {
+          "numeroOperationnelSillon": "9580-9581",
+          "sillonTTH": "042522910097"
+        },
+        "listeJourRegimeDApplication": [
+          {
+            "date": "2012-11-20"
+          }
+        ],
+        "listeJourRegimeFacultatif": [],
+        "pointDebutUtilisationSillon": {
+          "@id": "50f31367-af56-4c08-9bf8-423bf3856dfc"
+        },
+        "pointFinUtilisationSillon": {
+          "@id": "0f4666b5-082f-4006-9e06-65702e45fdda"
+        },
+        "porteur": true,
+        "rangPRDebutUtilisationSillon": 1,
+        "decalagePasseMinuit": 0,
+        "rangPRFinUtilisationSillon": 210
+      }
+    ],
+    "numeroCourse": "8837",
+    "statutOperationnel": "PERTURBEE",
+    "systemeCreateur": "2148",
+    "type": "COURSE_OPE",
+    "@id": "784ec6d2-ba7b-4c6d-ab96-da03e163345a",
+    "codeSousRelation": "671100"
+  }
+}
