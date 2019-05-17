@@ -231,7 +231,7 @@
         ],
         "listeMotifArrivee": [],
         "listeMotifDepart": [],
-        "rang": 11,
+        "rang": 4,
         "typeArret": "CH"
       },
       {
@@ -274,7 +274,7 @@
         ],
         "listeMotifDepart": [
         ],
-        "rang": 4,
+        "rang": 5,
         "typeArret": "CH"
       },
       {
@@ -317,7 +317,7 @@
         ],
         "listeMotifDepart": [
         ],
-        "rang": 5,
+        "rang": 6,
         "typeArret": "CH"
       },
       {
@@ -350,7 +350,7 @@
         ],
         "listeMotifDepart": [
         ],
-        "rang": 6,
+        "rang": 7,
         "typeArret": "CH"
       }
     ],
