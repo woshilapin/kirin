@@ -315,6 +315,7 @@ To generate a new release:
 1. merge the version you want to release into release branch (adapt script):
    ```bash
    git checkout release
+   git pull
    git merge canaltp/master
    ```
 2. tag and annotate the version:
