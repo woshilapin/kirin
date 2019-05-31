@@ -439,8 +439,9 @@ class RealTimeUpdate(db.Model, TimestampMixin):
             outerjoin(associate_realtimeupdate_tripupdate).\
             filter(cls.connector.in_(connectors)).\
             filter(cls.created_at <= until).\
-            filter(associate_realtimeupdate_tripupdate.c.real_time_update_id is None)
+            filter(associate_realtimeupdate_tripupdate.c.real_time_update_id == None)  # '==' works, not 'is'
         cls.query.filter(cls.id.in_(sub_query)).delete(synchronize_session=False)
+
         db.session.commit()
 
     @classmethod
