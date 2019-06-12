@@ -282,10 +282,10 @@ def test_gtfs_rt_purge(basic_gtfs_rt_data, mock_rabbitmq):
         assert len(StopTimeUpdate.query.all()) == 4
         assert db.session.execute('select * from associate_realtimeupdate_tripupdate').rowcount == 1
 
-        # VehicleJourney is old, so it's affected by TripUpdate purge
-        config = {'contributor': app.config.get('GTFS_RT_CONTRIBUTOR'),
-                  'nb_days_to_keep': int(app.config.get('NB_DAYS_TO_KEEP_TRIP_UPDATE'))}
-        purge_trip_update(config)
+        # VehicleJourney affected is old, so it's affected by TripUpdate purge (based on base-VJ's date)
+        contrib = app.config.get('GTFS_RT_CONTRIBUTOR')
+        until = datetime.date(2012, 12, 31)
+        TripUpdate.remove_by_contributors_and_period(contributors=[contrib], start_date=None, end_date=until)
 
         assert len(TripUpdate.query.all()) == 0
         assert len(VehicleJourney.query.all()) == 0
@@ -293,13 +293,12 @@ def test_gtfs_rt_purge(basic_gtfs_rt_data, mock_rabbitmq):
         assert db.session.execute('select * from associate_realtimeupdate_tripupdate').rowcount == 0
         assert len(RealTimeUpdate.query.all()) == 1  # keeping RTU longer for potential debug need
 
-        # Put an old date to RealTimeUpdate object so that RTU purge affects it
+        # Put an old (realistic) date to RealTimeUpdate object so that RTU purge affects it
         rtu = RealTimeUpdate.query.all()[0]
         rtu.created_at = datetime.datetime(2012, 6, 15, 15, 33)
 
-        config = {'nb_days_to_keep': int(app.config.get('NB_DAYS_TO_KEEP_RT_UPDATE')),
-                  'connector': 'gtfs-rt'}
-        purge_rt_update(config)
+        connector = 'gtfs-rt'
+        RealTimeUpdate.remove_by_connectors_until(connectors=[connector], until=until)
 
         assert len(TripUpdate.query.all()) == 0
         assert len(VehicleJourney.query.all()) == 0
