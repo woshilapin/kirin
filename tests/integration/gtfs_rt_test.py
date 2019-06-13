@@ -33,10 +33,11 @@ from datetime import timedelta
 import datetime
 import pytest
 from pytz import utc
-from kirin.core.model import RealTimeUpdate, db, TripUpdate, StopTimeUpdate
+from kirin.core.model import RealTimeUpdate, db, TripUpdate, StopTimeUpdate, VehicleJourney
 from kirin.core.populate_pb import to_posix_time, convert_to_gtfsrt
 from kirin import gtfs_rt
 from kirin.core.types import TripEffect
+from kirin.tasks import purge_trip_update, purge_rt_update
 from tests import mock_navitia
 from tests.check_utils import dumb_nav_wrapper, api_post
 from kirin import gtfs_realtime_pb2, app
@@ -194,6 +195,7 @@ def test_gtfs_model_builder(basic_gtfs_rt_data, basic_gtfs_rt_data_without_delay
         assert len(trip_updates) == 1
         assert trip_updates[0].effect == 'UNKNOWN_EFFECT'
 
+
 def test_gtfs_rt_simple_delay(basic_gtfs_rt_data, mock_rabbitmq):
     """
     test the gtfs-rt post with a simple gtfs-rt
@@ -262,6 +264,47 @@ def test_gtfs_rt_simple_delay(basic_gtfs_rt_data, mock_rabbitmq):
         assert fourth_stop.departure_status == 'none'
         assert fourth_stop.departure == datetime.datetime(2012, 6, 15, 15, 33)
         assert fourth_stop.message is None
+
+
+def test_gtfs_rt_purge(basic_gtfs_rt_data, mock_rabbitmq):
+    """
+    POST a simple gtfs-rt, then test the purge
+    """
+    tester = app.test_client()
+    resp = tester.post('/gtfs_rt', data=basic_gtfs_rt_data.SerializeToString())
+    assert resp.status_code == 200
+
+    with app.app_context():
+        # Check there's really something before purge
+        assert len(RealTimeUpdate.query.all()) == 1
+        assert len(TripUpdate.query.all()) == 1
+        assert len(VehicleJourney.query.all()) == 1
+        assert len(StopTimeUpdate.query.all()) == 4
+        assert db.session.execute('select * from associate_realtimeupdate_tripupdate').rowcount == 1
+
+        # VehicleJourney affected is old, so it's affected by TripUpdate purge (based on base-VJ's date)
+        contrib = app.config.get('GTFS_RT_CONTRIBUTOR')
+        until = datetime.date(2012, 12, 31)
+        TripUpdate.remove_by_contributors_and_period(contributors=[contrib], start_date=None, end_date=until)
+
+        assert len(TripUpdate.query.all()) == 0
+        assert len(VehicleJourney.query.all()) == 0
+        assert len(StopTimeUpdate.query.all()) == 0
+        assert db.session.execute('select * from associate_realtimeupdate_tripupdate').rowcount == 0
+        assert len(RealTimeUpdate.query.all()) == 1  # keeping RTU longer for potential debug need
+
+        # Put an old (realistic) date to RealTimeUpdate object so that RTU purge affects it
+        rtu = RealTimeUpdate.query.all()[0]
+        rtu.created_at = datetime.datetime(2012, 6, 15, 15, 33)
+
+        connector = 'gtfs-rt'
+        RealTimeUpdate.remove_by_connectors_until(connectors=[connector], until=until)
+
+        assert len(TripUpdate.query.all()) == 0
+        assert len(VehicleJourney.query.all()) == 0
+        assert len(StopTimeUpdate.query.all()) == 0
+        assert db.session.execute('select * from associate_realtimeupdate_tripupdate').rowcount == 0
+        assert len(RealTimeUpdate.query.all()) == 0
 
 
 @pytest.fixture()
