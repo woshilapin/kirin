@@ -1360,6 +1360,19 @@ def test_cots_add_trip_existing_in_navitia():
         assert len(StopTimeUpdate.query.all()) == 0
 
 
+def test_cots_on_add_trip_without_first_cots():
+    """
+    Test that trip update on a newly added trip without first flux cots is accepted without any action on trip
+    """
+    cots_add_file = get_fixture_data('cots_train_151515_added_trip_with_delay.json')
+    res = api_post('/cots', data=cots_add_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 1
+        trips = TripUpdate.query.all()
+        assert len(trips) == 0
+
+
 def test_cots_update_trip_with_delay_pass_midnight_on_first_station():
     """
     Disruption on a base-schedule VJ that was past-midnight.
