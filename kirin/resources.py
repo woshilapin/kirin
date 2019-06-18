@@ -39,7 +39,7 @@ class Index(Resource):
     def get(self):
         response = {
             'status': {'href': url_for('status', _external=True)},
-            'ire': {'href': url_for('ire', _external=True)},
+            'gtfs_rt': {'href': url_for('gtfs_rt', _external=True)},
             'cots': {'href': url_for('cots', _external=True)}
         }
         return response, 200

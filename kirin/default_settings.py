@@ -21,7 +21,7 @@ NAVITIA_INSTANCE = os.getenv('KIRIN_NAVITIA_INSTANCE', 'sncf')
 
 NAVITIA_TOKEN = os.getenv('KIRIN_NAVITIA_TOKEN', None)
 
-CONTRIBUTOR = os.getenv('KIRIN_CONTRIBUTOR', 'realtime.ire')
+CONTRIBUTOR = os.getenv('KIRIN_CONTRIBUTOR', 'realtime.cots')
 
 CELERY_BROKER_URL = os.getenv('KIRIN_CELERY_BROKER_URL',
                               'pyamqp://guest:guest@localhost:5672//?heartbeat=60')
@@ -204,16 +204,6 @@ CELERYBEAT_SCHEDULE = {
     'purge_gtfs_rt_update': {
         'task': 'kirin.tasks.purge_gtfs_rt_update',
         'schedule': schedules.crontab(hour='3', minute='15'),
-        'options': {'expires': timedelta(hours=1).total_seconds()}
-    },
-    'purge_ire_trip_update': {
-        'task': 'kirin.tasks.purge_ire_trip_update',
-        'schedule': schedules.crontab(hour='3', minute='30'),
-        'options': {'expires': timedelta(hours=1).total_seconds()}
-    },
-    'purge_ire_rt_update': {
-        'task': 'kirin.tasks.purge_ire_rt_update',
-        'schedule': schedules.crontab(hour='3', minute='45'),
         'options': {'expires': timedelta(hours=1).total_seconds()}
     },
     'purge_cots_trip_update': {
