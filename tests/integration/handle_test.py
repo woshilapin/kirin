@@ -77,7 +77,7 @@ def setup_database():
                                      {'id': 'sa:3', 'departure': None, 'arrival': _dt("10:05"),
                                       'departure_status': 'none', 'arrival_status': 'none'},
                                  ])
-        rtu = RealTimeUpdate(None, 'ire', contributor='realtime.ire')
+        rtu = RealTimeUpdate(None, 'cots', contributor='realtime.cots')
         rtu.id = '10866ce8-0638-4fa1-8556-1ddfa22d09d3'
         rtu.trip_updates.append(vju)
         db.session.add(rtu)
@@ -92,7 +92,7 @@ def setup_database():
                                      {'id': 'sa:3', 'departure': None, 'arrival': _dt("10:35", day=7),
                                       'departure_status': 'none', 'arrival_status': 'update'},
                                  ])
-        rtu = RealTimeUpdate(None, 'ire', contributor='realtime.ire')
+        rtu = RealTimeUpdate(None, 'cots', contributor='realtime.cots')
         rtu.id = '20866ce8-0638-4fa1-8556-1ddfa22d09d3'
         rtu.trip_updates.append(vju)
         db.session.add(rtu)
@@ -123,7 +123,7 @@ def test_handle_basic():
 
     #a RealTimeUpdate without any TripUpdate doesn't do anything
     with app.app_context():
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         res, _ = handle(real_time_update, [], 'kisio-digital')
         assert res == real_time_update
 
@@ -139,7 +139,7 @@ def test_handle_new_vj():
     with app.app_context():
         trip_update = TripUpdate(_create_db_vj(navitia_vj), status='update')
         st = StopTimeUpdate({'id': 'sa:1'}, departure_delay=timedelta(minutes=5), dep_status='update')
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         trip_update.stop_time_updates.append(st)
         res, _ = handle(real_time_update, [trip_update], 'kisio-digital')
 
@@ -193,7 +193,7 @@ def test_past_midnight():
                             utc.localize(datetime.datetime(2015, 9, 9, 4, 20, 0)))
         trip_update = TripUpdate(vj, status='update')
         st = StopTimeUpdate({'id': 'sa:2'}, departure_delay=timedelta(minutes=31), dep_status='update', order=1)
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         trip_update.stop_time_updates.append(st)
         res, _ = handle(real_time_update, [trip_update], 'kisio-digital')
 
@@ -229,7 +229,7 @@ def test_handle_new_trip_out_of_order(navitia_vj):
         st = StopTimeUpdate({'id': 'sa:2'},
                             departure_delay=timedelta(minutes=40), dep_status='update',
                             arrival_delay=timedelta(minutes=44), arr_status='update', order=1)
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         trip_update.stop_time_updates.append(st)
         res, _ = handle(real_time_update, [trip_update], 'kisio-digital')
 
@@ -265,7 +265,7 @@ def test_manage_consistency(navitia_vj):
                             arrival_delay=timedelta(minutes=70), dep_status='update',
                             departure_delay=timedelta(minutes=10), arr_status='update', order=1)
         st.arrival_status = st.departure_status = 'update'
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         real_time_update.id = '30866ce8-0638-4fa1-8556-1ddfa22d09d3'
         trip_update.stop_time_updates.append(st)
         res, _ = handle(real_time_update, [trip_update], 'kisio-digital')
@@ -307,7 +307,7 @@ def test_handle_update_vj(setup_database, navitia_vj):
                             arrival_delay=timedelta(minutes=10), dep_status='update',
                             departure_delay=timedelta(minutes=10), arr_status='update', order=1)
         st.arrival_status = st.departure_status = 'update'
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         real_time_update.id = '30866ce8-0638-4fa1-8556-1ddfa22d09d3'
         trip_update.stop_time_updates.append(st)
         res, _ = handle(real_time_update, [trip_update], 'kisio-digital')
@@ -379,7 +379,7 @@ def test_simple_delay(navitia_vj):
         st = StopTimeUpdate({'id': 'sa:1'},
                             departure_delay=timedelta(minutes=10), dep_status='update',
                             arrival_delay=timedelta(minutes=5), arr_status='update', order=0)
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         trip_update.stop_time_updates.append(st)
         res, _ = handle(real_time_update, [trip_update], 'kisio-digital')
         assert len(res.trip_updates) == 1
@@ -467,7 +467,7 @@ def test_multiple_delays(setup_database, navitia_vj):
     """
     with app.app_context():
         trip_update = TripUpdate(_create_db_vj(navitia_vj), status='update')
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         trip_update.stop_time_updates = [
             # Note: the delay is based of the navitia's vj
             StopTimeUpdate({'id': 'sa:1'}, departure_delay=timedelta(minutes=10), dep_status='update'),
@@ -492,14 +492,14 @@ def test_multiple_delays_in_2_updates(navitia_vj):
     """
     with app.app_context():
         trip_update = TripUpdate(_create_db_vj(navitia_vj), status='update')
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         trip_update.stop_time_updates = [
             StopTimeUpdate({'id': 'sa:1'}, departure_delay=timedelta(minutes=5), dep_status='update'),
         ]
         handle(real_time_update, [trip_update], 'kisio-digital')
 
         trip_update = TripUpdate(_create_db_vj(navitia_vj), status='update')
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         trip_update.stop_time_updates = [
             StopTimeUpdate({'id': 'sa:1'}, departure_delay=timedelta(minutes=10), dep_status='update'),
             StopTimeUpdate({'id': 'sa:2'}, arrival_delay=timedelta(minutes=2), arr_status='update'),
@@ -527,7 +527,7 @@ def test_delays_then_cancellation(setup_database, navitia_vj):
     """
     with app.app_context():
         trip_update = TripUpdate(_create_db_vj(navitia_vj), status='delete')
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         res, _ = handle(real_time_update, [trip_update], 'kisio-digital')
 
         assert len(res.trip_updates) == 1
@@ -543,14 +543,14 @@ def test_delays_then_cancellation_in_2_updates(navitia_vj):
     """
     with app.app_context():
         trip_update = TripUpdate(_create_db_vj(navitia_vj), status='update')
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         trip_update.stop_time_updates = [
             StopTimeUpdate({'id': 'sa:1'}, departure_delay=timedelta(minutes=5), dep_status='update'),
         ]
         handle(real_time_update, [trip_update], 'kisio-digital')
 
         trip_update = TripUpdate(_create_db_vj(navitia_vj), status='delete')
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         res, _ = handle(real_time_update, [trip_update], 'kisio-digital')
 
         assert len(res.trip_updates) == 1
@@ -610,7 +610,7 @@ def test_cancellation_then_delay(navitia_vj):
     with app.app_context():
         vju = create_trip_update('70866ce8-0638-4fa1-8556-1ddfa22d09d3', 'vehicle_journey:1',
                                  datetime.date(2015, 9, 8), [], status='delete')
-        rtu = RealTimeUpdate(None, 'ire', contributor='realtime.ire')
+        rtu = RealTimeUpdate(None, 'cots', contributor='realtime.cots')
         rtu.id = '10866ce8-0638-4fa1-8556-1ddfa22d09d3'
         rtu.trip_updates.append(vju)
         db.session.add(rtu)
@@ -618,7 +618,7 @@ def test_cancellation_then_delay(navitia_vj):
 
     with app.app_context():
         trip_update = TripUpdate(_create_db_vj(navitia_vj), status='update')
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         trip_update.stop_time_updates = [
             StopTimeUpdate({'id': 'sa:3'}, arrival_delay=timedelta(minutes=40), arr_status='update', order=2),
         ]
@@ -634,11 +634,11 @@ def test_cancellation_then_delay_in_2_updates(navitia_vj):
     with app.app_context():
         trip_update = TripUpdate(_create_db_vj(navitia_vj), status='delete')
         trip_update.stop_time_updates = []
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         handle(real_time_update, [trip_update], 'kisio-digital')
 
         trip_update = TripUpdate(_create_db_vj(navitia_vj), status='update')
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         trip_update.stop_time_updates = [
             StopTimeUpdate({'id': 'sa:3'}, arrival_delay=timedelta(minutes=40), arr_status='update', order=2),
         ]
