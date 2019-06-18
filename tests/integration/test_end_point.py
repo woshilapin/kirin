@@ -37,12 +37,6 @@ from datetime import datetime, time
 import pytest
 
 
-def test_end_point():
-    resp = api_get('/')
-    assert 'status' in resp
-    assert 'ire' in resp
-
-
 def test_status(setup_database):
     resp = api_get('/status')
 
