@@ -66,17 +66,6 @@ def handle(proto, navitia_wrapper, contributor):
         raise
 
     real_time_update, log_dict = core.handle(rt_update, trip_updates, contributor)
-
-    # After merging trip_updates information of gtfs-rt, navitia and kirin database, if there is no new
-    # information destined to navitia, update real_time_update with status = 'KO' and a proper error message.
-    if not real_time_update.trip_updates and real_time_update.status == 'OK':
-        real_time_update.status = 'KO'
-        real_time_update.error = 'No new information destinated to navitia for this gtfs-rt ' \
-                                 'with timestamp: {}'.format(proto.header.timestamp)
-        logging.getLogger(__name__).error('No new information destinated to navitia for this gtfs-rt '
-                                          'with timestamp: {}'.format(proto.header.timestamp))
-        model.db.session.add(rt_update)
-        model.db.session.commit()
     duration = (datetime.datetime.utcnow() - start_datetime).total_seconds()
     log_dict.update({'duration': duration,
                      'input_timestamp': datetime.datetime.utcfromtimestamp(proto.header.timestamp)})

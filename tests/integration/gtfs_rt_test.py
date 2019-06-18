@@ -824,8 +824,7 @@ def test_gtfs_rt_partial_update_same_feed(partial_update_gtfs_rt_data_1):
             if nb_rt_update == 2:
                 last_real_time_update = RealTimeUpdate.query.order_by(RealTimeUpdate.created_at.desc()).first()
                 assert last_real_time_update.status == 'KO'
-                assert last_real_time_update.error == \
-                       'No new information destinated to navitia for this gtfs-rt with timestamp: 1339772400'
+                assert last_real_time_update.error == 'No new information destinated to navitia for this gtfs-rt'
     check(nb_rt_update=1)
 
     # Now we apply exactly the same gtfs-rt, the new gtfs-rt will be save into the db,

@@ -1362,13 +1362,15 @@ def test_cots_add_trip_existing_in_navitia():
 
 def test_cots_on_add_trip_without_first_cots():
     """
-    Test that trip update on a newly added trip without first flux cots is accepted without any action on trip
+    Test that trip update on a newly added trip without first flux cots is rejected with a message
     """
     cots_add_file = get_fixture_data('cots_train_151515_added_trip_with_delay.json')
     res = api_post('/cots', data=cots_add_file)
     assert res == 'OK'
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) == 1
+        assert RealTimeUpdate.query.first().status == 'KO'
+        assert RealTimeUpdate.query.first().error == 'No new information destinated to navitia for this cots'
         trips = TripUpdate.query.all()
         assert len(trips) == 0
 
