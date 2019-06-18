@@ -191,8 +191,8 @@ def handle(real_time_update, trip_updates, contributor, is_new_complete=False):
         real_time_update.status = 'KO'
         real_time_update.error = 'No new information destinated to navitia for this {}'.format(
             real_time_update.connector)
-        logging.getLogger(__name__).error('No new information destinated to navitia for this {}'.format(
-            real_time_update.connector))
+        logging.getLogger(__name__).error(
+            'RealTimeUpdate id={}: {}'.format(real_time_update.id, real_time_update.error))
         model.db.session.add(real_time_update)
         model.db.session.commit()
 
