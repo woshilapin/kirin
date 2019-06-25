@@ -21,8 +21,6 @@ NAVITIA_INSTANCE = os.getenv('KIRIN_NAVITIA_INSTANCE', 'sncf')
 
 NAVITIA_TOKEN = os.getenv('KIRIN_NAVITIA_TOKEN', None)
 
-CONTRIBUTOR = os.getenv('KIRIN_CONTRIBUTOR', 'realtime.cots')
-
 CELERY_BROKER_URL = os.getenv('KIRIN_CELERY_BROKER_URL',
                               'pyamqp://guest:guest@localhost:5672//?heartbeat=60')
 
