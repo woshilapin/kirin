@@ -46,8 +46,6 @@ Kirin deals with real-time updates for navitia.
 When feeds are provided to Kirin by a client, it requests navitia to find the corresponding vehicle journey and apply the update, that is then posted in a queue for navitia to pick.
 
 The feeds can be of the following type:
-- IRE : A proprietary realtime information feed for SNCF. XML files are posted to the Kirin web service
-  (example of such feed [here](https://github.com/CanalTP/kirin/blob/master/tests/fixtures/train_96231_delayed.xml)).
 - COTS : Also a proprietary realtime information feed for SNCF. JSON files are posted to the Kirin web service
   (example of such feed
   [here](https://github.com/CanalTP/kirin/blob/master/tests/fixtures/cots_train_96231_delayed.json)).
@@ -171,23 +169,6 @@ for both Kirin and Kraken (the navitia core calculator).
     ```
 
 
-###### Ire (POST)
-
-Post an IRE update file with modifications about a vehicle journey (delay, disruption, deletion, ...) that will be modified and posted in the rabbitmq queue.
-```
-curl -X POST 'http://localhost:5000/ire' -H 'Content-Type: application/xml' -d @<PATH/TO/my_ire.xml>
-```
-For the IRE to be taken into account by navitia, please add the common SNCF's parameters above, plus:
-- In Kraken:
-    - kraken.ini:
-    ```
-    [BROKER] # in the BROKER section existing from common part
-    rt_topics = realtime.ire  # it's possible to add multiple topics simultaneously
-    ```
-
-If the IRE was successfully sent and processed by Kirin, the http response 200 will have a message "OK".
-
-
 ###### Cots (POST)
 
 Post a COTS update file with modifications about a vehicle journey (delay, disruption, deletion, ...)
@@ -244,7 +225,7 @@ Its roles are:
 * provide a POST endpoint for each type of accepted realtime provider.  
   On given endpoints, the webservice receives and directly processes the feed.
   The result is then saved in db and sent to corresponding Navitia's Kraken.
-  It is mainly used for COTS and IRE.
+  It is mainly used for COTS.
 * provide a POST endpoint to ask for a full reload on a given realtime provider.  
   When a Kraken restarts it pops a rabbitmq queue and asks Kirin to provide all info in it.
   Then the webservice asks Kirin background to fulfill this task.
@@ -295,18 +276,6 @@ To use pgAdmin, simply `File/add server` then enter any `name` then
 If you use pgAdmin, you can increase massively the number of characters per column
 (as the feed is big):
 `File/preferences` then `Request editor/Request editor/Maximum number of characters per column`
-
-
-###### IRE
-
-To retrieve an IRE feed concerning a given train number at a given date,
-you can connect to the desired database and execute the following command:
-```sql
-SELECT * FROM real_time_update WHERE connector = 'ire' AND raw_data
-    LIKE '%<NumeroTrain>009580/1</NumeroTrain><DateCirculation>26/10/2018%'
-    ORDER BY received_at desc;
-```
-Pay attention to the train number that can mix multiple numbers and can contain trailing 0.
 
 
 ### Release

@@ -38,7 +38,7 @@ import logging
 def purge_rt(nb_day_to_keep, connector):
     """
     purge table real_time_update and associate_realtimeupdate_tripupdate
-    for connector 'ire' or 'gtfs-rt' with nb_day_to_keep of history
+    for connector 'cots' or 'gtfs-rt' with nb_day_to_keep of history
     """
     logger = logging.getLogger(__name__)
     until = datetime.date.today() - datetime.timedelta(days=int(nb_day_to_keep))

@@ -40,7 +40,7 @@ import pytest
 def test_end_point():
     resp = api_get('/')
     assert 'status' in resp
-    assert 'ire' in resp
+    assert 'cots' in resp
 
 
 def test_status(setup_database):
@@ -51,14 +51,14 @@ def test_status(setup_database):
     assert 'db_version' in resp
     assert 'navitia_url' in resp
     assert 'last_update' in resp
-    assert 'realtime.ire' in resp['last_update']
+    assert 'realtime.cots' in resp['last_update']
     assert 'realtime.sherbrooke' in resp['last_update']
 
-    assert '2015-11-04T07:32:00Z' in resp['last_update']['realtime.ire']
+    assert '2015-11-04T07:32:00Z' in resp['last_update']['realtime.cots']
     assert '2015-11-04T07:52:00Z' in resp['last_update']['realtime.sherbrooke']
 
     assert 'realtime.sherbrooke' in resp['last_update_error']
-    assert '2015-11-04T07:32:00Z' in resp['last_valid_update']['realtime.ire']
+    assert '2015-11-04T07:32:00Z' in resp['last_valid_update']['realtime.cots']
     assert '2015-11-04T07:42:00Z' in resp['last_valid_update']['realtime.sherbrooke']
 
 
@@ -90,14 +90,14 @@ def setup_database():
             ]},
             utc.localize(datetime(2015, 11, 4, 8, 0, 0)),
             utc.localize(datetime(2015, 11, 4, 10, 0, 0)))
-        tu1 = model.TripUpdate(vj1, contributor='realtime.ire')
-        tu2 = model.TripUpdate(vj2, contributor='realtime.ire')
+        tu1 = model.TripUpdate(vj1, contributor='realtime.cots')
+        tu2 = model.TripUpdate(vj2, contributor='realtime.cots')
         tu3 = model.TripUpdate(vj3, contributor='realtime.sherbrooke')
-        rtu1 = model.RealTimeUpdate(None, 'ire', 'realtime.ire')
+        rtu1 = model.RealTimeUpdate(None, 'cots', 'realtime.cots')
         rtu1.created_at = datetime(2015, 11, 4, 6, 32)
         rtu1.trip_updates.append(tu1)
         model.db.session.add(rtu1)
-        rtu2 = model.RealTimeUpdate(None, 'ire', contributor='realtime.ire')
+        rtu2 = model.RealTimeUpdate(None, 'cots', contributor='realtime.cots')
         rtu2.created_at = datetime(2015, 11, 4, 7, 32)
         rtu2.trip_updates.append(tu2)
         model.db.session.add(rtu2)

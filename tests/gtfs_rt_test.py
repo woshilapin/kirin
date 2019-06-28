@@ -43,7 +43,7 @@ def unix_time(y, m, d, h, min, s):
     return calendar.timegm(d.utctimetuple())
 
 def make_96231_20150728_0():
-    """gtfs rt feed corresponding to train_96231_delayed.xml"""
+    """gtfs rt feed corresponding to cots_train_96231_delayed.json"""
 
     message = gtfs_realtime_pb2.FeedMessage()
 

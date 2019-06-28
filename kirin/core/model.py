@@ -412,7 +412,7 @@ class RealTimeUpdate(db.Model, TimestampMixin):
         result = {'last_update': {},
                   'last_valid_update': {},
                   'last_update_error': {}}
-        contributor = [app.config['CONTRIBUTOR'], app.config['COTS_CONTRIBUTOR'], app.config['GTFS_RT_CONTRIBUTOR']]
+        contributor = [app.config['COTS_CONTRIBUTOR'], app.config['GTFS_RT_CONTRIBUTOR']]
         for c in contributor:
             sql = db.session.query(cls.created_at, cls.status, cls.updated_at, cls.error)
             sql = sql.filter(cls.contributor == c)

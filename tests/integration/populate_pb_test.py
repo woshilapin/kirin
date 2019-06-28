@@ -61,7 +61,7 @@ def test_populate_pb_with_one_stop_time():
                             utc.localize(datetime.datetime(2015, 9, 8, 8, 10, 0)))
         trip_update.vj = vj
         st = StopTimeUpdate({'id': 'sa:1'}, departure=_dt("8:15"), arrival=None)
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         real_time_update.trip_updates.append(trip_update)
         trip_update.stop_time_updates.append(st)
 
@@ -108,7 +108,7 @@ def test_populate_pb_with_two_stop_time():
                             utc.localize(datetime.datetime(2015, 9, 8, 5, 10, 0)),
                             utc.localize(datetime.datetime(2015, 9, 8, 8, 10, 0)))
         trip_update.vj = vj
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         real_time_update.trip_updates.append(trip_update)
         st = StopTimeUpdate({'id': 'sa:1'}, departure=_dt("8:15"), departure_delay=timedelta(minutes=5),
                             arrival=None)
@@ -191,7 +191,7 @@ def test_populate_pb_with_deleted_stop_time():
                             utc.localize(datetime.datetime(2015, 9, 8, 5, 11, 0)),
                             utc.localize(datetime.datetime(2015, 9, 8, 10, 10, 0)))
         trip_update.vj = vj
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         real_time_update.trip_updates.append(trip_update)
         st = StopTimeUpdate({'id': 'sa:1'}, departure=_dt("8:15"), departure_delay=timedelta(minutes=5),
                             arrival=None)
@@ -300,7 +300,7 @@ def test_populate_pb_with_cancelation():
         trip_update.vj = vj
         trip_update.status = 'delete'
         trip_update.message = 'Message Test'
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         trip_update.contributor = 'kisio-digital'
         trip_update.company_id = 'sncf'
         trip_update.effect = 'REDUCED_SERVICE'
@@ -345,7 +345,7 @@ def test_populate_pb_with_full_dataset():
         trip_update.vj = vj
         trip_update.status = 'delete'
         trip_update.message = 'Message Test'
-        real_time_update = RealTimeUpdate(raw_data=None, connector='ire', contributor='realtime.ire')
+        real_time_update = RealTimeUpdate(raw_data=None, connector='cots', contributor='realtime.cots')
         trip_update.contributor = 'kisio-digital'
         trip_update.company_id = 'keolis'
         trip_update.effect = 'DETOUR'
