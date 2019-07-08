@@ -185,6 +185,17 @@ def handle(real_time_update, trip_updates, contributor, is_new_complete=False):
     data_time = datetime.datetime.utcfromtimestamp(feed.header.timestamp)
     log_dict = {'contributor': contributor, 'timestamp': data_time, 'trip_update_count': len(feed.entity),
                 'size': len(feed_str)}
+    # After merging trip_updates information of connector realtime, navitia and kirin database, if there is no new
+    # information destined to navitia, update real_time_update with status = 'KO' and a proper error message.
+    if not real_time_update.trip_updates and real_time_update.status == 'OK':
+        real_time_update.status = 'KO'
+        real_time_update.error = 'No new information destinated to navitia for this {}'.format(
+            real_time_update.connector)
+        logging.getLogger(__name__).error(
+            'RealTimeUpdate id={}: {}'.format(real_time_update.id, real_time_update.error))
+        model.db.session.add(real_time_update)
+        model.db.session.commit()
+
     return real_time_update, log_dict
 
 

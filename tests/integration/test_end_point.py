@@ -108,8 +108,7 @@ def setup_database():
         model.db.session.add(rtu3)
 
         rtu4 = model.RealTimeUpdate(None, connector='gtfs-rt', contributor='realtime.sherbrooke', status='KO',
-                                    error='No new information destinated to navitia for this gtfs-rt with '
-                                          'timestamp: 1520351246')
+                                    error='No new information destinated to navitia for this gtfs-rt')
         rtu4.created_at = datetime(2015, 11, 4, 7, 52)
         model.db.session.add(rtu4)
         model.db.session.commit()
