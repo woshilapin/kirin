@@ -84,8 +84,7 @@ def test_cots_train_delayed(mock_navitia_fixture):
         assert st.departure is None
         assert st.departure_delay == timedelta(minutes=15)
         assert st.departure_status == 'update'
-        # TODO: activate this once message are managed
-        # assert st.message == 'Affluence exceptionnelle de voyageurs'
+        assert st.message == 'Affluence exceptionnelle de voyageurs'
 
         # second impacted should be 'gare de Colmar'
         st = trip_up.stop_time_updates[2]
@@ -97,8 +96,7 @@ def test_cots_train_delayed(mock_navitia_fixture):
         assert st.departure is None
         assert st.departure_delay == timedelta(minutes=15)
         assert st.departure_status == 'update'
-        # TODO: activate this once message are managed
-        # assert st.message == 'Affluence exceptionnelle de voyageurs'
+        assert st.message == 'Affluence exceptionnelle de voyageurs'
 
         # last should be 'gare de Basel-SBB'
         st = trip_up.stop_time_updates[-1]
@@ -111,8 +109,7 @@ def test_cots_train_delayed(mock_navitia_fixture):
         assert st.departure is None
         assert st.departure_delay is None
         assert st.departure_status == 'none'
-        # TODO: activate this once message are managed
-        # assert st.message == 'Affluence exceptionnelle de voyageurs'
+        assert st.message == 'Affluence exceptionnelle de voyageurs'
 
 
 def test_cots_train_trip_removal(mock_navitia_fixture):
