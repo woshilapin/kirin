@@ -156,7 +156,7 @@ def find_st_in_vj(st_id, vj_sts):
 def handle(real_time_update, trip_updates, contributor, is_new_complete=False):
     """
     receive a RealTimeUpdate with at least one TripUpdate filled with the data received
-    by the connector. each TripUpdate is associated with the VehicleJourney returned by jormugandr
+    by the connector. each TripUpdate is associated with the VehicleJourney returned by jormungandr
     Returns real_time_update and the log_dict
     """
     if not real_time_update:
