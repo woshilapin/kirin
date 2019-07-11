@@ -77,15 +77,14 @@ def test_cots_train_delayed(mock_navitia_fixture):
         st = trip_up.stop_time_updates[1]
         assert st.id
         assert st.stop_id == 'stop_point:OCE:SP:TrainTER-87214056'
-        # the arrival has no EcartExterne in the IRE data, so the status is 'none'
+        # the COTS data has no listeHoraireProjeteArrivee, so the status is 'none'
         assert st.arrival is None  # not computed yet
         assert st.arrival_delay is None
         assert st.arrival_status == 'none'
         assert st.departure is None
         assert st.departure_delay == timedelta(minutes=15)
         assert st.departure_status == 'update'
-        # TODO: activate this once message are managed
-        # assert st.message == 'Affluence exceptionnelle de voyageurs'
+        assert st.message == 'Affluence exceptionnelle de voyageurs'
 
         # second impacted should be 'gare de Colmar'
         st = trip_up.stop_time_updates[2]
@@ -97,8 +96,7 @@ def test_cots_train_delayed(mock_navitia_fixture):
         assert st.departure is None
         assert st.departure_delay == timedelta(minutes=15)
         assert st.departure_status == 'update'
-        # TODO: activate this once message are managed
-        # assert st.message == 'Affluence exceptionnelle de voyageurs'
+        assert st.message == 'Affluence exceptionnelle de voyageurs'
 
         # last should be 'gare de Basel-SBB'
         st = trip_up.stop_time_updates[-1]
@@ -107,12 +105,11 @@ def test_cots_train_delayed(mock_navitia_fixture):
         assert st.arrival is None
         assert st.arrival_delay == timedelta(minutes=15)
         assert st.arrival_status == 'update'
-        # no departure in ire since it's the last (thus the departure will be before the arrival)
+        # no departure since it's the last (thus the departure will be before the arrival)
         assert st.departure is None
         assert st.departure_delay is None
         assert st.departure_status == 'none'
-        # TODO: activate this once message are managed
-        # assert st.message == 'Affluence exceptionnelle de voyageurs'
+        assert st.message == 'Affluence exceptionnelle de voyageurs'
 
 
 def test_cots_train_trip_removal(mock_navitia_fixture):
