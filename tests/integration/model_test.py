@@ -100,14 +100,14 @@ def test_find_stop():
 
 def test_find_activate():
     with app.app_context():
-        create_real_time_update('70866ce8-0638-4fa1-8556-1ddfa22d09d3', 'C1', 'ire',
+        create_real_time_update('70866ce8-0638-4fa1-8556-1ddfa22d09d3', 'C1', 'cots',
                                 '70866ce8-0638-4fa1-8556-1ddfa22d09d3', 'vj1', datetime.date(2015, 9, 8))
-        create_real_time_update('70866ce8-0638-4fa1-8556-1ddfa22d09d4', 'C1', 'ire',
+        create_real_time_update('70866ce8-0638-4fa1-8556-1ddfa22d09d4', 'C1', 'cots',
                                 '70866ce8-0638-4fa1-8556-1ddfa22d09d4', 'vj2', datetime.date(2015, 9, 10))
-        create_real_time_update('70866ce8-0638-4fa1-8556-1ddfa22d09d5', 'C1', 'ire',
+        create_real_time_update('70866ce8-0638-4fa1-8556-1ddfa22d09d5', 'C1', 'cots',
                                 '70866ce8-0638-4fa1-8556-1ddfa22d09d5', 'vj3', datetime.date(2015, 9, 12))
 
-        create_real_time_update('70866ce8-0638-4fa1-8556-1ddfa22d09d6', 'C2', 'ire',
+        create_real_time_update('70866ce8-0638-4fa1-8556-1ddfa22d09d6', 'C2', 'cots',
                                 '70866ce8-0638-4fa1-8556-1ddfa22d09d6', 'vj4', datetime.date(2015, 9, 12))
         db.session.commit()
 

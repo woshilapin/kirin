@@ -381,7 +381,7 @@ class RealTimeUpdate(db.Model, TimestampMixin):
     """
     id = db.Column(postgresql.UUID, default=gen_uuid, primary_key=True)
     received_at = db.Column(db.DateTime, nullable=False)
-    connector = db.Column(db.Enum('ire', 'cots', 'gtfs-rt', name='connector_type'), nullable=False)
+    connector = db.Column(db.Enum('cots', 'gtfs-rt', name='connector_type'), nullable=False)
     status = db.Column(db.Enum('OK', 'KO', 'pending', name='rt_status'), nullable=False)
     db.Index('status_idx', status)
     error = db.Column(db.Text, nullable=True)
