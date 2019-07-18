@@ -1,5 +1,5 @@
 # coding: utf8
-
+#
 # Copyright (c) 2001-2018, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
@@ -1412,3 +1412,41 @@ def test_cots_update_trip_with_delay_pass_midnight_on_first_station():
         assert stop_times[3].arrival == datetime(2012, 11, 20, 1, 15)
         assert stop_times[3].departure_status == 'none'
         assert stop_times[3].departure == datetime(2012, 11, 20, 1, 15)
+
+def test_cots_add_first_stop_with_advance_pass_midnight():
+    """
+    Relates to test_delay_pass_midnight_towards_previous_day in jormungandr
+    Vehicle_journey with first stop_time at 14:01 and last stop_time at 21:46 for 20121120
+    Disruption on a base-schedule VJ without pass-midnight.
+    The disruption adds a previous stop before existing stops at 21:30 the day before so that the realtime VJ is
+    a past-midnight the day before (20121119).
+    Test that the realtime VJ is circulating on the right day: 20121119 (so one day before the base-schedule VJ).
+    TODO: A current issue, that should be fixed is a day is added on the result. In our case, it shift the VJ from
+    20121119-20121120 to 20121120-20121121.
+    """
+    cots_update_file = get_fixture_data('cots_train_9580_pass_midnight_in_advance_on_first_station.json')
+    res = api_post('/cots', data=cots_update_file)
+    assert res == 'OK'
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 1
+        trips = TripUpdate.query.all()
+        assert len(trips) == 1
+        assert trips[0].effect == 'MODIFIED_SERVICE'
+        stop_times = StopTimeUpdate.query.all()
+        assert len(stop_times) == 14
+
+        # The first station should be served at 20121119T2130 (pass midnight in advance 20121120)
+        assert stop_times[0].arrival_status == 'none'
+        assert stop_times[0].departure_status == 'add'
+        assert stop_times[0].arrival == datetime(2012, 11, 20, 21, 30)
+        assert stop_times[0].departure == datetime(2012, 11, 20, 21, 30)
+
+        # From the second station, we should have a pass midnight towards the next day (20121121)
+        assert stop_times[1].arrival_status == 'none'
+        assert stop_times[1].departure_status == 'none'
+        assert stop_times[1].arrival == datetime(2012, 11, 21, 13, 1)
+        assert stop_times[1].departure == datetime(2012, 11, 21, 13, 1)
+        assert stop_times[-1].arrival_status == 'none'
+        assert stop_times[-1].departure_status == 'none'
+        assert stop_times[-1].arrival == datetime(2012, 11, 21, 20, 46)
+        assert stop_times[-1].departure == datetime(2012, 11, 21, 20, 46)
