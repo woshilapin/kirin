@@ -41,20 +41,20 @@ import six
 from kirin.core import model
 from enum import Enum
 
-TRAIN_ID_FORMAT = 'OCE:SN:{}'
+TRAIN_ID_FORMAT = "OCE:SN:{}"
 SNCF_SEARCH_MARGIN = timedelta(hours=1)
 
 
 class TripStatus(Enum):
-    AJOUTEE = 1,    # Added
-    SUPPRIMEE = 2,  # Deleted
-    PERTURBEE = 3   # Modified or Impacted
+    AJOUTEE = (1,)  # Added
+    SUPPRIMEE = (2,)  # Deleted
+    PERTURBEE = 3  # Modified or Impacted
 
 
 class ActionOnTrip(Enum):
-    NOT_ADDED = 1,          #
-    FIRST_TIME_ADDED = 2,   # Add trip for the first time / delete followed by add
-    PREVIOUSLY_ADDED = 3    # add followed by update
+    NOT_ADDED = (1,)  #
+    FIRST_TIME_ADDED = (2,)  # Add trip for the first time / delete followed by add
+    PREVIOUSLY_ADDED = 3  # add followed by update
 
 
 def make_navitia_empty_vj(headsign):
@@ -88,11 +88,11 @@ def headsigns(str_headsign):
     ['2038', '12345']
 
     """
-    h = str_headsign.lstrip('0')
-    if '/' not in h:
+    h = str_headsign.lstrip("0")
+    if "/" not in h:
         return [h]
-    signs = h.split('/', 1)
-    alternative_headsign = signs[0][:-len(signs[1])] + signs[1]
+    signs = h.split("/", 1)
+    alternative_headsign = signs[0][: -len(signs[1])] + signs[1]
     return [signs[0], alternative_headsign]
 
 
@@ -100,28 +100,35 @@ def get_navitia_stop_time_sncf(cr, ci, ch, nav_vj):
     nav_external_code = "{cr}-{ci}-{ch}".format(cr=cr, ci=ci, ch=ch)
 
     nav_stop_times = jmespath.search(
-        'stop_times[? stop_point.stop_area.codes[? value==`{nav_ext_code}` && type==`CR-CI-CH`]]'.format(
-            nav_ext_code=nav_external_code),
-        nav_vj)
+        "stop_times[? stop_point.stop_area.codes[? value==`{nav_ext_code}` && type==`CR-CI-CH`]]".format(
+            nav_ext_code=nav_external_code
+        ),
+        nav_vj,
+    )
 
     log_dict = None
     if not nav_stop_times:
-        log_dict = {'log': 'missing stop point', 'stop_point_code': nav_external_code}
+        log_dict = {"log": "missing stop point", "stop_point_code": nav_external_code}
         return None, log_dict
 
     if len(nav_stop_times) > 1:
-        log_dict = {'log': 'duplicate stops', 'stop_point_code': nav_external_code}
+        log_dict = {"log": "duplicate stops", "stop_point_code": nav_external_code}
 
     return nav_stop_times[0], log_dict
 
 
 class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
-
     def __init__(self, nav, contributor=None):
         self.navitia = nav
         self.contributor = contributor
 
-    def _get_navitia_vjs(self, headsign_str, utc_since_dt, utc_until_dt, action_on_trip=ActionOnTrip.NOT_ADDED.name):
+    def _get_navitia_vjs(
+        self,
+        headsign_str,
+        utc_since_dt,
+        utc_until_dt,
+        action_on_trip=ActionOnTrip.NOT_ADDED.name,
+    ):
         """
         Search for navitia's vehicle journeys with given headsigns, in the period provided
         :param utc_since_dt: UTC datetime that starts the search period.
@@ -147,42 +154,66 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
         # So we do one VJ search for each headsign to ensure we get it, then deduplicate VJs
         for train_number in headsigns(headsign_str):
 
-            log.debug('searching for vj {} during period [{} - {}] in navitia'.format(
-                            train_number, extended_since_dt, extended_until_dt))
+            log.debug(
+                "searching for vj {} during period [{} - {}] in navitia".format(
+                    train_number, extended_since_dt, extended_until_dt
+                )
+            )
 
-            navitia_vjs = self.navitia.vehicle_journeys(q={
-                'headsign': train_number,
-                'since': to_navitia_str(extended_since_dt),
-                'until': to_navitia_str(extended_until_dt),
-                'depth': '2',  # we need this depth to get the stoptime's stop_area
-                'show_codes': 'true'  # we need the stop_points CRCICH codes
-            })
+            navitia_vjs = self.navitia.vehicle_journeys(
+                q={
+                    "headsign": train_number,
+                    "since": to_navitia_str(extended_since_dt),
+                    "until": to_navitia_str(extended_until_dt),
+                    "depth": "2",  # we need this depth to get the stoptime's stop_area
+                    "show_codes": "true",  # we need the stop_points CRCICH codes
+                }
+            )
 
             if action_on_trip == ActionOnTrip.NOT_ADDED.name:
                 if not navitia_vjs:
-                    logging.getLogger(__name__).info('impossible to find train {t} on [{s}, {u}['
-                                                     .format(t=train_number,
-                                                             s=extended_since_dt,
-                                                             u=extended_until_dt))
-                    record_internal_failure('missing train', contributor=self.contributor)
+                    logging.getLogger(__name__).info(
+                        "impossible to find train {t} on [{s}, {u}[".format(
+                            t=train_number, s=extended_since_dt, u=extended_until_dt
+                        )
+                    )
+                    record_internal_failure(
+                        "missing train", contributor=self.contributor
+                    )
 
             else:
                 if action_on_trip == ActionOnTrip.FIRST_TIME_ADDED.name and navitia_vjs:
-                    raise InvalidArguments('Invalid action, trip {} already present in navitia'.format(train_number))
+                    raise InvalidArguments(
+                        "Invalid action, trip {} already present in navitia".format(
+                            train_number
+                        )
+                    )
 
                 navitia_vjs = [make_navitia_empty_vj(train_number)]
 
             for nav_vj in navitia_vjs:
 
                 try:
-                    vj = model.VehicleJourney(nav_vj, extended_since_dt, extended_until_dt, vj_start_dt=utc_since_dt)
-                    vjs[nav_vj['id']] = vj
+                    vj = model.VehicleJourney(
+                        nav_vj,
+                        extended_since_dt,
+                        extended_until_dt,
+                        vj_start_dt=utc_since_dt,
+                    )
+                    vjs[nav_vj["id"]] = vj
                 except Exception as e:
                     logging.getLogger(__name__).exception(
-                        'Error while creating kirin VJ of {}: {}'.format(nav_vj.get('id'), e))
-                    record_internal_failure('Error while creating kirin VJ', contributor=self.contributor)
+                        "Error while creating kirin VJ of {}: {}".format(
+                            nav_vj.get("id"), e
+                        )
+                    )
+                    record_internal_failure(
+                        "Error while creating kirin VJ", contributor=self.contributor
+                    )
 
         if not vjs:
-            raise ObjectNotFound('no train found for headsign(s) {}'.format(headsign_str))
+            raise ObjectNotFound(
+                "no train found for headsign(s) {}".format(headsign_str)
+            )
 
         return vjs.values()

@@ -51,7 +51,7 @@ def str_to_date(value):
     try:
         return parse_date(value)
     except:
-        logging.getLogger(__name__).info('[{value} invalid date.'.format(value=value))
+        logging.getLogger(__name__).info("[{value} invalid date.".format(value=value))
         return None
 
 
@@ -61,8 +61,9 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
 
     you can add additional params to it (like the environment name) at configuration time
     """
+
     def __init__(self, *args, **kwargs):
-        self.extras = kwargs.pop('extras', {})
+        self.extras = kwargs.pop("extras", {})
         jsonlogger.JsonFormatter.__init__(self, *args, **kwargs)
 
     def process_log_record(self, log_record):
@@ -74,17 +75,19 @@ def make_navitia_wrapper():
     """
     return a navitia wrapper to call the navitia API
     """
-    url = current_app.config['NAVITIA_URL']
-    token = current_app.config.get('NAVITIA_TOKEN')
-    instance = current_app.config['NAVITIA_INSTANCE']
+    url = current_app.config["NAVITIA_URL"]
+    token = current_app.config.get("NAVITIA_TOKEN")
+    instance = current_app.config["NAVITIA_INSTANCE"]
     return navitia_wrapper.Navitia(url=url, token=token).instance(instance)
 
 
-def make_rt_update(data, connector, contributor, status='OK'):
+def make_rt_update(data, connector, contributor, status="OK"):
     """
     Create an RealTimeUpdate object for the query and persist it
     """
-    rt_update = model.RealTimeUpdate(data, connector=connector, contributor=contributor, status=status)
+    rt_update = model.RealTimeUpdate(
+        data, connector=connector, contributor=contributor, status=status
+    )
 
     model.db.session.add(rt_update)
     model.db.session.commit()
@@ -92,9 +95,9 @@ def make_rt_update(data, connector, contributor, status='OK'):
 
 
 def record_internal_failure(log, **kwargs):
-    params = {'log': log}
+    params = {"log": log}
     params.update(kwargs)
-    new_relic.record_custom_event('kirin_internal_failure', params)
+    new_relic.record_custom_event("kirin_internal_failure", params)
 
 
 def record_call(status, **kwargs):
@@ -102,17 +105,17 @@ def record_call(status, **kwargs):
     status can be in: ok, a message text or failure with reason.
     parameters: contributor, timestamp, trip_update_count, size...
     """
-    params = {'status': status}
+    params = {"status": status}
     params.update(kwargs)
-    new_relic.record_custom_event('kirin_status', params)
+    new_relic.record_custom_event("kirin_status", params)
 
 
 def get_timezone(stop_time):
     # TODO: we must use the coverage timezone, not the stop_area timezone, as they can be different.
     # We don't have this information now but we should have it in the near future
-    str_tz = stop_time.get('stop_point', {}).get('stop_area', {}).get('timezone')
+    str_tz = stop_time.get("stop_point", {}).get("stop_area", {}).get("timezone")
     if not str_tz:
-        raise Exception('impossible to convert local to utc without the timezone')
+        raise Exception("impossible to convert local to utc without the timezone")
 
     tz = pytz.timezone(str_tz)
     if not tz:
@@ -126,12 +129,15 @@ def should_retry_exception(exception):
 
 def make_kirin_lock_name(*args):
     from kirin import app
-    return '|'.join([app.config['TASK_LOCK_PREFIX']] + [str(a) for a in args])
+
+    return "|".join([app.config["TASK_LOCK_PREFIX"]] + [str(a) for a in args])
 
 
 def save_gtfs_rt_with_error(data, connector, contributor, status, error=None):
     raw_data = str(data)
-    rt_update = make_rt_update(raw_data, connector=connector, contributor=contributor, status=status)
+    rt_update = make_rt_update(
+        raw_data, connector=connector, contributor=contributor, status=status
+    )
     rt_update.status = status
     rt_update.error = error
     model.db.session.add(rt_update)
@@ -144,7 +150,9 @@ def poke_updated_at(rtu):
     """
     if rtu:
         status = rtu.status
-        rtu.status = 'pending' if status != 'pending' else 'OK' # just to poke updated_at
+        rtu.status = (
+            "pending" if status != "pending" else "OK"
+        )  # just to poke updated_at
         model.db.session.commit()
         rtu.status = status
         model.db.session.commit()
@@ -160,7 +168,12 @@ def manage_db_error(data, connector, contributor, status, error=None):
     parameters: data, connector, contributor, status, error
     """
     last = model.RealTimeUpdate.get_last_rtu(connector, contributor)
-    if last and last.status == status and last.error == error and last.raw_data == str(data):
+    if (
+        last
+        and last.status == status
+        and last.error == error
+        and last.raw_data == str(data)
+    ):
         poke_updated_at(last)
     else:
         save_gtfs_rt_with_error(data, connector, contributor, status, error)
@@ -174,12 +187,13 @@ def manage_db_no_new(connector, contributor):
 @contextmanager
 def get_lock(logger, lock_name, lock_timeout):
     from kirin import redis
-    logger.debug('getting lock %s', lock_name)
+
+    logger.debug("getting lock %s", lock_name)
     try:
         lock = redis.lock(lock_name, timeout=lock_timeout)
         locked = lock.acquire(blocking=False)
     except ConnectionError:
-        logging.exception('Exception with redis while locking')
+        logging.exception("Exception with redis while locking")
         raise
 
     try:

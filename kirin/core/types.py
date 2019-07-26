@@ -44,36 +44,36 @@ class ModificationType(Enum):
 
 def stop_time_status_to_protobuf(stop_time_status):
     return {
-        'add': kirin_pb2.ADDED,
-        'delete': kirin_pb2.DELETED,
-        'update': kirin_pb2.SCHEDULED,
-        'none': kirin_pb2.SCHEDULED,
-        'deleted_for_detour': kirin_pb2.DELETED_FOR_DETOUR,
-        'added_for_detour': kirin_pb2.ADDED_FOR_DETOUR
+        "add": kirin_pb2.ADDED,
+        "delete": kirin_pb2.DELETED,
+        "update": kirin_pb2.SCHEDULED,
+        "none": kirin_pb2.SCHEDULED,
+        "deleted_for_detour": kirin_pb2.DELETED_FOR_DETOUR,
+        "added_for_detour": kirin_pb2.ADDED_FOR_DETOUR,
     }.get(stop_time_status, kirin_pb2.SCHEDULED)
 
 
 def get_modification_type_order(modification_type):
     return {
-        'none': 0,
-        'update': 1,
-        'add': 2,
-        'delete': 3,
-        'added_for_detour': 4,
-        'deleted_for_detour': 5,
+        "none": 0,
+        "update": 1,
+        "add": 2,
+        "delete": 3,
+        "added_for_detour": 4,
+        "deleted_for_detour": 5,
     }.get(modification_type, 0)
 
 
 class TripEffect(Enum):
-    NO_SERVICE = 1,
-    REDUCED_SERVICE = 2,
-    SIGNIFICANT_DELAYS = 3,
-    DETOUR = 4,
-    ADDITIONAL_SERVICE = 5,
-    MODIFIED_SERVICE = 6,
-    OTHER_EFFECT = 7,
-    UNKNOWN_EFFECT = 8,
-    STOP_MOVED = 9,
+    NO_SERVICE = (1,)
+    REDUCED_SERVICE = (2,)
+    SIGNIFICANT_DELAYS = (3,)
+    DETOUR = (4,)
+    ADDITIONAL_SERVICE = (5,)
+    MODIFIED_SERVICE = (6,)
+    OTHER_EFFECT = (7,)
+    UNKNOWN_EFFECT = (8,)
+    STOP_MOVED = (9,)
 
 
 def get_higher_status(st1, st2):
@@ -91,13 +91,13 @@ def get_effect_by_stop_time_status(status):
         ModificationType.add.name: TripEffect.MODIFIED_SERVICE.name,
         ModificationType.delete.name: TripEffect.REDUCED_SERVICE.name,
         ModificationType.added_for_detour.name: TripEffect.DETOUR.name,
-        ModificationType.deleted_for_detour.name: TripEffect.DETOUR.name
+        ModificationType.deleted_for_detour.name: TripEffect.DETOUR.name,
     }
     return status_to_effect.get(status, TripEffect.UNKNOWN_EFFECT.name)
 
 
 def get_mode_filter(indicator=None):
     return {
-        'FERRE': 'physical_mode.id=physical_mode:LongDistanceTrain',
-        'ROUTIER': 'physical_mode.id=physical_mode:Coach'
-    }.get(indicator, 'physical_mode.id=physical_mode:LongDistanceTrain')
+        "FERRE": "physical_mode.id=physical_mode:LongDistanceTrain",
+        "ROUTIER": "physical_mode.id=physical_mode:Coach",
+    }.get(indicator, "physical_mode.id=physical_mode:LongDistanceTrain")

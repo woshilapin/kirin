@@ -35,34 +35,32 @@ class KirinException(HTTPException):
     """
     All kirin exception must inherit from this one and define a code and a short message
     """
+
     def __init__(self, detailed_message=None):
-        self.data = {
-            'status': self.code,
-            'message': self.message,
-        }
+        self.data = {"status": self.code, "message": self.message}
         if detailed_message:
-            self.data['error'] = detailed_message
+            self.data["error"] = detailed_message
 
 
 class InvalidArguments(KirinException):
     code = 400
-    message = 'Invalid arguments'
+    message = "Invalid arguments"
 
 
 class ObjectNotFound(KirinException):
     code = 404
-    message = 'object not found'
+    message = "object not found"
 
 
 class MessageNotPublished(KirinException):
     code = 500
-    message = 'impossible to publish message on network'
+    message = "impossible to publish message on network"
 
 
 class SubServiceError(KirinException):
     code = 404
-    message = 'object not found (error on sub-service)'
+    message = "object not found (error on sub-service)"
 
 
 class UnauthorizedOnSubService(SubServiceError):
-    message = 'object not found (unauthorized on sub-service)'
+    message = "object not found (unauthorized on sub-service)"

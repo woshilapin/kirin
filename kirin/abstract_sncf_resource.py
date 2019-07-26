@@ -37,7 +37,6 @@ from kirin.core import model
 
 
 class AbstractSNCFResource(Resource):
-
     def __init__(self, nav_wrapper, timeout, contributor, builder):
         self.navitia_wrapper = nav_wrapper
         self.navitia_wrapper.timeout = timeout
@@ -47,34 +46,40 @@ class AbstractSNCFResource(Resource):
     def process_post(self, input_raw, contributor_type, is_new_complete=False):
 
         # create a raw rt_update obj, save the raw_input into the db
-        rt_update = make_rt_update(input_raw, contributor_type, contributor=self.contributor)
+        rt_update = make_rt_update(
+            input_raw, contributor_type, contributor=self.contributor
+        )
         start_datetime = datetime.utcnow()
         try:
             # assuming UTF-8 encoding for all input
-            rt_update.raw_data = rt_update.raw_data.encode('utf-8')
+            rt_update.raw_data = rt_update.raw_data.encode("utf-8")
 
             # raw_input is interpreted
-            trip_updates = self.builder(self.navitia_wrapper, self.contributor).build(rt_update)
-            record_call('OK', contributor=self.contributor)
+            trip_updates = self.builder(self.navitia_wrapper, self.contributor).build(
+                rt_update
+            )
+            record_call("OK", contributor=self.contributor)
         except KirinException as e:
-            rt_update.status = 'KO'
-            rt_update.error = e.data['error']
+            rt_update.status = "KO"
+            rt_update.error = e.data["error"]
             model.db.session.add(rt_update)
             model.db.session.commit()
-            record_call('failure', reason=str(e), contributor=self.contributor)
+            record_call("failure", reason=str(e), contributor=self.contributor)
             raise
         except Exception as e:
-            rt_update.status = 'KO'
+            rt_update.status = "KO"
             rt_update.error = e.message
             model.db.session.add(rt_update)
             model.db.session.commit()
-            record_call('failure', reason=str(e), contributor=self.contributor)
+            record_call("failure", reason=str(e), contributor=self.contributor)
             raise
 
-        _, log_dict = core.handle(rt_update, trip_updates, self.contributor, is_new_complete=is_new_complete)
+        _, log_dict = core.handle(
+            rt_update, trip_updates, self.contributor, is_new_complete=is_new_complete
+        )
         duration = (datetime.utcnow() - start_datetime).total_seconds()
-        log_dict.update({'duration': duration})
-        record_call('Simple feed publication', **log_dict)
-        logging.getLogger(__name__).info('Simple feed publication', extra=log_dict)
+        log_dict.update({"duration": duration})
+        record_call("Simple feed publication", **log_dict)
+        logging.getLogger(__name__).info("Simple feed publication", extra=log_dict)
 
-        return 'OK', 200
+        return "OK", 200

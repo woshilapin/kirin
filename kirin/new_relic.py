@@ -38,22 +38,25 @@ try:
     from newrelic import agent
 except ImportError:
     logger = logging.getLogger(__name__)
-    logger.exception('failure while importing newrelic')
+    logger.exception("failure while importing newrelic")
     agent = None
+
 
 def init(config_file):
     if agent and config_file and os.path.exists(config_file):
         agent.initialize(config_file)
     else:
         logger = logging.getLogger(__name__)
-        logger.warn('newrelic hasn\'t been initialized')
+        logger.warn("newrelic hasn't been initialized")
+
 
 def record_exception():
     """
     record the exception currently handled to newrelic
     """
     if agent:
-        agent.record_exception()#will record the exception currently handled
+        agent.record_exception()  # will record the exception currently handled
+
 
 def record_custom_parameter(name, value):
     """
@@ -61,6 +64,7 @@ def record_custom_parameter(name, value):
     """
     if agent:
         agent.add_custom_parameter(name, value)
+
 
 def record_custom_event(event_type, params):
     """
@@ -71,14 +75,15 @@ def record_custom_event(event_type, params):
         try:
             if not params:
                 params = {}
-            params['kirin_request_id'] = flask.request.id
+            params["kirin_request_id"] = flask.request.id
         except RuntimeError:
-            pass#we are outside of a flask context :(
+            pass  # we are outside of a flask context :(
         try:
             agent.record_custom_event(event_type, params)
         except:
             logger = logging.getLogger(__name__)
-            logger.exception('failure while reporting to newrelic')
+            logger.exception("failure while reporting to newrelic")
+
 
 def ignore():
     """
@@ -89,7 +94,8 @@ def ignore():
             agent.suppress_transaction_trace()
         except:
             logger = logging.getLogger(__name__)
-            logger.exception('failure while suppressing transaction')
+            logger.exception("failure while suppressing transaction")
+
 
 def ignore_transaction():
     """
@@ -100,4 +106,4 @@ def ignore_transaction():
             agent.ignore_transaction()
         except:
             logger = logging.getLogger(__name__)
-            logger.exception('failure while ignoring transaction')
+            logger.exception("failure while ignoring transaction")

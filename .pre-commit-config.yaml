@@ -16,5 +16,6 @@ repos:
     rev: v0.670
     hooks:
     -   id: mypy
-        args: [--ignore-missing-imports, --py2]
+        args: [--ignore-missing-imports, --py2, --follow-imports=skip]
         language_version: python3.6
+

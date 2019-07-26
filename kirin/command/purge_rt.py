@@ -34,6 +34,7 @@ from kirin.core.model import db, RealTimeUpdate
 import datetime
 import logging
 
+
 @manager.command
 def purge_rt(nb_day_to_keep, connector):
     """
@@ -42,6 +43,6 @@ def purge_rt(nb_day_to_keep, connector):
     """
     logger = logging.getLogger(__name__)
     until = datetime.date.today() - datetime.timedelta(days=int(nb_day_to_keep))
-    logger.info('purge table real_time_update for %s until %s', connector, until)
+    logger.info("purge table real_time_update for %s until %s", connector, until)
     RealTimeUpdate.remove_by_connectors_until(connectors=[connector], until=until)
     db.session.commit()

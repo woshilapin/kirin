@@ -33,20 +33,20 @@ from flask import Request, request
 import uuid
 import logging
 
+
 class IdFilter(logging.Filter):
     def filter(self, record):
         try:
             record.request_id = request.id
         except RuntimeError:
-            #if we are outside of a application context
+            # if we are outside of a application context
             pass
         return True
 
 
-
-#http://flask.pocoo.org/docs/0.12/patterns/celery/
+# http://flask.pocoo.org/docs/0.12/patterns/celery/
 def make_celery(app):
-    celery_app = celery.Celery(app.import_name, broker=app.config['CELERY_BROKER_URL'])
+    celery_app = celery.Celery(app.import_name, broker=app.config["CELERY_BROKER_URL"])
     celery_app.conf.update(app.config)
     TaskBase = celery_app.Task
 
@@ -60,11 +60,12 @@ def make_celery(app):
     celery_app.Task = ContextTask
     return celery_app
 
+
 class KirinRequest(Request):
     """
     override the request of flask to add an id on all request
     """
+
     def __init__(self, *args, **kwargs):
         super(Request, self).__init__(*args, **kwargs)
         self.id = str(uuid.uuid4())
-
