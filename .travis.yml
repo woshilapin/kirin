@@ -1,0 +1,33 @@
+
+language: python
+python:
+  - "2.7"
+  - "3.6"
+sudo: required
+cache: pip
+dist: xenial
+
+
+# This script is triggered only with python2.7 (as below python3.6 is excluded from the matrix)
+before_install:
+  - git submodule update --init --recursive
+
+before_script:
+  - pip install -r requirements_dev.txt
+  - bash ./setup.py build_pb
+  - bash ./setup.py build_version
+
+script:
+  - KIRIN_CONFIG_FILE=test_settings.py py.test --doctest-modules
+
+matrix:
+  include:  # This script is triggered only with python3.6
+    - python: "3.6"
+      before_script:
+        - pip install -r requirements_pre-commit.txt
+        - pip install pre-commit
+        - pre-commit install
+      script:
+        - pre-commit run --all --show-diff-on-failure
+  exclude:
+    - python: "3.6"
