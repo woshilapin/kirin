@@ -65,15 +65,15 @@ def get_modification_type_order(modification_type):
 
 
 class TripEffect(Enum):
-    NO_SERVICE = (1,)
-    REDUCED_SERVICE = (2,)
-    SIGNIFICANT_DELAYS = (3,)
-    DETOUR = (4,)
-    ADDITIONAL_SERVICE = (5,)
-    MODIFIED_SERVICE = (6,)
-    OTHER_EFFECT = (7,)
-    UNKNOWN_EFFECT = (8,)
-    STOP_MOVED = (9,)
+    NO_SERVICE = 1
+    REDUCED_SERVICE = 2
+    SIGNIFICANT_DELAYS = 3
+    DETOUR = 4
+    ADDITIONAL_SERVICE = 5
+    MODIFIED_SERVICE = 6
+    OTHER_EFFECT = 7
+    UNKNOWN_EFFECT = 8
+    STOP_MOVED = 9
 
 
 def get_higher_status(st1, st2):

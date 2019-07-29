@@ -7,15 +7,20 @@ sudo: required
 cache: pip
 dist: xenial
 
+addons:
+  apt:
+    packages:
+    - rabbitmq-server
+
 
 # This script is triggered only with python2.7 (as below python3.6 is excluded from the matrix)
-before_install:
-  - git submodule update --init --recursive
-
 before_script:
+  - sudo apt update && sudo apt install -y protobuf-compiler
+  - sed -i 's,git\@github.com:\([^/]*\)/\(.*\).git,https://github.com/\1/\2,' .gitmodules
+  - git submodule update --init --recursive
   - pip install -r requirements_dev.txt
-  - bash ./setup.py build_pb
-  - bash ./setup.py build_version
+  - python setup.py build_pbf
+  - python setup.py build_version
 
 script:
   - KIRIN_CONFIG_FILE=test_settings.py py.test --doctest-modules
