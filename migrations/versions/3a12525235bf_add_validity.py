@@ -13,6 +13,7 @@ down_revision = '2763a0e3f0bf'
 
 from alembic import op
 
+
 def upgrade():
     op.execute("UPDATE real_time_update SET status = 'OK' WHERE status IS NULL")
     op.alter_column('real_time_update', 'status', server_default='OK')

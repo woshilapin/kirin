@@ -21,8 +21,10 @@ def upgrade():
     handled thus the stoptimes are not important)
     """
     op.execute("""TRUNCATE TABLE stop_time_update;""")
-    op.execute("""DELETE from associate_realtimeupdate_tripupdate WHERE \
-              trip_update_id in (select vj_id from trip_update WHERE status != 'delete');""")
+    op.execute(
+        """DELETE from associate_realtimeupdate_tripupdate WHERE \
+              trip_update_id in (select vj_id from trip_update WHERE status != 'delete');"""
+    )
     op.execute("""DELETE from trip_update WHERE status != 'delete';""")
     op.execute("""DELETE from vehicle_journey WHERE id not in (select vj_id from trip_update);""")
 

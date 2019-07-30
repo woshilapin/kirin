@@ -21,12 +21,14 @@ def upgrade():
     since all stoptimes are thus false, we remove all of them
     """
     op.execute("""TRUNCATE TABLE stop_time_update;""")
-    op.execute("""DELETE from associate_realtimeupdate_tripupdate WHERE \
-              trip_update_id in (select vj_id from trip_update WHERE status != 'delete');""")
+    op.execute(
+        """DELETE from associate_realtimeupdate_tripupdate WHERE \
+              trip_update_id in (select vj_id from trip_update WHERE status != 'delete');"""
+    )
     op.execute("""DELETE from trip_update WHERE status != 'delete';""")
     op.execute("""DELETE from vehicle_journey WHERE id not in (select vj_id from trip_update);""")
 
 
 def downgrade():
-    #no way to get the old stoptimes back :p
+    # no way to get the old stoptimes back :p
     pass

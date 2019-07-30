@@ -16,10 +16,12 @@ import sqlalchemy as sa
 
 def upgrade():
     # Delete from trip_update and related tables lines related to the connector 'ire'
-    op.execute("delete from trip_update where vj_id in ( \
+    op.execute(
+        "delete from trip_update where vj_id in ( \
                select trip_update_id from associate_realtimeupdate_tripupdate \
                inner join real_time_update on (real_time_update_id = real_time_update.id) \
-               where connector = 'ire')")
+               where connector = 'ire')"
+    )
 
     # Delete lines in vehicle_journey without any use in trip_update
     op.execute("delete from vehicle_journey where id not in ( select vj_id from trip_update)")

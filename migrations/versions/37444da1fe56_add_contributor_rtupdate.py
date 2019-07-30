@@ -17,11 +17,13 @@ import sqlalchemy as sa
 def upgrade():
     op.add_column('real_time_update', sa.Column('contributor', sa.Text(), nullable=True))
     connection = op.get_bind()
-    connection.execute('''UPDATE real_time_update
+    connection.execute(
+        '''UPDATE real_time_update
                           SET contributor = t.contributor
                           FROM trip_update t, associate_realtimeupdate_tripupdate art
                           WHERE t.vj_id = art.trip_update_id
-                          AND real_time_update.id = art.real_time_update_id;''')
+                          AND real_time_update.id = art.real_time_update_id;'''
+    )
 
 
 def downgrade():

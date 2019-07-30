@@ -15,10 +15,12 @@ import sqlalchemy as sa
 
 
 def upgrade():
-    op.create_index('realtime_update_contributor_and_created_at',
-                    'real_time_update',
-                    ['created_at', 'contributor'],
-                    unique=False)
+    op.create_index(
+        'realtime_update_contributor_and_created_at',
+        'real_time_update',
+        ['created_at', 'contributor'],
+        unique=False,
+    )
 
 
 def downgrade():

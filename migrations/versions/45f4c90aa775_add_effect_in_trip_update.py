@@ -14,9 +14,18 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-trip_effect = sa.Enum('NO_SERVICE', 'REDUCED_SERVICE', 'SIGNIFICANT_DELAYS',
-                      'DETOUR', 'ADDITIONAL_SERVICE', 'MODIFIED_SERVICE',
-                      'OTHER_EFFECT', 'UNKNOWN_EFFECT', 'STOP_MOVED', name='trip_effect')
+trip_effect = sa.Enum(
+    'NO_SERVICE',
+    'REDUCED_SERVICE',
+    'SIGNIFICANT_DELAYS',
+    'DETOUR',
+    'ADDITIONAL_SERVICE',
+    'MODIFIED_SERVICE',
+    'OTHER_EFFECT',
+    'UNKNOWN_EFFECT',
+    'STOP_MOVED',
+    name='trip_effect',
+)
 
 
 def upgrade():

@@ -17,11 +17,11 @@ import sqlalchemy as sa
 
 def upgrade():
     op.add_column('vehicle_journey', sa.Column('start_timestamp', sa.DateTime(), nullable=True))
-    op.execute("UPDATE vehicle_journey SET start_timestamp = circulation_date + TIME '00:00:00' "
-               "WHERE start_timestamp IS NULL")
+    op.execute(
+        "UPDATE vehicle_journey SET start_timestamp = circulation_date + TIME '00:00:00' "
+        "WHERE start_timestamp IS NULL"
+    )
 
 
 def downgrade():
     op.drop_column('vehicle_journey', 'start_timestamp')
-
-
