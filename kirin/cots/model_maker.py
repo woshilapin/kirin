@@ -107,9 +107,7 @@ def _retrieve_interesting_pdp(list_pdp):
     sorted_list_pdp = sorted(list_pdp, key=itemgetter("rang"))
     for idx, pdp in enumerate(sorted_list_pdp):
         # At start, do not consume until there's a departure time (horaireVoyageurDepart)
-        if not picked_one and not get_value(
-            pdp, "horaireVoyageurDepart", nullable=True
-        ):
+        if not picked_one and not get_value(pdp, "horaireVoyageurDepart", nullable=True):
             continue
         # exclude stop_times that are not legit stations
         if not is_station(pdp):
@@ -128,8 +126,7 @@ def _retrieve_interesting_pdp(list_pdp):
         #   (should not happen in practice).
         if not get_value(pdp, "horaireVoyageurArrivee", nullable=True):
             has_following_arrival = any(
-                get_value(follow_pdp, "horaireVoyageurArrivee", nullable=True)
-                and is_station(follow_pdp)
+                get_value(follow_pdp, "horaireVoyageurArrivee", nullable=True) and is_station(follow_pdp)
                 for follow_pdp in sorted_list_pdp[idx:]
             )
             if not has_following_arrival:
@@ -142,14 +139,10 @@ def _retrieve_interesting_pdp(list_pdp):
 
 def as_utc_dt(str_time):
     try:
-        return parser.parse(
-            str_time, dayfirst=False, yearfirst=True, ignoretz=False
-        ).astimezone(utc)
+        return parser.parse(str_time, dayfirst=False, yearfirst=True, ignoretz=False).astimezone(utc)
     except Exception as e:
         raise InvalidArguments(
-            'Impossible to parse timezoned datetime from "{s}": {m}'.format(
-                s=str_time, m=e.message
-            )
+            'Impossible to parse timezoned datetime from "{s}": {m}'.format(s=str_time, m=e.message)
         )
 
 
@@ -211,16 +204,12 @@ def _retrieve_projected_time(source_ref, list_proj_time):
 
 def _retrieve_stop_event_delay(pdp, arrival_departure_toggle):
     cots_ref_planned = get_value(
-        pdp,
-        "sourceHoraireProjete{}Reference".format(arrival_departure_toggle),
-        nullable=True,
+        pdp, "sourceHoraireProjete{}Reference".format(arrival_departure_toggle), nullable=True
     )
     cots_planned_stop_times = get_value(
         pdp, "listeHoraireProjete{}".format(arrival_departure_toggle), nullable=True
     )
-    cots_planned_stop_time = _retrieve_projected_time(
-        cots_ref_planned, cots_planned_stop_times
-    )
+    cots_planned_stop_time = _retrieve_projected_time(cots_ref_planned, cots_planned_stop_times)
 
     if cots_planned_stop_time is not None:
         delay = get_value(cots_planned_stop_time, "pronosticIV", nullable=True)
@@ -236,13 +225,9 @@ def _is_fully_added_pdp(pdp):
     # retrieve expressed statuses
     dep_arr_statuses = []
     for arrival_departure_toggle in ["Arrivee", "Depart"]:
-        cots_traveler_time = get_value(
-            pdp, "horaireVoyageur{}".format(arrival_departure_toggle), nullable=True
-        )
+        cots_traveler_time = get_value(pdp, "horaireVoyageur{}".format(arrival_departure_toggle), nullable=True)
         if cots_traveler_time:
-            dep_arr_statuses.append(
-                get_value(cots_traveler_time, "statutCirculationOPE", nullable=True)
-            )
+            dep_arr_statuses.append(get_value(cots_traveler_time, "statutCirculationOPE", nullable=True))
 
     # if there are expressed cots_traveler_times and all are 'CREATION', pdp is fully added
     return dep_arr_statuses and all(s == "CREATION" for s in dep_arr_statuses)
@@ -264,22 +249,14 @@ def _get_action_on_trip(train_numbers, dict_version, pdps):
     :param dict_version: Value of attribut nouvelleVersion in Flux cots
     :return: True or False
     """
-    cots_trip_status = get_value(
-        dict_version, "statutOperationnel", TripStatus.PERTURBEE.name
-    )
+    cots_trip_status = get_value(dict_version, "statutOperationnel", TripStatus.PERTURBEE.name)
 
     # We have to verify if the trip exists in database
-    utc_vj_start = _get_first_stop_datetime(
-        pdps, "horaireVoyageurDepart", skip_fully_added_stops=False
-    )
-    utc_vj_end = _get_first_stop_datetime(
-        reversed(pdps), "horaireVoyageurArrivee", skip_fully_added_stops=False
-    )
+    utc_vj_start = _get_first_stop_datetime(pdps, "horaireVoyageurDepart", skip_fully_added_stops=False)
+    utc_vj_end = _get_first_stop_datetime(reversed(pdps), "horaireVoyageurArrivee", skip_fully_added_stops=False)
     train_id = TRAIN_ID_FORMAT.format(train_numbers)
     trip_added_in_db = model.TripUpdate.find_vj_by_period(
-        train_id,
-        start_date=utc_vj_start - SNCF_SEARCH_MARGIN,
-        end_date=utc_vj_end + SNCF_SEARCH_MARGIN,
+        train_id, start_date=utc_vj_start - SNCF_SEARCH_MARGIN, end_date=utc_vj_end + SNCF_SEARCH_MARGIN
     )
 
     action_on_trip = ActionOnTrip.NOT_ADDED.name
@@ -287,24 +264,15 @@ def _get_action_on_trip(train_numbers, dict_version, pdps):
         # Raise exception on forbidden / inconsistent actions
         # No addition multiple times
         # No update or delete on trip already deleted.
-        if (
-            cots_trip_status == TripStatus.AJOUTEE.name
-            and trip_added_in_db.status == ModificationType.add.name
-        ):
+        if cots_trip_status == TripStatus.AJOUTEE.name and trip_added_in_db.status == ModificationType.add.name:
             raise InvalidArguments(
-                "Invalid action, trip {} can not be added multiple times".format(
-                    train_numbers
-                )
+                "Invalid action, trip {} can not be added multiple times".format(train_numbers)
             )
         elif (
             cots_trip_status != TripStatus.AJOUTEE.name
             and trip_added_in_db.status == ModificationType.delete.name
         ):
-            raise InvalidArguments(
-                "Invalid action, trip {} already deleted in database".format(
-                    train_numbers
-                )
-            )
+            raise InvalidArguments("Invalid action, trip {} already deleted in database".format(train_numbers))
 
         # Trip deleted followed by add should be handled as FIRST_TIME_ADDED
         if (
@@ -351,15 +319,11 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             raise InvalidArguments("invalid json: {}".format(e.message))
 
         if "nouvelleVersion" not in json:
-            raise InvalidArguments(
-                'No object "nouvelleVersion" available in feed provided'
-            )
+            raise InvalidArguments('No object "nouvelleVersion" available in feed provided')
 
         dict_version = get_value(json, "nouvelleVersion")
         train_numbers = get_value(dict_version, "numeroCourse")
-        pdps = _retrieve_interesting_pdp(
-            get_value(dict_version, "listePointDeParcours")
-        )
+        pdps = _retrieve_interesting_pdp(get_value(dict_version, "listePointDeParcours"))
         if not pdps:
             raise InvalidArguments(
                 'invalid json, "listePointDeParcours" has no valid stop_time in '
@@ -368,18 +332,13 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
 
         action_on_trip = _get_action_on_trip(train_numbers, dict_version, pdps)
         vjs = self._get_vjs(train_numbers, pdps, action_on_trip=action_on_trip)
-        trip_updates = [
-            self._make_trip_update(dict_version, vj, action_on_trip=action_on_trip)
-            for vj in vjs
-        ]
+        trip_updates = [self._make_trip_update(dict_version, vj, action_on_trip=action_on_trip) for vj in vjs]
 
         return trip_updates
 
     def _get_vjs(self, train_numbers, pdps, action_on_trip=ActionOnTrip.NOT_ADDED.name):
         utc_vj_start = _get_first_stop_datetime(
-            pdps,
-            "horaireVoyageurDepart",
-            skip_fully_added_stops=(action_on_trip == ActionOnTrip.NOT_ADDED.name),
+            pdps, "horaireVoyageurDepart", skip_fully_added_stops=(action_on_trip == ActionOnTrip.NOT_ADDED.name)
         )
         utc_vj_end = _get_first_stop_datetime(
             reversed(pdps),
@@ -387,9 +346,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             skip_fully_added_stops=(action_on_trip == ActionOnTrip.NOT_ADDED.name),
         )
 
-        return self._get_navitia_vjs(
-            train_numbers, utc_vj_start, utc_vj_end, action_on_trip=action_on_trip
-        )
+        return self._get_navitia_vjs(train_numbers, utc_vj_start, utc_vj_end, action_on_trip=action_on_trip)
 
     def _record_and_log(self, logger, log_str):
         log_dict = {"log": log_str}
@@ -398,54 +355,31 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
         logger.info("internal failure", extra=log_dict)
 
     @staticmethod
-    def _check_stop_time_consistency(
-        last_stop_time_depart, projected_stop_time, pdp_code
-    ):
+    def _check_stop_time_consistency(last_stop_time_depart, projected_stop_time, pdp_code):
         last_stop_time_depart = (
-            last_stop_time_depart
-            if last_stop_time_depart is not None
-            else datetime.fromtimestamp(0, tz.tzutc())
+            last_stop_time_depart if last_stop_time_depart is not None else datetime.fromtimestamp(0, tz.tzutc())
         )
 
         projected_arrival = projected_stop_time.get("Arrivee")
-        projected_arrival = (
-            projected_arrival
-            if projected_arrival is not None
-            else last_stop_time_depart
-        )
+        projected_arrival = projected_arrival if projected_arrival is not None else last_stop_time_depart
 
         projected_departure = projected_stop_time.get("Depart")
-        projected_departure = (
-            projected_departure
-            if projected_departure is not None
-            else projected_arrival
-        )
+        projected_departure = projected_departure if projected_departure is not None else projected_arrival
 
         if not (projected_departure >= projected_arrival >= last_stop_time_depart):
-            raise InvalidArguments(
-                "invalid cots: stop_point's({}) time is not consistent".format(pdp_code)
-            )
+            raise InvalidArguments("invalid cots: stop_point's({}) time is not consistent".format(pdp_code))
 
-    def _make_trip_update(
-        self, json_train, vj, action_on_trip=ActionOnTrip.NOT_ADDED.name
-    ):
+    def _make_trip_update(self, json_train, vj, action_on_trip=ActionOnTrip.NOT_ADDED.name):
         """
         create the new TripUpdate object
         Following the COTS spec: https://github.com/CanalTP/kirin/blob/master/documentation/cots_connector.md
         """
         trip_update = model.TripUpdate(vj=vj)
         trip_update.contributor = self.contributor
-        trip_message_id = get_value(
-            json_train, "idMotifInterneReference", nullable=True
-        )
+        trip_message_id = get_value(json_train, "idMotifInterneReference", nullable=True)
         if trip_message_id:
-            trip_update.message = self.message_handler.get_message(
-                index=trip_message_id
-            )
-        cots_company_id = (
-            get_value(json_train, "codeCompagnieTransporteur", nullable=True)
-            or DEFAULT_COMPANY_ID
-        )
+            trip_update.message = self.message_handler.get_message(index=trip_message_id)
+        cots_company_id = get_value(json_train, "codeCompagnieTransporteur", nullable=True) or DEFAULT_COMPANY_ID
         trip_update.company_id = self._get_navitia_company(cots_company_id)
 
         trip_status = get_value(json_train, "statutOperationnel")
@@ -462,9 +396,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             trip_update.effect = TripEffect.ADDITIONAL_SERVICE.name
             trip_update.status = ModificationType.add.name
             cots_physical_mode = get_value(json_train, "indicateurFer", nullable=True)
-            trip_update.physical_mode_id = self._get_navitia_physical_mode(
-                cots_physical_mode
-            )
+            trip_update.physical_mode_id = self._get_navitia_physical_mode(cots_physical_mode)
             trip_update.headsign = get_value(json_train, "numeroCourse", nullable=True)
 
         # all other status is considered an 'update' of the trip_update and effect is calculated
@@ -487,10 +419,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
         for pdp in pdps:
             # retrieve navitia's stop_point corresponding to the current COTS pdp
             nav_stop, log_dict = self._get_navitia_stop_point(pdp, vj.navitia_vj)
-            projected_stop_time = {
-                "Arrivee": None,
-                "Depart": None,
-            }  # used to check consistency
+            projected_stop_time = {"Arrivee": None, "Depart": None}  # used to check consistency
 
             if log_dict:
                 record_internal_failure(log_dict["log"], contributor=self.contributor)
@@ -503,17 +432,11 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             st_update = model.StopTimeUpdate(nav_stop)
             trip_update.stop_time_updates.append(st_update)
             # using the message from departure-time in priority, if absent fallback on arrival-time's message
-            st_message_id = get_value(
-                pdp, "idMotifInterneDepartReference", nullable=True
-            )
+            st_message_id = get_value(pdp, "idMotifInterneDepartReference", nullable=True)
             if not st_message_id:
-                st_message_id = get_value(
-                    pdp, "idMotifInterneArriveeReference", nullable=True
-                )
+                st_message_id = get_value(pdp, "idMotifInterneArriveeReference", nullable=True)
             if st_message_id:
-                st_update.message = self.message_handler.get_message(
-                    index=st_message_id
-                )
+                st_update.message = self.message_handler.get_message(index=st_message_id)
 
             _status_map = {"Arrivee": "arrival_status", "Depart": "departure_status"}
             _delay_map = {"Arrivee": "arrival_delay", "Depart": "departure_delay"}
@@ -522,52 +445,32 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
             # compute realtime information and fill st_update for arrival and departure
             for arrival_departure_toggle in ["Arrivee", "Depart"]:
                 cots_traveler_time = get_value(
-                    pdp,
-                    "horaireVoyageur{}".format(arrival_departure_toggle),
-                    nullable=True,
+                    pdp, "horaireVoyageur{}".format(arrival_departure_toggle), nullable=True
                 )
 
                 if cots_traveler_time is None:
                     continue
 
-                cots_stop_time_status = get_value(
-                    cots_traveler_time, "statutCirculationOPE", nullable=True
-                )
+                cots_stop_time_status = get_value(cots_traveler_time, "statutCirculationOPE", nullable=True)
 
                 if cots_stop_time_status is None:
                     # if no cots_stop_time_status, it is considered an 'update' of the stop_time
                     # (can be a delay, back to normal, normal, ...)
-                    cots_base_datetime = _retrieve_stop_event_datetime(
-                        cots_traveler_time
-                    )
+                    cots_base_datetime = _retrieve_stop_event_datetime(cots_traveler_time)
                     if cots_base_datetime:
-                        projected_stop_time[
-                            arrival_departure_toggle
-                        ] = cots_base_datetime
-                    cots_delay = _retrieve_stop_event_delay(
-                        pdp, arrival_departure_toggle
-                    )
+                        projected_stop_time[arrival_departure_toggle] = cots_base_datetime
+                    cots_delay = _retrieve_stop_event_delay(pdp, arrival_departure_toggle)
 
                     if cots_delay is not None:
                         # It's an update only if there is delay
                         projected_stop_time[arrival_departure_toggle] += cots_delay
-                        setattr(
-                            st_update,
-                            _status_map[arrival_departure_toggle],
-                            ModificationType.update.name,
-                        )
-                        setattr(
-                            st_update, _delay_map[arrival_departure_toggle], cots_delay
-                        )
+                        setattr(st_update, _status_map[arrival_departure_toggle], ModificationType.update.name)
+                        setattr(st_update, _delay_map[arrival_departure_toggle], cots_delay)
                     # otherwise nothing to do (status none, delay none, time none)
 
                 elif cots_stop_time_status == "SUPPRESSION":
                     # partial delete
-                    setattr(
-                        st_update,
-                        _status_map[arrival_departure_toggle],
-                        ModificationType.delete.name,
-                    )
+                    setattr(st_update, _status_map[arrival_departure_toggle], ModificationType.delete.name)
 
                 elif cots_stop_time_status == "SUPPRESSION_DETOURNEMENT":
                     # stop_time is replaced by another one
@@ -579,16 +482,10 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
 
                 elif cots_stop_time_status in ["CREATION", "DETOURNEMENT"]:
                     # new stop_time added
-                    cots_base_datetime = _retrieve_stop_event_datetime(
-                        cots_traveler_time
-                    )
+                    cots_base_datetime = _retrieve_stop_event_datetime(cots_traveler_time)
                     if cots_base_datetime:
-                        projected_stop_time[
-                            arrival_departure_toggle
-                        ] = cots_base_datetime
-                    cots_delay = _retrieve_stop_event_delay(
-                        pdp, arrival_departure_toggle
-                    )
+                        projected_stop_time[arrival_departure_toggle] = cots_base_datetime
+                    cots_delay = _retrieve_stop_event_delay(pdp, arrival_departure_toggle)
                     if cots_delay is not None:
                         projected_stop_time[arrival_departure_toggle] += cots_delay
 
@@ -602,11 +499,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
 
                     if cots_stop_time_status == "CREATION":
                         # pure add
-                        setattr(
-                            st_update,
-                            _status_map[arrival_departure_toggle],
-                            ModificationType.add.name,
-                        )
+                        setattr(st_update, _status_map[arrival_departure_toggle], ModificationType.add.name)
                     elif cots_stop_time_status == "DETOURNEMENT":
                         # add to replace another stop_time
                         setattr(
@@ -623,9 +516,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
                     )
 
                 arr_dep_status = getattr(
-                    st_update,
-                    _status_map[arrival_departure_toggle],
-                    ModificationType.none.name,
+                    st_update, _status_map[arrival_departure_toggle], ModificationType.none.name
                 )
                 highest_st_status = get_higher_status(highest_st_status, arr_dep_status)
 
@@ -653,16 +544,11 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
         Error messages are also returned as 'missing stop point', 'duplicate stops'
         """
         nav_st, log_dict = get_navitia_stop_time_sncf(
-            cr=get_value(pdp, "cr"),
-            ci=get_value(pdp, "ci"),
-            ch=get_value(pdp, "ch"),
-            nav_vj=nav_vj,
+            cr=get_value(pdp, "cr"), ci=get_value(pdp, "ci"), ch=get_value(pdp, "ch"), nav_vj=nav_vj
         )
         if not nav_st:
             nav_stop, log_dict = self._request_navitia_stop_point(
-                cr=get_value(pdp, "cr"),
-                ci=get_value(pdp, "ci"),
-                ch=get_value(pdp, "ch"),
+                cr=get_value(pdp, "cr"), ci=get_value(pdp, "ci"), ch=get_value(pdp, "ch")
             )
         else:
             nav_stop = nav_st.get("stop_point", None)
@@ -671,10 +557,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
     def _request_navitia_stop_point(self, cr, ci, ch):
         external_code = "{}-{}-{}".format(cr, ci, ch)
         stop_points = self.navitia.stop_points(
-            q={
-                "filter": 'stop_area.has_code("CR-CI-CH", "{}")'.format(external_code),
-                "count": "1",
-            }
+            q={"filter": 'stop_area.has_code("CR-CI-CH", "{}")'.format(external_code), "count": "1"}
         )
         if stop_points:
             return stop_points[0], None
@@ -687,9 +570,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
         If the company doesn't exist in navitia, another request is made to
         find company for key="RefProd" and value="1187"
         """
-        return self._request_navitia_company(code) or self._request_navitia_company(
-            DEFAULT_COMPANY_ID
-        )
+        return self._request_navitia_company(code) or self._request_navitia_company(DEFAULT_COMPANY_ID)
 
     def _request_navitia_company(self, code):
         companies = self.navitia.companies(
@@ -705,15 +586,10 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
         If the physical_mode doesn't exist in navitia, another request is made default physical_mode
         with filter=physical_mode.id=physical_mode:LongDistanceTrain
         """
-        return (
-            self._request_navitia_physical_mode(indicator)
-            or self._request_navitia_physical_mode()
-        )
+        return self._request_navitia_physical_mode(indicator) or self._request_navitia_physical_mode()
 
     def _request_navitia_physical_mode(self, indicator=None):
-        physical_modes = self.navitia.physical_modes(
-            q={"filter": get_mode_filter(indicator), "count": "1"}
-        )
+        physical_modes = self.navitia.physical_modes(q={"filter": get_mode_filter(indicator), "count": "1"})
         if physical_modes:
             return physical_modes[0].get("id", None)
         return None

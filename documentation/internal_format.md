@@ -2,7 +2,7 @@
 
 ## Overview
 Kirin's internal model is derived from GTFS-realtime `Trip updates` (specifications)[http://gtfs.org/realtime/#message-tripupdate].
-It is composed of several objects : 
+It is composed of several objects :
 - VehicleJourney
 - RealTimeUpdate
 - TripUpdate
@@ -14,7 +14,7 @@ Received raw data from a Real Time Update.
 
 Property | TYpe | Description
 --- | --- | ---
-id | UUID | 
+id | UUID |
 received_at | DateTime, Required | Date and time of the reception of the data (UTC)
 connector | Enum, Required | Source of the data. See below for an available source format.
 status | Enum, Required | Processing status of the received data (Possible values are `OK`, `KO` or `pending`)
@@ -25,15 +25,15 @@ trip_updates | List | List of `TripUpdate` provided by this bloc of data
 
 **Connector field possible values**
 The `connector` field is restricted to the following values:
-- `ire`: realtime informations of the SNCF long distance trains 
+- `ire`: realtime informations of the SNCF long distance trains
 - `gtfs-rt`: realtime informations from the `TripUpdate` format of GTFS-realtime
 
 ### TripUpdate
-Update information about a VehicleJourney. 
+Update information about a VehicleJourney.
 
 Property | TYpe | Description
 --- | --- | ---
-id | UUID | 
+id | UUID |
 vj_id | UUID | id of the VehicleJourney being updated
 status | Enum, Required | Modification type for this trip (Possible values are `add`, `delete`, `update` or `none`)
 message | String, Optional | Text to be displayed in Navitia for the `VehicleJourney`
@@ -53,7 +53,7 @@ start_timestamp | DateTime, Required | Start date and time of the VehicleJourney
 ### StopTimeUpdate
 Property | TYpe | Description
 --- | --- | ---
-id | UUID | 
+id | UUID |
 trip_update_id | UUID | id of the `TripUpdate` containing this `StopTimeUpdate`
 order | Integer, Required | `StopTime` order in the `VehicleJourney`
 stop_id | String, Required | id of the stop_point in navitia

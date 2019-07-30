@@ -1,29 +1,9 @@
 
 language: python
-python:
-  - "2.7"
-  - "3.6"
+python: "3.6"
 sudo: required
 cache: pip
 dist: xenial
-
-addons:
-  apt:
-    packages:
-    - rabbitmq-server
-
-
-# This script is triggered only with python2.7 (as below python3.6 is excluded from the matrix)
-before_script:
-  - sudo apt update && sudo apt install -y protobuf-compiler
-  - sed -i 's,git\@github.com:\([^/]*\)/\(.*\).git,https://github.com/\1/\2,' .gitmodules
-  - git submodule update --init --recursive
-  - pip install -r requirements_dev.txt
-  - python setup.py build_pbf
-  - python setup.py build_version
-
-script:
-  - KIRIN_CONFIG_FILE=test_settings.py py.test --doctest-modules
 
 matrix:
   include:  # This script is triggered only with python3.6
@@ -34,5 +14,4 @@ matrix:
         - pre-commit install
       script:
         - pre-commit run --all --show-diff-on-failure
-  exclude:
-    - python: "3.6"
+

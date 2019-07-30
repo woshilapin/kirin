@@ -34,13 +34,7 @@ import requests
 from kirin import gtfs_realtime_pb2
 
 from kirin.tasks import celery
-from kirin.utils import (
-    should_retry_exception,
-    make_kirin_lock_name,
-    get_lock,
-    manage_db_error,
-    manage_db_no_new,
-)
+from kirin.utils import should_retry_exception, make_kirin_lock_name, get_lock, manage_db_error, manage_db_no_new
 from kirin.gtfs_rt import model_maker
 from retrying import retry
 from kirin import app, redis
@@ -58,9 +52,7 @@ class InvalidFeed(Exception):
 
 
 def _is_newer(config):
-    logger = logging.LoggerAdapter(
-        logging.getLogger(__name__), extra={"contributor": config["contributor"]}
-    )
+    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": config["contributor"]})
     contributor = config["contributor"]
     try:
         head = requests.head(config["feed_url"], timeout=config.get("timeout", 1))
@@ -73,35 +65,23 @@ def _is_newer(config):
         old_etag = redis.get(etag_key)
 
         if new_etag == old_etag:
-            logger.info(
-                "get the same ETag of %s, skipping the polling for %s",
-                etag_key,
-                contributor,
-            )
+            logger.info("get the same ETag of %s, skipping the polling for %s", etag_key, contributor)
             return False
 
         redis.set(etag_key, new_etag)
 
     except Exception as e:
         logger.debug(
-            "exception occurred when checking the newer version of gtfs for %s: %s",
-            contributor,
-            str(e),
+            "exception occurred when checking the newer version of gtfs for %s: %s", contributor, str(e)
         )
     return True  # whatever the exception is, we don't want to break the polling
 
 
 @celery.task(bind=True)  # type: ignore
-@retry(
-    stop_max_delay=TASK_STOP_MAX_DELAY,
-    wait_fixed=TASK_WAIT_FIXED,
-    retry_on_exception=should_retry_exception,
-)
+@retry(stop_max_delay=TASK_STOP_MAX_DELAY, wait_fixed=TASK_WAIT_FIXED, retry_on_exception=should_retry_exception)
 def gtfs_poller(self, config):
     func_name = "gtfs_poller"
-    logger = logging.LoggerAdapter(
-        logging.getLogger(__name__), extra={"contributor": config["contributor"]}
-    )
+    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": config["contributor"]})
     logger.debug("polling of %s", config["feed_url"])
 
     contributor = config["contributor"]
@@ -120,18 +100,12 @@ def gtfs_poller(self, config):
             return
 
         try:
-            response = requests.get(
-                config["feed_url"], timeout=config.get("timeout", 1)
-            )
+            response = requests.get(config["feed_url"], timeout=config.get("timeout", 1))
             response.raise_for_status()
 
         except Exception as e:
             manage_db_error(
-                data="",
-                connector="gtfs-rt",
-                contributor=contributor,
-                status="KO",
-                error="Http Error",
+                data="", connector="gtfs-rt", contributor=contributor, status="KO", error="Http Error"
             )
             logger.debug(str(e))
             return
@@ -149,13 +123,7 @@ def gtfs_poller(self, config):
         try:
             proto.ParseFromString(response.content)
         except DecodeError:
-            manage_db_error(
-                proto,
-                "gtfs-rt",
-                contributor=contributor,
-                status="KO",
-                error="Decode Error",
-            )
+            manage_db_error(proto, "gtfs-rt", contributor=contributor, status="KO", error="Decode Error")
             logger.debug("invalid protobuf")
         else:
             model_maker.handle(proto, nav, contributor)

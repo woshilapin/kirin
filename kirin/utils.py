@@ -85,9 +85,7 @@ def make_rt_update(data, connector, contributor, status="OK"):
     """
     Create an RealTimeUpdate object for the query and persist it
     """
-    rt_update = model.RealTimeUpdate(
-        data, connector=connector, contributor=contributor, status=status
-    )
+    rt_update = model.RealTimeUpdate(data, connector=connector, contributor=contributor, status=status)
 
     model.db.session.add(rt_update)
     model.db.session.commit()
@@ -135,9 +133,7 @@ def make_kirin_lock_name(*args):
 
 def save_gtfs_rt_with_error(data, connector, contributor, status, error=None):
     raw_data = str(data)
-    rt_update = make_rt_update(
-        raw_data, connector=connector, contributor=contributor, status=status
-    )
+    rt_update = make_rt_update(raw_data, connector=connector, contributor=contributor, status=status)
     rt_update.status = status
     rt_update.error = error
     model.db.session.add(rt_update)
@@ -150,9 +146,7 @@ def poke_updated_at(rtu):
     """
     if rtu:
         status = rtu.status
-        rtu.status = (
-            "pending" if status != "pending" else "OK"
-        )  # just to poke updated_at
+        rtu.status = "pending" if status != "pending" else "OK"  # just to poke updated_at
         model.db.session.commit()
         rtu.status = status
         model.db.session.commit()
@@ -168,12 +162,7 @@ def manage_db_error(data, connector, contributor, status, error=None):
     parameters: data, connector, contributor, status, error
     """
     last = model.RealTimeUpdate.get_last_rtu(connector, contributor)
-    if (
-        last
-        and last.status == status
-        and last.error == error
-        and last.raw_data == str(data)
-    ):
+    if last and last.status == status and last.error == error and last.raw_data == str(data):
         poke_updated_at(last)
     else:
         save_gtfs_rt_with_error(data, connector, contributor, status, error)

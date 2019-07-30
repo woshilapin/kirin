@@ -62,16 +62,7 @@ class MessageHandler:
          -X GET 'https://motif.sncf/api/delayLabels'
     """
 
-    def __init__(
-        self,
-        api_key,
-        resource_server,
-        token_server,
-        client_id,
-        client_secret,
-        grant_type,
-        timeout,
-    ):
+    def __init__(self, api_key, resource_server, token_server, client_id, client_secret, grant_type, timeout):
         self.api_key = api_key
         self.resource_server = resource_server
         self.token_server = token_server
@@ -88,9 +79,7 @@ class MessageHandler:
         """
         Allow this class to be cacheable
         """
-        return "{}.{}.{}.{}".format(
-            self.__class__, self.resource_server, self.token_server, self.client_id
-        )
+        return "{}.{}.{}.{}".format(self.__class__, self.resource_server, self.token_server, self.client_id)
 
     def _service_caller(self, method, url, headers, data=None):
         try:
@@ -105,24 +94,17 @@ class MessageHandler:
                 )
                 if response.status_code == 401:
                     raise UnauthorizedOnSubService(
-                        "Unauthorized on COTS message sub-service {} {}".format(
-                            method, url
-                        )
+                        "Unauthorized on COTS message sub-service {} {}".format(method, url)
                     )
                 raise ObjectNotFound(
-                    "non 200 response on COTS cause message "
-                    "sub-service {} {}".format(method, url)
+                    "non 200 response on COTS cause message " "sub-service {} {}".format(method, url)
                 )
             return response
         except pybreaker.CircuitBreakerError as e:
-            logging.getLogger(__name__).error(
-                "COTS cause message sub-service dead (error: {})".format(e)
-            )
+            logging.getLogger(__name__).error("COTS cause message sub-service dead (error: {})".format(e))
             raise SubServiceError("COTS cause message sub-service circuit breaker open")
         except requests.Timeout as t:
-            logging.getLogger(__name__).error(
-                "COTS cause message sub-service timeout (error: {})".format(t)
-            )
+            logging.getLogger(__name__).error("COTS cause message sub-service timeout (error: {})".format(t))
             raise SubServiceError("COTS cause message sub-service timeout")
         except (UnauthorizedOnSubService, ObjectNotFound):
             raise  # Do not change exceptions that were just raised
@@ -135,39 +117,24 @@ class MessageHandler:
     @app.cache.memoize(timeout=app.config.get("COTS_PAR_IV_TIMEOUT_TOKEN", 60 * 60))
     def _get_access_token(self):
         headers = {"X-API-Key": str(self.api_key)}
-        data = {
-            "client_id": self.client_id,
-            "client_secret": self.client_secret,
-            "grant_type": self.grant_type,
-        }
+        data = {"client_id": self.client_id, "client_secret": self.client_secret, "grant_type": self.grant_type}
 
-        response = self._service_caller(
-            method=requests.post, url=self.token_server, headers=headers, data=data
-        )
+        response = self._service_caller(method=requests.post, url=self.token_server, headers=headers, data=data)
         if not response:
             return None
         content = response.json()
         access_token = content.get("access_token")
         if not access_token:
-            logging.getLogger(__name__).error(
-                "COTS cause message sub-service, no access_token in response"
-            )
+            logging.getLogger(__name__).error("COTS cause message sub-service, no access_token in response")
             return None
         return access_token
 
     def _call_webservice(self):
         access_token = self._get_access_token()
         if access_token is None:
-            raise SubServiceError(
-                "Impossible to get a token for COTS cause message sub-service"
-            )
-        headers = {
-            "X-API-Key": self.api_key,
-            "Authorization": "Bearer {}".format(access_token),
-        }
-        resp = self._service_caller(
-            method=requests.get, url=self.resource_server, headers=headers
-        )
+            raise SubServiceError("Impossible to get a token for COTS cause message sub-service")
+        headers = {"X-API-Key": self.api_key, "Authorization": "Bearer {}".format(access_token)}
+        resp = self._service_caller(method=requests.get, url=self.resource_server, headers=headers)
         messages = {}
         if not resp:
             return messages
@@ -191,7 +158,6 @@ class MessageHandler:
                 return self._call_webservice_safer().get(index)
             except Exception as e:
                 logging.getLogger(__name__).exception(
-                    "COTS cause message sub-service handling "
-                    "error : {}".format(str(e))
+                    "COTS cause message sub-service handling " "error : {}".format(str(e))
                 )
                 return None

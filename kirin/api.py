@@ -62,9 +62,7 @@ def log_exception(sender, exception):
     message = ""
     if hasattr(exception, "data"):
         message = exception.data
-    error = "{ex} {data} {url}".format(
-        ex=exception.__class__.__name__, data=message, url=request.url
-    )
+    error = "{ex} {data} {url}".format(ex=exception.__class__.__name__, data=message, url=request.url)
 
     record_exception()
     if isinstance(exception, HTTPException):

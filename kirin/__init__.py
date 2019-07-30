@@ -105,8 +105,6 @@ if "threading" not in sys.modules:
 logger.info("Configs: %s", app.config)
 
 
-rabbitmq_handler = RabbitMQHandler(
-    app.config["RABBITMQ_CONNECTION_STRING"], app.config["EXCHANGE"]
-)
+rabbitmq_handler = RabbitMQHandler(app.config["RABBITMQ_CONNECTION_STRING"], app.config["EXCHANGE"])
 
 import kirin.api

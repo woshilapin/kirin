@@ -54,14 +54,9 @@ def stop_time_status_to_protobuf(stop_time_status):
 
 
 def get_modification_type_order(modification_type):
-    return {
-        "none": 0,
-        "update": 1,
-        "add": 2,
-        "delete": 3,
-        "added_for_detour": 4,
-        "deleted_for_detour": 5,
-    }.get(modification_type, 0)
+    return {"none": 0, "update": 1, "add": 2, "delete": 3, "added_for_detour": 4, "deleted_for_detour": 5}.get(
+        modification_type, 0
+    )
 
 
 class TripEffect(Enum):

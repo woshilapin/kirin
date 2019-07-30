@@ -42,7 +42,7 @@ POSTGRES_CONTAINER_NAME = 'kirin_test_postgres'
 def _get_docker_file():
     """
     Return a dumb DockerFile
-    
+
     The best way to get the image would be to get postgres:9.4 it from dockerhub,
     but with this dumb wrapper the runtime time of the unit tests
     is reduced by 10s

@@ -47,9 +47,7 @@ def to_posix_time(date_time):
     return 0
 
 
-def convert_to_gtfsrt(
-    trip_updates, incrementality=gtfs_realtime_pb2.FeedHeader.DIFFERENTIAL
-):
+def convert_to_gtfsrt(trip_updates, incrementality=gtfs_realtime_pb2.FeedHeader.DIFFERENTIAL):
     feed = gtfs_realtime_pb2.FeedMessage()
 
     feed.header.incrementality = incrementality
@@ -104,19 +102,19 @@ def fill_stop_times(pb_stop_time, stop_time):
     TODO: kirin_pb2.stop_time_event_relationship needs to be removed once
     kirin_pb2.stop_time_event_status is deployed on production
     """
-    pb_stop_time.departure.Extensions[
-        kirin_pb2.stop_time_event_relationship
-    ] = get_st_event(stop_time.departure_status)
-    pb_stop_time.arrival.Extensions[
-        kirin_pb2.stop_time_event_relationship
-    ] = get_st_event(stop_time.arrival_status)
+    pb_stop_time.departure.Extensions[kirin_pb2.stop_time_event_relationship] = get_st_event(
+        stop_time.departure_status
+    )
+    pb_stop_time.arrival.Extensions[kirin_pb2.stop_time_event_relationship] = get_st_event(
+        stop_time.arrival_status
+    )
 
-    pb_stop_time.departure.Extensions[
-        kirin_pb2.stop_time_event_status
-    ] = stop_time_status_to_protobuf(stop_time.departure_status)
-    pb_stop_time.arrival.Extensions[
-        kirin_pb2.stop_time_event_status
-    ] = stop_time_status_to_protobuf(stop_time.arrival_status)
+    pb_stop_time.departure.Extensions[kirin_pb2.stop_time_event_status] = stop_time_status_to_protobuf(
+        stop_time.departure_status
+    )
+    pb_stop_time.arrival.Extensions[kirin_pb2.stop_time_event_status] = stop_time_status_to_protobuf(
+        stop_time.arrival_status
+    )
 
     if stop_time.message:
         pb_stop_time.Extensions[kirin_pb2.stoptime_message] = stop_time.message
@@ -137,9 +135,7 @@ def fill_trip_update(pb_trip_update, trip_update):
     if trip_update.effect:
         pb_trip_update.Extensions[kirin_pb2.effect] = get_trip_event(trip_update.effect)
     if trip_update.physical_mode_id:
-        pb_trip_update.vehicle.Extensions[
-            kirin_pb2.physical_mode_id
-        ] = trip_update.physical_mode_id
+        pb_trip_update.vehicle.Extensions[kirin_pb2.physical_mode_id] = trip_update.physical_mode_id
     if trip_update.headsign:
         pb_trip_update.Extensions[kirin_pb2.headsign] = trip_update.headsign
 

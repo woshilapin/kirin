@@ -65,17 +65,11 @@ def close_session(*args, **kwargs):
 
 
 @celery.task(bind=True)
-@retry(
-    stop_max_delay=TASK_STOP_MAX_DELAY,
-    wait_fixed=TASK_WAIT_FIXED,
-    retry_on_exception=should_retry_exception,
-)
+@retry(stop_max_delay=TASK_STOP_MAX_DELAY, wait_fixed=TASK_WAIT_FIXED, retry_on_exception=should_retry_exception)
 def purge_trip_update(self, config):
     func_name = "purge_trip_update"
     contributor = config["contributor"]
-    logger = logging.LoggerAdapter(
-        logging.getLogger(__name__), extra={"contributor": contributor}
-    )
+    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": contributor})
     logger.debug("purge trip update for %s", contributor)
 
     lock_name = make_kirin_lock_name(func_name, contributor)
@@ -83,30 +77,20 @@ def purge_trip_update(self, config):
         if not locked:
             logger.warning("%s for %s is already in progress", func_name, contributor)
             return
-        until = datetime.date.today() - datetime.timedelta(
-            days=int(config["nb_days_to_keep"])
-        )
+        until = datetime.date.today() - datetime.timedelta(days=int(config["nb_days_to_keep"]))
         logger.info("purge trip update for {} until {}".format(contributor, until))
 
-        TripUpdate.remove_by_contributors_and_period(
-            contributors=[contributor], start_date=None, end_date=until
-        )
+        TripUpdate.remove_by_contributors_and_period(contributors=[contributor], start_date=None, end_date=until)
         logger.info("%s for %s is finished", func_name, contributor)
 
 
 @celery.task(bind=True)
-@retry(
-    stop_max_delay=TASK_STOP_MAX_DELAY,
-    wait_fixed=TASK_WAIT_FIXED,
-    retry_on_exception=should_retry_exception,
-)
+@retry(stop_max_delay=TASK_STOP_MAX_DELAY, wait_fixed=TASK_WAIT_FIXED, retry_on_exception=should_retry_exception)
 def purge_rt_update(self, config):
     func_name = "purge_rt_update"
     connector = config["connector"]
 
-    logger = logging.LoggerAdapter(
-        logging.getLogger(__name__), extra={"connector": connector}
-    )
+    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={"connector": connector})
     logger.debug("purge realtime update for %s", connector)
 
     lock_name = make_kirin_lock_name(func_name, connector)
@@ -115,9 +99,7 @@ def purge_rt_update(self, config):
             logger.warning("%s for %s is already in progress", func_name, connector)
             return
 
-        until = datetime.date.today() - datetime.timedelta(
-            days=int(config["nb_days_to_keep"])
-        )
+        until = datetime.date.today() - datetime.timedelta(days=int(config["nb_days_to_keep"]))
         logger.info("purge realtime update for {} until {}".format(connector, until))
 
         # TODO:  we want to purge on "contributor" later, not "connector".
@@ -158,10 +140,7 @@ def purge_gtfs_rt_update(self):
     """
     This task will remove realtime update
     """
-    config = {
-        "nb_days_to_keep": app.config.get("NB_DAYS_TO_KEEP_RT_UPDATE"),
-        "connector": "gtfs-rt",
-    }
+    config = {"nb_days_to_keep": app.config.get("NB_DAYS_TO_KEEP_RT_UPDATE"), "connector": "gtfs-rt"}
     purge_rt_update.delay(config)
 
 

@@ -72,18 +72,12 @@ def gen_uuid():
 
 
 class TimestampMixin(object):
-    created_at = db.Column(
-        db.DateTime(), default=datetime.datetime.utcnow, nullable=False
-    )
-    updated_at = db.Column(
-        db.DateTime(), default=None, onupdate=datetime.datetime.utcnow
-    )
+    created_at = db.Column(db.DateTime(), default=datetime.datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime(), default=None, onupdate=datetime.datetime.utcnow)
 
 
 Db_TripEffect = db.Enum(*[e.name for e in TripEffect], name="trip_effect")
-Db_ModificationType = db.Enum(
-    *[t.name for t in ModificationType], name="modification_type"
-)
+Db_ModificationType = db.Enum(*[t.name for t in ModificationType], name="modification_type")
 
 
 def get_utc_timezoned_timestamp_safe(timestamp):
@@ -110,15 +104,11 @@ class VehicleJourney(db.Model):  # type: ignore
 
     # ! DO NOT USE attribute directly !
     # timestamp of VJ's start (stored in UTC to be safe with db without timezone)
-    start_timestamp = db.Column(
-        db.DateTime, nullable=False
-    )  # ! USE get_start_timestamp() !
+    start_timestamp = db.Column(db.DateTime, nullable=False)  # ! USE get_start_timestamp() !
     db.Index("start_timestamp_idx", start_timestamp)
 
     db.UniqueConstraint(
-        navitia_trip_id,
-        start_timestamp,
-        name="vehicle_journey_navitia_trip_id_start_timestamp_idx",
+        navitia_trip_id, start_timestamp, name="vehicle_journey_navitia_trip_id_start_timestamp_idx"
     )
 
     def __init__(self, navitia_vj, utc_since_dt, utc_until_dt, vj_start_dt=None):
@@ -155,16 +145,12 @@ class VehicleJourney(db.Model):  # type: ignore
             self.start_timestamp = vj_start_dt
         else:
             first_stop_time = navitia_vj.get("stop_times", [{}])[0]
-            start_time = first_stop_time[
-                "utc_arrival_time"
-            ]  # converted in datetime.time() in python wrapper
+            start_time = first_stop_time["utc_arrival_time"]  # converted in datetime.time() in python wrapper
             if start_time is None:
                 start_time = first_stop_time[
                     "utc_departure_time"
                 ]  # converted in datetime.time() in python wrapper
-            self.start_timestamp = utc.localize(
-                datetime.datetime.combine(utc_since_dt.date(), start_time)
-            )
+            self.start_timestamp = utc.localize(datetime.datetime.combine(utc_since_dt.date(), start_time))
 
             # if since = 20010102T2300 and start_time = 0200, actual start_timestamp = 20010103T0200.
             # So adding one day to start_timestamp obtained (20010102T0200) if it's before since.
@@ -193,9 +179,7 @@ class StopTimeUpdate(db.Model, TimestampMixin):  # type: ignore
 
     id = db.Column(postgresql.UUID, default=gen_uuid, primary_key=True)
     trip_update_id = db.Column(
-        postgresql.UUID,
-        db.ForeignKey("trip_update.vj_id", ondelete="CASCADE"),
-        nullable=False,
+        postgresql.UUID, db.ForeignKey("trip_update.vj_id", ondelete="CASCADE"), nullable=False
     )
     db.Index("trip_update_id_idx", trip_update_id)
 
@@ -277,43 +261,25 @@ class StopTimeUpdate(db.Model, TimestampMixin):  # type: ignore
 
     def get_stop_event_status(self, event_name):
         if not hasattr(self, "{}_status".format(event_name)):
-            raise Exception(
-                'StopTimeUpdate has no attribute "{}_status"'.format(event_name)
-            )
+            raise Exception('StopTimeUpdate has no attribute "{}_status"'.format(event_name))
         return getattr(self, "{}_status".format(event_name), ModificationType.none.name)
 
     def is_stop_event_deleted(self, event_name):
         status = self.get_stop_event_status(event_name)
-        return status in (
-            ModificationType.delete.name,
-            ModificationType.deleted_for_detour.name,
-        )
+        return status in (ModificationType.delete.name, ModificationType.deleted_for_detour.name)
 
     def is_stop_event_added(self, event_name):
         status = self.get_stop_event_status(event_name)
-        return status in (
-            ModificationType.add.name,
-            ModificationType.added_for_detour.name,
-        )
+        return status in (ModificationType.add.name, ModificationType.added_for_detour.name)
 
 
 associate_realtimeupdate_tripupdate = db.Table(
     "associate_realtimeupdate_tripupdate",
     db.metadata,
-    db.Column(
-        "real_time_update_id",
-        postgresql.UUID,
-        db.ForeignKey("real_time_update.id", ondelete="CASCADE"),
-    ),
-    db.Column(
-        "trip_update_id",
-        postgresql.UUID,
-        db.ForeignKey("trip_update.vj_id", ondelete="CASCADE"),
-    ),
+    db.Column("real_time_update_id", postgresql.UUID, db.ForeignKey("real_time_update.id", ondelete="CASCADE")),
+    db.Column("trip_update_id", postgresql.UUID, db.ForeignKey("trip_update.vj_id", ondelete="CASCADE")),
     db.PrimaryKeyConstraint(
-        "real_time_update_id",
-        "trip_update_id",
-        name="associate_realtimeupdate_tripupdate_pkey",
+        "real_time_update_id", "trip_update_id", name="associate_realtimeupdate_tripupdate_pkey"
     ),
 )
 
@@ -337,9 +303,7 @@ class TripUpdate(db.Model, TimestampMixin):  # type: ignore
         "VehicleJourney",
         uselist=False,
         lazy="joined",
-        backref=backref(
-            "trip_update", cascade="all, delete-orphan", single_parent=True
-        ),
+        backref=backref("trip_update", cascade="all, delete-orphan", single_parent=True),
         cascade="all, delete-orphan",
         single_parent=True,
     )
@@ -411,9 +375,7 @@ class TripUpdate(db.Model, TimestampMixin):  # type: ignore
         return (
             cls.query.join(VehicleJourney)
             .filter(
-                tuple_(
-                    VehicleJourney.navitia_trip_id, VehicleJourney.start_timestamp
-                ).in_(id_timestamp_tuples)
+                tuple_(VehicleJourney.navitia_trip_id, VehicleJourney.start_timestamp).in_(id_timestamp_tuples)
             )
             .order_by(VehicleJourney.navitia_trip_id)
             .all()
@@ -425,41 +387,23 @@ class TripUpdate(db.Model, TimestampMixin):  # type: ignore
         if start_date:
             start_dt = datetime.datetime.combine(start_date, datetime.time(0, 0))
             query = query.filter(
-                sqlalchemy.text(
-                    "vehicle_journey_1.start_timestamp >= '{start_dt}'".format(
-                        start_dt=start_dt
-                    )
-                )
+                sqlalchemy.text("vehicle_journey_1.start_timestamp >= '{start_dt}'".format(start_dt=start_dt))
             )
         if end_date:
-            end_dt = datetime.datetime.combine(
-                end_date, datetime.time(0, 0)
-            ) + datetime.timedelta(days=1)
+            end_dt = datetime.datetime.combine(end_date, datetime.time(0, 0)) + datetime.timedelta(days=1)
             query = query.filter(
-                sqlalchemy.text(
-                    "vehicle_journey_1.start_timestamp <= '{end_dt}'".format(
-                        end_dt=end_dt
-                    )
-                )
+                sqlalchemy.text("vehicle_journey_1.start_timestamp <= '{end_dt}'".format(end_dt=end_dt))
             )
         return query.all()
 
     @classmethod
-    def remove_by_contributors_and_period(
-        cls, contributors, start_date=None, end_date=None
-    ):
+    def remove_by_contributors_and_period(cls, contributors, start_date=None, end_date=None):
         trip_updates_to_remove = cls.find_by_contributor_period(
             contributors=contributors, start_date=start_date, end_date=end_date
         )
         for t in trip_updates_to_remove:
-            f = sqlalchemy.text(
-                "associate_realtimeupdate_tripupdate.trip_update_id='{}'".format(
-                    t.vj_id
-                )
-            )
-            db.session.query(associate_realtimeupdate_tripupdate).filter(f).delete(
-                synchronize_session=False
-            )
+            f = sqlalchemy.text("associate_realtimeupdate_tripupdate.trip_update_id='{}'".format(t.vj_id))
+            db.session.query(associate_realtimeupdate_tripupdate).filter(f).delete(synchronize_session=False)
             db.session.delete(t)
 
         db.session.commit()
@@ -470,19 +414,10 @@ class TripUpdate(db.Model, TimestampMixin):  # type: ignore
         # For COTS, since we don't care about the order, search only with stop_id if no element found
         # Note: if the trip_update stops list is not a strict ending sublist of stops list of navitia_vj
         # then the whole trip is ignored in model_maker.
-        first = next(
-            (
-                st
-                for st in self.stop_time_updates
-                if st.stop_id == stop_id and st.order == order
-            ),
-            None,
-        )
+        first = next((st for st in self.stop_time_updates if st.stop_id == stop_id and st.order == order), None)
         if first:
             return first
-        return next(
-            (st for st in self.stop_time_updates if st.stop_id == stop_id), None
-        )
+        return next((st for st in self.stop_time_updates if st.stop_id == stop_id), None)
 
 
 class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
@@ -498,9 +433,7 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
 
     id = db.Column(postgresql.UUID, default=gen_uuid, primary_key=True)
     received_at = db.Column(db.DateTime, nullable=False)
-    connector = db.Column(
-        db.Enum("cots", "gtfs-rt", name="connector_type"), nullable=False
-    )
+    connector = db.Column(db.Enum("cots", "gtfs-rt", name="connector_type"), nullable=False)
     status = db.Column(db.Enum("OK", "KO", "pending", name="rt_status"), nullable=False)
     db.Index("status_idx", status)
     error = db.Column(db.Text, nullable=True)
@@ -517,20 +450,10 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
 
     __table_args__ = (
         db.Index("realtime_update_created_at", "created_at"),
-        db.Index(
-            "realtime_update_contributor_and_created_at", "created_at", "contributor"
-        ),
+        db.Index("realtime_update_contributor_and_created_at", "created_at", "contributor"),
     )
 
-    def __init__(
-        self,
-        raw_data,
-        connector,
-        contributor,
-        status="OK",
-        error=None,
-        received_at=None,
-    ):
+    def __init__(self, raw_data, connector, contributor, status="OK", error=None, received_at=None):
         self.id = gen_uuid()
         self.raw_data = raw_data
         self.connector = connector
@@ -547,35 +470,24 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         from kirin import app
 
         result = {"last_update": {}, "last_valid_update": {}, "last_update_error": {}}
-        contributor = [
-            app.config["COTS_CONTRIBUTOR"],
-            app.config["GTFS_RT_CONTRIBUTOR"],
-        ]
+        contributor = [app.config["COTS_CONTRIBUTOR"], app.config["GTFS_RT_CONTRIBUTOR"]]
         for c in contributor:
-            sql = db.session.query(
-                cls.created_at, cls.status, cls.updated_at, cls.error
-            )
+            sql = db.session.query(cls.created_at, cls.status, cls.updated_at, cls.error)
             sql = sql.filter(cls.contributor == c)
             sql = sql.order_by(desc(cls.created_at))
             row = sql.first()
             if row:
-                date = (
-                    row[2] if row[2] else row[0]
-                )  # update if exist, otherwise created
+                date = row[2] if row[2] else row[0]  # update if exist, otherwise created
                 result["last_update"][c] = date.strftime("%Y-%m-%dT%H:%M:%SZ")
                 if row[1] == "OK":
-                    result["last_valid_update"][c] = row[0].strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    )
+                    result["last_valid_update"][c] = row[0].strftime("%Y-%m-%dT%H:%M:%SZ")
                     # no error to populate
                 else:
                     result["last_update_error"][c] = row[3]
                     sql_ok = sql.filter(cls.status == "OK")
                     row_ok = sql_ok.first()
                     if row_ok:
-                        result["last_valid_update"][c] = row_ok[0].strftime(
-                            "%Y-%m-%dT%H:%M:%SZ"
-                        )
+                        result["last_valid_update"][c] = row_ok[0].strftime("%Y-%m-%dT%H:%M:%SZ")
 
         return result
 

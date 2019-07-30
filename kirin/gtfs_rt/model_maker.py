@@ -34,11 +34,7 @@ import logging
 from pytz import utc
 from kirin import core
 from kirin.core import model
-from kirin.core.types import (
-    ModificationType,
-    get_higher_status,
-    get_effect_by_stop_time_status,
-)
+from kirin.core.types import ModificationType, get_higher_status, get_effect_by_stop_time_status
 from kirin.exceptions import KirinException
 from kirin.utils import make_rt_update, floor_datetime
 from kirin.utils import record_internal_failure, record_call
@@ -52,9 +48,7 @@ def handle(proto, navitia_wrapper, contributor):
     rt_update = make_rt_update(data, "gtfs-rt", contributor=contributor)
     start_datetime = datetime.datetime.utcnow()
     try:
-        trip_updates = KirinModelBuilder(navitia_wrapper, contributor).build(
-            rt_update, data=proto
-        )
+        trip_updates = KirinModelBuilder(navitia_wrapper, contributor).build(rt_update, data=proto)
         record_call("OK", contributor=contributor)
     except KirinException as e:
         rt_update.status = "KO"
@@ -74,12 +68,7 @@ def handle(proto, navitia_wrapper, contributor):
     real_time_update, log_dict = core.handle(rt_update, trip_updates, contributor)
     duration = (datetime.datetime.utcnow() - start_datetime).total_seconds()
     log_dict.update(
-        {
-            "duration": duration,
-            "input_timestamp": datetime.datetime.utcfromtimestamp(
-                proto.header.timestamp
-            ),
-        }
+        {"duration": duration, "input_timestamp": datetime.datetime.utcfromtimestamp(proto.header.timestamp)}
     )
     record_call("Simple feed publication", **log_dict)
     logging.getLogger(__name__).info("Simple feed publication", extra=log_dict)
@@ -107,13 +96,9 @@ class KirinModelBuilder(object):
 
         The TripUpdates are not yet associated with the RealTimeUpdate
         """
-        utc_data_time = utc.localize(
-            datetime.datetime.utcfromtimestamp(data.header.timestamp)
-        )
+        utc_data_time = utc.localize(datetime.datetime.utcfromtimestamp(data.header.timestamp))
         self.log.debug(
-            "Start processing GTFS-rt: timestamp = {} ({})".format(
-                data.header.timestamp, utc_data_time
-            )
+            "Start processing GTFS-rt: timestamp = {} ({})".format(data.header.timestamp, utc_data_time)
         )
 
         trip_updates = []
@@ -121,21 +106,13 @@ class KirinModelBuilder(object):
         for entity in data.entity:
             if not entity.trip_update:
                 continue
-            tu = self._make_trip_updates(
-                entity.trip_update, utc_data_time=utc_data_time
-            )
+            tu = self._make_trip_updates(entity.trip_update, utc_data_time=utc_data_time)
             trip_updates.extend(tu)
 
         if not trip_updates:
             rt_update.status = "KO"
-            rt_update.error = "No information for this gtfs-rt with timestamp: {}".format(
-                data.header.timestamp
-            )
-            self.log.error(
-                "No information for this gtfs-rt with timestamp: {}".format(
-                    data.header.timestamp
-                )
-            )
+            rt_update.error = "No information for this gtfs-rt with timestamp: {}".format(data.header.timestamp)
+            self.log.error("No information for this gtfs-rt with timestamp: {}".format(data.header.timestamp))
 
         return trip_updates
 
@@ -163,8 +140,7 @@ class KirinModelBuilder(object):
             is_tu_valid = True
             vj_stop_order = len(vj.navitia_vj.get("stop_times", [])) - 1
             for vj_stop, tu_stop in itertools.izip_longest(
-                reversed(vj.navitia_vj.get("stop_times", [])),
-                reversed(input_trip_update.stop_time_update),
+                reversed(vj.navitia_vj.get("stop_times", [])), reversed(input_trip_update.stop_time_update)
             ):
                 if vj_stop is None:
                     is_tu_valid = False
@@ -196,21 +172,17 @@ class KirinModelBuilder(object):
 
             if is_tu_valid:
                 # Since vj.stop_times are managed in reversed order, we re sort stop_time_updates by order.
-                trip_update.stop_time_updates.sort(
-                    cmp=lambda x, y: cmp(x.order, y.order)
-                )
+                trip_update.stop_time_updates.sort(cmp=lambda x, y: cmp(x.order, y.order))
                 trip_update.effect = get_effect_by_stop_time_status(highest_st_status)
                 trip_updates.append(trip_update)
             else:
                 self.log.error(
                     "stop_time_update do not match with stops in navitia for trip : {} timestamp: {}".format(
-                        input_trip_update.trip.trip_id,
-                        calendar.timegm(utc_data_time.utctimetuple()),
+                        input_trip_update.trip.trip_id, calendar.timegm(utc_data_time.utctimetuple())
                     )
                 )
                 record_internal_failure(
-                    "stop_time_update do not match with stops in navitia",
-                    contributor=self.contributor,
+                    "stop_time_update do not match with stops in navitia", contributor=self.contributor
                 )
                 del trip_update.stop_time_updates[:]
 
@@ -219,17 +191,13 @@ class KirinModelBuilder(object):
     def __repr__(self):
         """ Allow this class to be cacheable
         """
-        return "{}.{}.{}".format(
-            self.__class__, self.navitia.url, self.instance_data_pub_date
-        )
+        return "{}.{}.{}".format(self.__class__, self.navitia.url, self.instance_data_pub_date)
 
     @app.cache.memoize(timeout=1200)
     def _make_db_vj(self, vj_source_code, utc_since_dt, utc_until_dt):
         navitia_vjs = self.navitia.vehicle_journeys(
             q={
-                "filter": "vehicle_journey.has_code({}, {})".format(
-                    self.stop_code_key, vj_source_code
-                ),
+                "filter": "vehicle_journey.has_code({}, {})".format(self.stop_code_key, vj_source_code),
                 "since": to_str(utc_since_dt),
                 "until": to_str(utc_until_dt),
                 "depth": "2",  # we need this depth to get the stoptime's stop_area
@@ -261,25 +229,17 @@ class KirinModelBuilder(object):
             vj = model.VehicleJourney(nav_vj, utc_since_dt, utc_until_dt)
             return [vj]
         except Exception as e:
-            self.log.exception(
-                "Error while creating kirin VJ of {}: {}".format(nav_vj.get("id"), e)
-            )
-            record_internal_failure(
-                "Error while creating kirin VJ", contributor=self.contributor
-            )
+            self.log.exception("Error while creating kirin VJ of {}: {}".format(nav_vj.get("id"), e))
+            record_internal_failure("Error while creating kirin VJ", contributor=self.contributor)
             return []
 
     def _get_navitia_vjs(self, trip, utc_data_time):
         vj_source_code = trip.trip_id
 
         utc_since_dt = floor_datetime(utc_data_time - self.period_filter_tolerance)
-        utc_until_dt = floor_datetime(
-            utc_data_time + self.period_filter_tolerance + datetime.timedelta(hours=1)
-        )
+        utc_until_dt = floor_datetime(utc_data_time + self.period_filter_tolerance + datetime.timedelta(hours=1))
         self.log.debug(
-            "searching for vj {} on [{}, {}] in navitia".format(
-                vj_source_code, utc_since_dt, utc_until_dt
-            )
+            "searching for vj {} on [{}, {}] in navitia".format(vj_source_code, utc_since_dt, utc_until_dt)
         )
 
         return self._make_db_vj(vj_source_code, utc_since_dt, utc_until_dt)
@@ -306,16 +266,8 @@ def _make_stoptime_update(input_st_update, nav_stop):
 
     dep_delay = read_delay(input_st_update.departure)
     arr_delay = read_delay(input_st_update.arrival)
-    dep_status = (
-        ModificationType.none.name
-        if dep_delay is None
-        else ModificationType.update.name
-    )
-    arr_status = (
-        ModificationType.none.name
-        if arr_delay is None
-        else ModificationType.update.name
-    )
+    dep_status = ModificationType.none.name if dep_delay is None else ModificationType.update.name
+    arr_status = ModificationType.none.name if arr_delay is None else ModificationType.update.name
     st_update = model.StopTimeUpdate(
         nav_stop,
         departure_delay=dep_delay,

@@ -50,9 +50,7 @@ class Status(Resource):
         res = model.RealTimeUpdate.get_probes_by_contributor()
         res["version"] = version
         res["db_pool_status"] = kirin.db.engine.pool.status()
-        res["db_version"] = kirin.db.engine.scalar(
-            "select version_num from alembic_version;"
-        )
+        res["db_version"] = kirin.db.engine.scalar("select version_num from alembic_version;")
         res["navitia_url"] = current_app.config["NAVITIA_URL"]
         res["rabbitmq_info"] = kirin.rabbitmq_handler.info()
         return res, 200

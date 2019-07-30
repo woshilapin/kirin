@@ -56,11 +56,7 @@ class RTReloader(ConsumerProducerMixin):
         self.max_retries = max_retries
 
     def get_consumers(self, Consumer, channel):
-        return [
-            Consumer(
-                queues=[self.rpc_queue], on_message=self.on_request, prefetch_count=1
-            )
-        ]
+        return [Consumer(queues=[self.rpc_queue], on_message=self.on_request, prefetch_count=1)]
 
     def on_request(self, message):
         self._on_request(message)
@@ -98,9 +94,7 @@ class RTReloader(ConsumerProducerMixin):
                 if task.load_realtime.end_date:
                     end_date = str_to_date(task.load_realtime.end_date)
             feed = convert_to_gtfsrt(
-                TripUpdate.find_by_contributor_period(
-                    task.load_realtime.contributors, begin_date, end_date
-                ),
+                TripUpdate.find_by_contributor_period(task.load_realtime.contributors, begin_date, end_date),
                 gtfs_realtime_pb2.FeedHeader.FULL_DATASET,
             )
 
@@ -122,10 +116,7 @@ class RTReloader(ConsumerProducerMixin):
                 },
             )
             duration = (datetime.utcnow() - start_datetime).total_seconds()
-            log.info(
-                "End of full feed publication",
-                extra={"duration": duration, "task": task},
-            )
+            log.info("End of full feed publication", extra={"duration": duration, "task": task})
             record_call(
                 "Full feed publication",
                 size=len(feed_str),
@@ -150,10 +141,7 @@ class RabbitMQHandler(object):
         with self._connection.channel() as channel:
             with Producer(channel) as producer:
                 producer.publish(
-                    item,
-                    exchange=self._exchange,
-                    routing_key=contributor,
-                    declare=[self._exchange],
+                    item, exchange=self._exchange, routing_key=contributor, declare=[self._exchange]
                 )
 
     def info(self):
@@ -164,14 +152,9 @@ class RabbitMQHandler(object):
 
         route = "task.load_realtime.*"
         log.info("listening route {} on exchange {}...".format(route, self._exchange))
-        rt_queue = Queue(
-            queue_name, routing_key=route, exchange=self._exchange, durable=False
-        )
+        rt_queue = Queue(queue_name, routing_key=route, exchange=self._exchange, durable=False)
         RTReloader(
-            connection=self._connection,
-            rpc_queue=rt_queue,
-            exchange=self._exchange,
-            max_retries=max_retries,
+            connection=self._connection, rpc_queue=rt_queue, exchange=self._exchange, max_retries=max_retries
         ).run()
 
 
@@ -199,9 +182,7 @@ def monitor_heartbeats(connections, rate=2):
             try:
                 conn.heartbeat_check(rate=rate)
             except (socket.error, ConnectionForced):
-                logging.getLogger(__name__).info(
-                    "connection %s dead: removing it!", conn
-                )
+                logging.getLogger(__name__).info("connection %s dead: removing it!", conn)
                 # actualy we don't do a close(), else we won't be able to reopen it after...
                 to_remove.append(conn)
 
@@ -214,8 +195,6 @@ def monitor_heartbeats(connections, rate=2):
                 gevent.sleep(interval)
                 heartbeat_check()
             except Exception as e:
-                logging.getLogger(__name__).exception(
-                    "unknown exception when heartbeating%s", e
-                )
+                logging.getLogger(__name__).exception("unknown exception when heartbeating%s", e)
 
     gevent.Greenlet.spawn(loop)

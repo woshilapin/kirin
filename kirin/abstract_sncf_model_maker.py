@@ -123,11 +123,7 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
         self.contributor = contributor
 
     def _get_navitia_vjs(
-        self,
-        headsign_str,
-        utc_since_dt,
-        utc_until_dt,
-        action_on_trip=ActionOnTrip.NOT_ADDED.name,
+        self, headsign_str, utc_since_dt, utc_until_dt, action_on_trip=ActionOnTrip.NOT_ADDED.name
     ):
         """
         Search for navitia's vehicle journeys with given headsigns, in the period provided
@@ -177,16 +173,12 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
                             t=train_number, s=extended_since_dt, u=extended_until_dt
                         )
                     )
-                    record_internal_failure(
-                        "missing train", contributor=self.contributor
-                    )
+                    record_internal_failure("missing train", contributor=self.contributor)
 
             else:
                 if action_on_trip == ActionOnTrip.FIRST_TIME_ADDED.name and navitia_vjs:
                     raise InvalidArguments(
-                        "Invalid action, trip {} already present in navitia".format(
-                            train_number
-                        )
+                        "Invalid action, trip {} already present in navitia".format(train_number)
                     )
 
                 navitia_vjs = [make_navitia_empty_vj(train_number)]
@@ -195,25 +187,16 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
 
                 try:
                     vj = model.VehicleJourney(
-                        nav_vj,
-                        extended_since_dt,
-                        extended_until_dt,
-                        vj_start_dt=utc_since_dt,
+                        nav_vj, extended_since_dt, extended_until_dt, vj_start_dt=utc_since_dt
                     )
                     vjs[nav_vj["id"]] = vj
                 except Exception as e:
                     logging.getLogger(__name__).exception(
-                        "Error while creating kirin VJ of {}: {}".format(
-                            nav_vj.get("id"), e
-                        )
+                        "Error while creating kirin VJ of {}: {}".format(nav_vj.get("id"), e)
                     )
-                    record_internal_failure(
-                        "Error while creating kirin VJ", contributor=self.contributor
-                    )
+                    record_internal_failure("Error while creating kirin VJ", contributor=self.contributor)
 
         if not vjs:
-            raise ObjectNotFound(
-                "no train found for headsign(s) {}".format(headsign_str)
-            )
+            raise ObjectNotFound("no train found for headsign(s) {}".format(headsign_str))
 
         return vjs.values()

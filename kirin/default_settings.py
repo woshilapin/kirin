@@ -22,18 +22,14 @@ NAVITIA_INSTANCE = os.getenv("KIRIN_NAVITIA_INSTANCE", "sncf")
 
 NAVITIA_TOKEN = os.getenv("KIRIN_NAVITIA_TOKEN", None)
 
-CELERY_BROKER_URL = os.getenv(
-    "KIRIN_CELERY_BROKER_URL", "pyamqp://guest:guest@localhost:5672//?heartbeat=60"
-)
+CELERY_BROKER_URL = os.getenv("KIRIN_CELERY_BROKER_URL", "pyamqp://guest:guest@localhost:5672//?heartbeat=60")
 
 
 # COTS configuration
 # * external configuration
 COTS_CONTRIBUTOR = os.getenv("KIRIN_COTS_CONTRIBUTOR", "realtime.cots")
 COTS_PAR_IV_API_KEY = os.getenv("KIRIN_COTS_PAR_IV_API_KEY", None)
-COTS_PAR_IV_MOTIF_RESOURCE_SERVER = os.getenv(
-    "KIRIN_COTS_PAR_IV_MOTIF_RESOURCE_SERVER", None
-)
+COTS_PAR_IV_MOTIF_RESOURCE_SERVER = os.getenv("KIRIN_COTS_PAR_IV_MOTIF_RESOURCE_SERVER", None)
 COTS_PAR_IV_TOKEN_SERVER = os.getenv("KIRIN_COTS_PAR_IV_TOKEN_SERVER", None)
 COTS_PAR_IV_CLIENT_ID = os.getenv("KIRIN_COTS_PAR_IV_CLIENT_ID", None)
 COTS_PAR_IV_CLIENT_SECRET = os.getenv("KIRIN_COTS_PAR_IV_CLIENT_SECRET", None)
@@ -41,30 +37,19 @@ COTS_PAR_IV_GRANT_TYPE = os.getenv("KIRIN_COTS_PAR_IV_GRANT_TYPE", "client_crede
 
 # * technical configuration
 # max instance call failures before stopping attempt
-COTS_PAR_IV_CIRCUIT_BREAKER_MAX_FAIL = int(
-    os.getenv("KIRIN_COTS_COTS_PAR_IV_CIRCUIT_BREAKER_MAX_FAIL", 4)
-)
+COTS_PAR_IV_CIRCUIT_BREAKER_MAX_FAIL = int(os.getenv("KIRIN_COTS_COTS_PAR_IV_CIRCUIT_BREAKER_MAX_FAIL", 4))
 # the circuit breaker retries after this timeout (in seconds)
 COTS_PAR_IV_CIRCUIT_BREAKER_TIMEOUT_S = int(
-    os.getenv(
-        "KIRIN_COTS_COTS_PAR_IV_CIRCUIT_BREAKER_TIMEOUT_S",
-        timedelta(minutes=1).total_seconds(),
-    )
+    os.getenv("KIRIN_COTS_COTS_PAR_IV_CIRCUIT_BREAKER_TIMEOUT_S", timedelta(minutes=1).total_seconds())
 )
 COTS_PAR_IV_TIMEOUT_TOKEN = int(
-    os.getenv(
-        "KIRIN_COTS_COTS_PAR_IV_TIMEOUT_TOKEN", timedelta(minutes=30).total_seconds()
-    )
+    os.getenv("KIRIN_COTS_COTS_PAR_IV_TIMEOUT_TOKEN", timedelta(minutes=30).total_seconds())
 )
 COTS_PAR_IV_CACHE_TIMEOUT = int(
-    os.getenv(
-        "KIRIN_COTS_COTS_PAR_IV_CACHE_TIMEOUT", timedelta(hours=1).total_seconds()
-    )
+    os.getenv("KIRIN_COTS_COTS_PAR_IV_CACHE_TIMEOUT", timedelta(hours=1).total_seconds())
 )
 COTS_PAR_IV_REQUEST_TIMEOUT = int(
-    os.getenv(
-        "KIRIN_COTS_COTS_PAR_IV_REQUEST_TIMEOUT", timedelta(seconds=2).total_seconds()
-    )
+    os.getenv("KIRIN_COTS_COTS_PAR_IV_REQUEST_TIMEOUT", timedelta(seconds=2).total_seconds())
 )
 
 
@@ -82,8 +67,7 @@ DEBUG = boolean(os.getenv("KIRIN_DEBUG", False))
 
 # rabbitmq connections string: http://kombu.readthedocs.org/en/latest/userguide/connections.html#urls
 RABBITMQ_CONNECTION_STRING = os.getenv(
-    "KIRIN_RABBITMQ_CONNECTION_STRING",
-    "pyamqp://guest:guest@localhost:5672//?heartbeat=60",
+    "KIRIN_RABBITMQ_CONNECTION_STRING", "pyamqp://guest:guest@localhost:5672//?heartbeat=60"
 )
 
 # max nb of retries before giving up publishing
@@ -103,9 +87,7 @@ NAVITIA_QUERY_CACHE_TIMEOUT = int(
     os.getenv("KIRIN_NAVITIA_QUERY_CACHE_TIMEOUT", timedelta(days=1).total_seconds())
 )  # in seconds
 NAVITIA_PUBDATE_CACHE_TIMEOUT = int(
-    os.getenv(
-        "KIRIN_NAVITIA_PUBDATE_CACHE_TIMEOUT", timedelta(minutes=5).total_seconds()
-    )
+    os.getenv("KIRIN_NAVITIA_PUBDATE_CACHE_TIMEOUT", timedelta(minutes=5).total_seconds())
 )  # in seconds
 
 CACHE_TYPE = os.getenv("KIRIN_CACHE_TYPE", "simple")
@@ -114,17 +96,12 @@ NEW_RELIC_CONFIG_FILE = os.getenv("KIRIN_NEW_RELIC_CONFIG_FILE", None)
 
 log_level = os.getenv("KIRIN_LOG_LEVEL", "DEBUG")
 log_format = os.getenv(
-    "KIRIN_LOG_FORMAT",
-    "[%(asctime)s] [%(levelname)5s] [%(process)5s] [%(name)25s] %(message)s",
+    "KIRIN_LOG_FORMAT", "[%(asctime)s] [%(levelname)5s] [%(process)5s] [%(name)25s] %(message)s"
 )
 
-log_formatter = os.getenv(
-    "KIRIN_LOG_FORMATTER", "default"
-)  # can be 'default' or 'json'
+log_formatter = os.getenv("KIRIN_LOG_FORMATTER", "default")  # can be 'default' or 'json'
 
-log_extras = json.loads(
-    os.getenv("KIRIN_LOG_EXTRAS", "{}")
-)  # fields to add to the logger
+log_extras = json.loads(os.getenv("KIRIN_LOG_EXTRAS", "{}"))  # fields to add to the logger
 
 # Log Level available
 # - DEBUG
@@ -139,11 +116,7 @@ LOGGER = {
     "disable_existing_loggers": True,
     "formatters": {
         "default": {"format": log_format},
-        "json": {
-            "format": log_format,
-            "extras": log_extras,
-            "()": "kirin.utils.CustomJsonFormatter",
-        },
+        "json": {"format": log_format, "extras": log_extras, "()": "kirin.utils.CustomJsonFormatter"},
     },
     "filters": {"IdFilter": {"()": IdFilter}},
     "handlers": {
@@ -158,27 +131,11 @@ LOGGER = {
         "": {"handlers": ["default"], "level": "DEBUG", "propagate": False},
         "kirin": {"handlers": ["default"], "level": "DEBUG", "propagate": False},
         "amqp": {"level": "INFO"},
-        "sqlalchemy.engine": {
-            "handlers": ["default"],
-            "level": "WARN",
-            "propagate": False,
-        },
-        "sqlalchemy.pool": {
-            "handlers": ["default"],
-            "level": "WARN",
-            "propagate": False,
-        },
-        "sqlalchemy.dialects.postgresql": {
-            "handlers": ["default"],
-            "level": "WARN",
-            "propagate": False,
-        },
+        "sqlalchemy.engine": {"handlers": ["default"], "level": "WARN", "propagate": False},
+        "sqlalchemy.pool": {"handlers": ["default"], "level": "WARN", "propagate": False},
+        "sqlalchemy.dialects.postgresql": {"handlers": ["default"], "level": "WARN", "propagate": False},
         "werkzeug": {"handlers": ["default"], "level": "WARN", "propagate": False},
-        "celery.bootsteps": {
-            "handlers": ["default"],
-            "level": "WARN",
-            "propagate": False,
-        },
+        "celery.bootsteps": {"handlers": ["default"], "level": "WARN", "propagate": False},
     },
 }
 
@@ -189,25 +146,17 @@ REDIS_HOST = os.getenv("KIRIN_REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("KIRIN_REDIS_PORT", 6379))
 # index of the database use in redis, between 0 and 15 by default
 REDIS_DB = int(os.getenv("KIRIN_REDIS_DB", 1))
-REDIS_PASSWORD = os.getenv(
-    "KIRIN_REDIS_PASSWORD", ""
-)  # No password is needed by default
+REDIS_PASSWORD = os.getenv("KIRIN_REDIS_PASSWORD", "")  # No password is needed by default
 
 REDIS_LOCK_TIMEOUT_POLLER = int(
     os.getenv("KIRIN_REDIS_LOCK_TIMEOUT_POLLER", timedelta(minutes=5).total_seconds())
 )
-REDIS_LOCK_TIMEOUT_PURGE = int(
-    os.getenv("KIRIN_REDIS_LOCK_TIMEOUT_PURGE", timedelta(hours=12).total_seconds())
-)
+REDIS_LOCK_TIMEOUT_PURGE = int(os.getenv("KIRIN_REDIS_LOCK_TIMEOUT_PURGE", timedelta(hours=12).total_seconds()))
 
 TASK_LOCK_PREFIX = "kirin.lock"
 
-TASK_STOP_MAX_DELAY = int(
-    os.getenv("KIRIN_TASK_STOP_MAX_DELAY", timedelta(seconds=10).total_seconds())
-)
-TASK_WAIT_FIXED = int(
-    os.getenv("KIRIN_TASK_WAIT_FIXED", timedelta(seconds=2).total_seconds())
-)
+TASK_STOP_MAX_DELAY = int(os.getenv("KIRIN_TASK_STOP_MAX_DELAY", timedelta(seconds=10).total_seconds()))
+TASK_WAIT_FIXED = int(os.getenv("KIRIN_TASK_WAIT_FIXED", timedelta(seconds=2).total_seconds()))
 
 CELERYBEAT_SCHEDULE = {
     "poller": {

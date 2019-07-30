@@ -4,7 +4,7 @@ To run the tests, just run py.test in the kirin root dir, using appropriate pyth
 ```bash
 KIRIN_CONFIG_FILE=test_settings.py py.test --doctest-modules
 ```
- 
+
 # Test with a database
 
 To be able to correctly test kirin, a database is needed.
