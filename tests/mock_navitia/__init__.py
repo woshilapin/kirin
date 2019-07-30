@@ -28,6 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+
 import json
 import vj_john
 import vj_6111
@@ -64,6 +65,7 @@ import vj_9580
 import st_0087_191981_WL
 import vj_unknown_object
 import logging
+
 
 mocks = [
     vj_john.response,
@@ -103,7 +105,7 @@ mocks = [
 ]
 _mock_navitia_call = {}
 for r in mocks:
-    map(lambda q: _mock_navitia_call.update({q: r}), r.queries)
+    map(lambda q: _mock_navitia_call.update({q: r}), r.queries)  # type: ignore
 
 
 def mock_navitia_query(self, query, q=None):
@@ -114,11 +116,11 @@ def mock_navitia_query(self, query, q=None):
     """
     query_str = query
     if q:
-        query_str += '?'
-        sep = ''
+        query_str += "?"
+        sep = ""
         for param_name, param_value in q.iteritems():
-            query_str += sep + param_name + '=' + param_value
-            sep = '&'
+            query_str += sep + param_name + "=" + param_value
+            sep = "&"
 
     try:
         mock = _mock_navitia_call[query_str]

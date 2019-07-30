@@ -72,7 +72,7 @@ def get_fixture_data(name):
     return a fixture input (IRE, COTS) as string
     the name must be the name of a file in kirin/tests/fixtures
     """
-    file = os.path.join(os.path.dirname(__file__), 'fixtures', name)
+    file = os.path.join(os.path.dirname(__file__), "fixtures", name)
     with open(file, "r") as fixture:
         return fixture.read()
 
@@ -88,6 +88,7 @@ def _dt(dt_to_parse, year=2015, month=9, day=8):
     d = parse(dt_to_parse)
     return d.replace(year=year, month=month, day=day)
 
+
 def dumb_nav_wrapper():
     """return a dumb navitia wrapper (all the param are useless since the 'query' call has been mocked)"""
-    return navitia_wrapper.Navitia(url='').instance('')
+    return navitia_wrapper.Navitia(url="").instance("")

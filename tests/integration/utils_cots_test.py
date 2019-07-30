@@ -83,23 +83,28 @@ mock_resource_json_response = """[
 def data_matcher(request):
     if not request:
         return False
-    return 'client_id=tchoutchou_id' in request.text and \
-           'client_secret=tchoutchou_secret' in request.text and \
-           'grant_type=client_credentials' in request.text
+    return (
+        "client_id=tchoutchou_id" in request.text
+        and "client_secret=tchoutchou_secret" in request.text
+        and "grant_type=client_credentials" in request.text
+    )
 
 
 def requests_mock_cause_message(mock):
     """
     Mock all calls to message sub-service, matching test_settings
     """
-    mock.post('https://messages.service/token',
-              json=json.loads(mock_token_json_response),
-              request_headers={'X-API-Key': 'tchoutchou_api_key'},
-              additional_matcher=data_matcher,
-              status_code=200)
-    mock.get('https://messages.service/resource',
-             json=json.loads(mock_resource_json_response),
-             request_headers={'X-API-Key': 'tchoutchou_api_key',
-                              'Authorization': 'Bearer wonderful_token'},
-             status_code=200)
+    mock.post(
+        "https://messages.service/token",
+        json=json.loads(mock_token_json_response),
+        request_headers={"X-API-Key": "tchoutchou_api_key"},
+        additional_matcher=data_matcher,
+        status_code=200,
+    )
+    mock.get(
+        "https://messages.service/resource",
+        json=json.loads(mock_resource_json_response),
+        request_headers={"X-API-Key": "tchoutchou_api_key", "Authorization": "Bearer wonderful_token"},
+        status_code=200,
+    )
     return requests_mock

@@ -35,8 +35,8 @@ import logging
 from retrying import retry
 
 # postgres image
-POSTGRES_IMAGE = 'postgres:9.4'
-POSTGRES_CONTAINER_NAME = 'kirin_test_postgres'
+POSTGRES_IMAGE = "postgres:9.4"
+POSTGRES_CONTAINER_NAME = "kirin_test_postgres"
 
 
 def _get_docker_file():
@@ -48,36 +48,43 @@ def _get_docker_file():
     is reduced by 10s
     """
     from io import BytesIO
-    return BytesIO('FROM ' + POSTGRES_IMAGE)
+
+    return BytesIO("FROM " + POSTGRES_IMAGE)
 
 
 class PostgresDocker(object):
-    USER = 'postgres'
-    PWD = 'postgres'
-    DBNAME = 'kirin_test'
+    USER = "postgres"
+    PWD = "postgres"
+    DBNAME = "kirin_test"
     """
     launch a temporary docker with a postgresql db
     """
+
     def __init__(self, user=USER, pwd=PWD, dbname=DBNAME):
         log = logging.getLogger(__name__)
-        base_url = 'unix://var/run/docker.sock'
+        base_url = "unix://var/run/docker.sock"
         self.docker_client = docker.DockerClient(base_url=base_url)
         self.docker_api_client = docker.APIClient(base_url=base_url)
 
-        log.info('Trying to build/update the docker image')
+        log.info("Trying to build/update the docker image")
         try:
-            for build_output in self.docker_client.images.build(fileobj=_get_docker_file(), tag=POSTGRES_IMAGE, rm=True):
+            for build_output in self.docker_client.images.build(
+                fileobj=_get_docker_file(), tag=POSTGRES_IMAGE, rm=True
+            ):
                 log.debug(build_output)
         except docker.errors.APIError as e:
             if e.is_server_error():
-                log.warn("[docker server error] A server error occcured, maybe "
-                                                "missing internet connection?")
+                log.warn("[docker server error] A server error occcured, maybe " "missing internet connection?")
                 log.warn("[docker server error] Details: {}".format(e))
-                log.warn("[docker server error] Checking if '{}' docker image "
-                                               "is already built".format(POSTGRES_IMAGE))
+                log.warn(
+                    "[docker server error] Checking if '{}' docker image "
+                    "is already built".format(POSTGRES_IMAGE)
+                )
                 self.docker_client.images.get(POSTGRES_IMAGE)
-                log.warn("[docker server error] Going on, as '{}' docker image "
-                                               "is already built".format(POSTGRES_IMAGE))
+                log.warn(
+                    "[docker server error] Going on, as '{}' docker image "
+                    "is already built".format(POSTGRES_IMAGE)
+                )
             else:
                 raise
 
@@ -86,8 +93,11 @@ class PostgresDocker(object):
 
         log.info("starting the temporary docker")
         self.container.start()
-        self.ip_addr = self.docker_api_client.inspect_container(self.container.id)\
-                                .get('NetworkSettings', {}).get('IPAddress')
+        self.ip_addr = (
+            self.docker_api_client.inspect_container(self.container.id)
+            .get("NetworkSettings", {})
+            .get("IPAddress")
+        )
 
         if not self.ip_addr:
             log.error("temporary docker {} not started".format(self.container.id))
@@ -112,12 +122,11 @@ class PostgresDocker(object):
             logging.getLogger(__name__).error("something is strange, the container is still there ...")
             exit(1)
 
-    @retry(stop_max_delay=10000, wait_fixed=100,
-           retry_on_exception=lambda e: isinstance(e, Exception))
+    @retry(stop_max_delay=10000, wait_fixed=100, retry_on_exception=lambda e: isinstance(e, Exception))
     def _create_db(self, user, pwd, dbname):
         connect = psycopg2.connect(user=user, host=self.ip_addr, password=pwd)
         connect.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
         cur = connect.cursor()
-        cur.execute('CREATE DATABASE ' + dbname)
+        cur.execute("CREATE DATABASE " + dbname)
         cur.close()
         connect.close()

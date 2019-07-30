@@ -45,30 +45,31 @@ def bdd(init_flask_db):
     """
     with app.app_context():
         flask_migrate.Migrate(app, db)
-        migration_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'migrations')
+        migration_dir = os.path.join(os.path.dirname(__file__), "..", "..", "migrations")
         flask_migrate.upgrade(directory=migration_dir)
 
     yield
 
     with app.app_context():
-        flask_migrate.downgrade(revision='base', directory=migration_dir)
+        flask_migrate.downgrade(revision="base", directory=migration_dir)
 
 
-@pytest.fixture(scope='function', autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def clean_db():
     """
     before all tests the database is cleared
     """
     with app.app_context():
         tables = [str(table) for table in db.metadata.sorted_tables]
-        db.session.execute('TRUNCATE {} CASCADE;'.format(', '.join(tables)))
+        db.session.execute("TRUNCATE {} CASCADE;".format(", ".join(tables)))
         db.session.commit()
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def mock_navitia_fixture(monkeypatch):
     from .. import mock_navitia
+
     """
     Mock all calls to navitia for this fixture
     """
-    monkeypatch.setattr('navitia_wrapper._NavitiaWrapper.query', mock_navitia.mock_navitia_query)
+    monkeypatch.setattr("navitia_wrapper._NavitiaWrapper.query", mock_navitia.mock_navitia_query)

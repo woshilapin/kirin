@@ -33,12 +33,12 @@ import navitia_response
 response = navitia_response.NavitiaResponse()
 
 response.queries = [
-    'vehicle_journeys/?filter=vehicle_journey.has_code(source, Code-R-vj1)&depth=2&since=20120615T120000Z&until=20120615T190000Z'
+    "vehicle_journeys/?filter=vehicle_journey.has_code(source, Code-R-vj1)&depth=2&since=20120615T120000Z&until=20120615T190000Z"
 ]
 
 response.response_code = 200
 
-response.json_response = '''
+response.json_response = """
 {
     "disruptions": [],
     "feed_publishers": [
@@ -258,4 +258,4 @@ response.json_response = '''
         }
     ]
 }
-'''
+"""
