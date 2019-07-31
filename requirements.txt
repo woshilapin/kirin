@@ -43,3 +43,4 @@ redis==2.10.6
 flask-cache==0.13.1
 click==6.7
 enum34==1.1.6
+typing==3.7.4
