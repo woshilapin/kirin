@@ -35,20 +35,22 @@ from kirin.version import version
 from flask import current_app
 from kirin.core import model
 
+
 class Index(Resource):
     def get(self):
         response = {
-            'status': {'href': url_for('status', _external=True)},
-            'cots': {'href': url_for('cots', _external=True)}
+            "status": {"href": url_for("status", _external=True)},
+            "cots": {"href": url_for("cots", _external=True)},
         }
         return response, 200
+
 
 class Status(Resource):
     def get(self):
         res = model.RealTimeUpdate.get_probes_by_contributor()
-        res['version'] = version
-        res['db_pool_status'] = kirin.db.engine.pool.status()
-        res['db_version'] = kirin.db.engine.scalar('select version_num from alembic_version;')
-        res['navitia_url'] = current_app.config['NAVITIA_URL']
-        res['rabbitmq_info'] = kirin.rabbitmq_handler.info()
+        res["version"] = version
+        res["db_pool_status"] = kirin.db.engine.pool.status()
+        res["db_version"] = kirin.db.engine.scalar("select version_num from alembic_version;")
+        res["navitia_url"] = current_app.config["NAVITIA_URL"]
+        res["rabbitmq_info"] = kirin.rabbitmq_handler.info()
         return res, 200

@@ -7,16 +7,16 @@ Create Date: 2018-11-19 13:50:34.486383
 """
 
 # revision identifiers, used by Alembic.
-revision = '4d9df787c7a7'
-down_revision = '396958f93bb'
+revision = "4d9df787c7a7"
+down_revision = "396958f93bb"
 
 from alembic import op
 import sqlalchemy as sa
 
 
 def upgrade():
-    op.add_column('trip_update', sa.Column('company_id', sa.Text(), nullable=True))
+    op.add_column("trip_update", sa.Column("company_id", sa.Text(), nullable=True))
 
 
 def downgrade():
-    op.drop_column('trip_update', 'company_id')
+    op.drop_column("trip_update", "company_id")

@@ -28,8 +28,10 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
+from typing import List
+
 
 class NavitiaResponse(object):
-    queries = []
+    queries = []  # type: List[str]
     response_code = None
     json_response = None

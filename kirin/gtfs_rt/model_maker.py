@@ -45,32 +45,33 @@ import calendar
 
 def handle(proto, navitia_wrapper, contributor):
     data = str(proto)  # temp, for the moment, we save the protobuf as text
-    rt_update = make_rt_update(data, 'gtfs-rt', contributor=contributor)
+    rt_update = make_rt_update(data, "gtfs-rt", contributor=contributor)
     start_datetime = datetime.datetime.utcnow()
     try:
         trip_updates = KirinModelBuilder(navitia_wrapper, contributor).build(rt_update, data=proto)
-        record_call('OK', contributor=contributor)
+        record_call("OK", contributor=contributor)
     except KirinException as e:
-        rt_update.status = 'KO'
-        rt_update.error = e.data['error']
+        rt_update.status = "KO"
+        rt_update.error = e.data["error"]
         model.db.session.add(rt_update)
         model.db.session.commit()
-        record_call('failure', reason=str(e), contributor=contributor)
+        record_call("failure", reason=str(e), contributor=contributor)
         raise
     except Exception as e:
-        rt_update.status = 'KO'
+        rt_update.status = "KO"
         rt_update.error = e.message
         model.db.session.add(rt_update)
         model.db.session.commit()
-        record_call('failure', reason=str(e), contributor=contributor)
+        record_call("failure", reason=str(e), contributor=contributor)
         raise
 
     real_time_update, log_dict = core.handle(rt_update, trip_updates, contributor)
     duration = (datetime.datetime.utcnow() - start_datetime).total_seconds()
-    log_dict.update({'duration': duration,
-                     'input_timestamp': datetime.datetime.utcfromtimestamp(proto.header.timestamp)})
-    record_call('Simple feed publication', **log_dict)
-    logging.getLogger(__name__).info('Simple feed publication', extra=log_dict)
+    log_dict.update(
+        {"duration": duration, "input_timestamp": datetime.datetime.utcfromtimestamp(proto.header.timestamp)}
+    )
+    record_call("Simple feed publication", **log_dict)
+    logging.getLogger(__name__).info("Simple feed publication", extra=log_dict)
 
 
 def to_str(date):
@@ -79,14 +80,13 @@ def to_str(date):
 
 
 class KirinModelBuilder(object):
-
     def __init__(self, nav, contributor=None):
         self.navitia = nav
         self.contributor = contributor
         self.log = logging.getLogger(__name__)
         # TODO better period handling
         self.period_filter_tolerance = datetime.timedelta(hours=3)
-        self.stop_code_key = 'source'  # TODO conf
+        self.stop_code_key = "source"  # TODO conf
         self.instance_data_pub_date = self.navitia.get_publication_date()
 
     def build(self, rt_update, data):
@@ -97,8 +97,9 @@ class KirinModelBuilder(object):
         The TripUpdates are not yet associated with the RealTimeUpdate
         """
         utc_data_time = utc.localize(datetime.datetime.utcfromtimestamp(data.header.timestamp))
-        self.log.debug("Start processing GTFS-rt: timestamp = {} ({})"
-                       .format(data.header.timestamp, utc_data_time))
+        self.log.debug(
+            "Start processing GTFS-rt: timestamp = {} ({})".format(data.header.timestamp, utc_data_time)
+        )
 
         trip_updates = []
 
@@ -109,16 +110,16 @@ class KirinModelBuilder(object):
             trip_updates.extend(tu)
 
         if not trip_updates:
-            rt_update.status = 'KO'
-            rt_update.error = 'No information for this gtfs-rt with timestamp: {}'.format(data.header.timestamp)
-            self.log.error('No information for this gtfs-rt with timestamp: {}'.format(data.header.timestamp))
+            rt_update.status = "KO"
+            rt_update.error = "No information for this gtfs-rt with timestamp: {}".format(data.header.timestamp)
+            self.log.error("No information for this gtfs-rt with timestamp: {}".format(data.header.timestamp))
 
         return trip_updates
 
     def _get_stop_code(self, nav_stop):
-        for c in nav_stop.get('codes', []):
-            if c['type'] == self.stop_code_key:
-                return c['value']
+        for c in nav_stop.get("codes", []):
+            if c["type"] == self.stop_code_key:
+                return c["value"]
 
     def _make_trip_updates(self, input_trip_update, utc_data_time):
         """
@@ -137,14 +138,15 @@ class KirinModelBuilder(object):
             highest_st_status = ModificationType.none.name
 
             is_tu_valid = True
-            vj_stop_order = len(vj.navitia_vj.get('stop_times', [])) - 1
-            for vj_stop, tu_stop in itertools.izip_longest(reversed(vj.navitia_vj.get('stop_times', [])),
-                                                           reversed(input_trip_update.stop_time_update)):
+            vj_stop_order = len(vj.navitia_vj.get("stop_times", [])) - 1
+            for vj_stop, tu_stop in itertools.izip_longest(
+                reversed(vj.navitia_vj.get("stop_times", [])), reversed(input_trip_update.stop_time_update)
+            ):
                 if vj_stop is None:
                     is_tu_valid = False
                     break
 
-                vj_stop_point = vj_stop.get('stop_point')
+                vj_stop_point = vj_stop.get("stop_point")
                 if vj_stop_point is None:
                     is_tu_valid = False
                     break
@@ -174,10 +176,14 @@ class KirinModelBuilder(object):
                 trip_update.effect = get_effect_by_stop_time_status(highest_st_status)
                 trip_updates.append(trip_update)
             else:
-                self.log.error('stop_time_update do not match with stops in navitia for trip : {} timestamp: {}'
-                               .format(input_trip_update.trip.trip_id, calendar.timegm(utc_data_time.utctimetuple())))
-                record_internal_failure('stop_time_update do not match with stops in navitia',
-                                        contributor=self.contributor)
+                self.log.error(
+                    "stop_time_update do not match with stops in navitia for trip : {} timestamp: {}".format(
+                        input_trip_update.trip.trip_id, calendar.timegm(utc_data_time.utctimetuple())
+                    )
+                )
+                record_internal_failure(
+                    "stop_time_update do not match with stops in navitia", contributor=self.contributor
+                )
                 del trip_update.stop_time_updates[:]
 
         return trip_updates
@@ -185,34 +191,36 @@ class KirinModelBuilder(object):
     def __repr__(self):
         """ Allow this class to be cacheable
         """
-        return '{}.{}.{}'.format(self.__class__, self.navitia.url, self.instance_data_pub_date)
+        return "{}.{}.{}".format(self.__class__, self.navitia.url, self.instance_data_pub_date)
 
     @app.cache.memoize(timeout=1200)
     def _make_db_vj(self, vj_source_code, utc_since_dt, utc_until_dt):
-        navitia_vjs = self.navitia.vehicle_journeys(q={
-            'filter': 'vehicle_journey.has_code({}, {})'.format(self.stop_code_key, vj_source_code),
-            'since': to_str(utc_since_dt),
-            'until': to_str(utc_until_dt),
-            'depth': '2',  # we need this depth to get the stoptime's stop_area
-        })
+        navitia_vjs = self.navitia.vehicle_journeys(
+            q={
+                "filter": "vehicle_journey.has_code({}, {})".format(self.stop_code_key, vj_source_code),
+                "since": to_str(utc_since_dt),
+                "until": to_str(utc_until_dt),
+                "depth": "2",  # we need this depth to get the stoptime's stop_area
+            }
+        )
 
         if not navitia_vjs:
-            self.log.info('impossible to find vj {t} on [{s}, {u}]'
-                          .format(t=vj_source_code,
-                                  s=utc_since_dt,
-                                  u=utc_until_dt))
-            record_internal_failure('missing vj', contributor=self.contributor)
+            self.log.info(
+                "impossible to find vj {t} on [{s}, {u}]".format(
+                    t=vj_source_code, s=utc_since_dt, u=utc_until_dt
+                )
+            )
+            record_internal_failure("missing vj", contributor=self.contributor)
             return []
 
         if len(navitia_vjs) > 1:
-            vj_ids = [vj.get('id') for vj in navitia_vjs]
-            self.log.info('too many vjs found for {t} on [{s}, {u}]: {ids}'
-                          .format(t=vj_source_code,
-                                  s=utc_since_dt,
-                                  u=utc_until_dt,
-                                  ids=vj_ids
-                                  ))
-            record_internal_failure('duplicate vjs', contributor=self.contributor)
+            vj_ids = [vj.get("id") for vj in navitia_vjs]
+            self.log.info(
+                "too many vjs found for {t} on [{s}, {u}]: {ids}".format(
+                    t=vj_source_code, s=utc_since_dt, u=utc_until_dt, ids=vj_ids
+                )
+            )
+            record_internal_failure("duplicate vjs", contributor=self.contributor)
             return []
 
         nav_vj = navitia_vjs[0]
@@ -221,8 +229,8 @@ class KirinModelBuilder(object):
             vj = model.VehicleJourney(nav_vj, utc_since_dt, utc_until_dt)
             return [vj]
         except Exception as e:
-            self.log.exception('Error while creating kirin VJ of {}: {}'.format(nav_vj.get('id'), e))
-            record_internal_failure('Error while creating kirin VJ', contributor=self.contributor)
+            self.log.exception("Error while creating kirin VJ of {}: {}".format(nav_vj.get("id"), e))
+            record_internal_failure("Error while creating kirin VJ", contributor=self.contributor)
             return []
 
     def _get_navitia_vjs(self, trip, utc_data_time):
@@ -230,15 +238,22 @@ class KirinModelBuilder(object):
 
         utc_since_dt = floor_datetime(utc_data_time - self.period_filter_tolerance)
         utc_until_dt = floor_datetime(utc_data_time + self.period_filter_tolerance + datetime.timedelta(hours=1))
-        self.log.debug('searching for vj {} on [{}, {}] in navitia'.format(
-                            vj_source_code, utc_since_dt, utc_until_dt))
+        self.log.debug(
+            "searching for vj {} on [{}, {}] in navitia".format(vj_source_code, utc_since_dt, utc_until_dt)
+        )
 
         return self._make_db_vj(vj_source_code, utc_since_dt, utc_until_dt)
 
 
 def _init_stop_update(nav_stop, stop_sequence):
-    st_update = model.StopTimeUpdate(nav_stop, departure_delay=None, arrival_delay=None,
-                                     dep_status='none', arr_status='none', order=stop_sequence)
+    st_update = model.StopTimeUpdate(
+        nav_stop,
+        departure_delay=None,
+        arrival_delay=None,
+        dep_status="none",
+        arr_status="none",
+        order=stop_sequence,
+    )
     return st_update
 
 
@@ -248,12 +263,18 @@ def _make_stoptime_update(input_st_update, nav_stop):
     def read_delay(st_event):
         if st_event and st_event.delay:
             return datetime.timedelta(seconds=st_event.delay)
+
     dep_delay = read_delay(input_st_update.departure)
     arr_delay = read_delay(input_st_update.arrival)
     dep_status = ModificationType.none.name if dep_delay is None else ModificationType.update.name
     arr_status = ModificationType.none.name if arr_delay is None else ModificationType.update.name
-    st_update = model.StopTimeUpdate(nav_stop, departure_delay=dep_delay, arrival_delay=arr_delay,
-                                     dep_status=dep_status, arr_status=arr_status,
-                                     order=input_st_update.stop_sequence)
+    st_update = model.StopTimeUpdate(
+        nav_stop,
+        departure_delay=dep_delay,
+        arrival_delay=arr_delay,
+        dep_status=dep_status,
+        arr_status=arr_status,
+        order=input_st_update.stop_sequence,
+    )
 
     return st_update

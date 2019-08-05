@@ -47,11 +47,11 @@ def to_posix_time(date_time):
     return 0
 
 
-def convert_to_gtfsrt(trip_updates, incrementality = gtfs_realtime_pb2.FeedHeader.DIFFERENTIAL):
+def convert_to_gtfsrt(trip_updates, incrementality=gtfs_realtime_pb2.FeedHeader.DIFFERENTIAL):
     feed = gtfs_realtime_pb2.FeedMessage()
 
     feed.header.incrementality = incrementality
-    feed.header.gtfs_realtime_version = '1'
+    feed.header.gtfs_realtime_version = "1"
     feed.header.timestamp = to_posix_time(datetime.datetime.utcnow())
 
     for trip_update in trip_updates:
@@ -61,27 +61,29 @@ def convert_to_gtfsrt(trip_updates, incrementality = gtfs_realtime_pb2.FeedHeade
 
 
 def get_st_event(st_status):
-    if st_status in ('delete', 'deleted_for_detour'):
+    if st_status in ("delete", "deleted_for_detour"):
         return gtfs_realtime_pb2.TripUpdate.StopTimeUpdate.SKIPPED
-    elif st_status in ('add', 'added_for_detour'):
+    elif st_status in ("add", "added_for_detour"):
         return gtfs_realtime_pb2.TripUpdate.StopTimeUpdate.ADDED
     else:
         # 'update' or 'none' are modeled as 'SCHEDULED'
         return gtfs_realtime_pb2.TripUpdate.StopTimeUpdate.SCHEDULED
 
+
 def get_trip_event(trip_status):
     trip_events = {
-        'NO_SERVICE': gtfs_realtime_pb2.Alert.NO_SERVICE,
-        'REDUCED_SERVICE': gtfs_realtime_pb2.Alert.REDUCED_SERVICE,
-        'SIGNIFICANT_DELAYS': gtfs_realtime_pb2.Alert.SIGNIFICANT_DELAYS,
-        'DETOUR': gtfs_realtime_pb2.Alert.DETOUR,
-        'ADDITIONAL_SERVICE': gtfs_realtime_pb2.Alert.ADDITIONAL_SERVICE,
-        'MODIFIED_SERVICE': gtfs_realtime_pb2.Alert.MODIFIED_SERVICE,
-        'OTHER_EFFECT': gtfs_realtime_pb2.Alert.OTHER_EFFECT,
-        'UNKNOWN_EFFECT': gtfs_realtime_pb2.Alert.UNKNOWN_EFFECT,
-        'STOP_MOVED': gtfs_realtime_pb2.Alert.STOP_MOVED,
+        "NO_SERVICE": gtfs_realtime_pb2.Alert.NO_SERVICE,
+        "REDUCED_SERVICE": gtfs_realtime_pb2.Alert.REDUCED_SERVICE,
+        "SIGNIFICANT_DELAYS": gtfs_realtime_pb2.Alert.SIGNIFICANT_DELAYS,
+        "DETOUR": gtfs_realtime_pb2.Alert.DETOUR,
+        "ADDITIONAL_SERVICE": gtfs_realtime_pb2.Alert.ADDITIONAL_SERVICE,
+        "MODIFIED_SERVICE": gtfs_realtime_pb2.Alert.MODIFIED_SERVICE,
+        "OTHER_EFFECT": gtfs_realtime_pb2.Alert.OTHER_EFFECT,
+        "UNKNOWN_EFFECT": gtfs_realtime_pb2.Alert.UNKNOWN_EFFECT,
+        "STOP_MOVED": gtfs_realtime_pb2.Alert.STOP_MOVED,
     }
     return trip_events.get(trip_status, None)
+
 
 def fill_stop_times(pb_stop_time, stop_time):
     pb_stop_time.stop_id = stop_time.stop_id
@@ -96,19 +98,23 @@ def fill_stop_times(pb_stop_time, stop_time):
     else:
         pb_stop_time.departure.delay = 0
 
-    '''
+    """
     TODO: kirin_pb2.stop_time_event_relationship needs to be removed once
     kirin_pb2.stop_time_event_status is deployed on production
-    '''
-    pb_stop_time.departure.Extensions[kirin_pb2.stop_time_event_relationship] = \
-        get_st_event(stop_time.departure_status)
-    pb_stop_time.arrival.Extensions[kirin_pb2.stop_time_event_relationship] = \
-        get_st_event(stop_time.arrival_status)
+    """
+    pb_stop_time.departure.Extensions[kirin_pb2.stop_time_event_relationship] = get_st_event(
+        stop_time.departure_status
+    )
+    pb_stop_time.arrival.Extensions[kirin_pb2.stop_time_event_relationship] = get_st_event(
+        stop_time.arrival_status
+    )
 
-    pb_stop_time.departure.Extensions[kirin_pb2.stop_time_event_status] = \
-        stop_time_status_to_protobuf(stop_time.departure_status)
-    pb_stop_time.arrival.Extensions[kirin_pb2.stop_time_event_status] = \
-        stop_time_status_to_protobuf(stop_time.arrival_status)
+    pb_stop_time.departure.Extensions[kirin_pb2.stop_time_event_status] = stop_time_status_to_protobuf(
+        stop_time.departure_status
+    )
+    pb_stop_time.arrival.Extensions[kirin_pb2.stop_time_event_status] = stop_time_status_to_protobuf(
+        stop_time.arrival_status
+    )
 
     if stop_time.message:
         pb_stop_time.Extensions[kirin_pb2.stoptime_message] = stop_time.message
@@ -140,7 +146,7 @@ def fill_trip_update(pb_trip_update, trip_update):
         # (this date differs if vj starts during the period between midnight UTC and local midnight)
         pb_trip.start_date = date_to_str(vj.get_utc_circulation_date())
         # TODO fill the right schedule_relationship
-        if trip_update.status == 'delete':
+        if trip_update.status == "delete":
             pb_trip.schedule_relationship = gtfs_realtime_pb2.TripDescriptor.CANCELED
         else:
             pb_trip.schedule_relationship = gtfs_realtime_pb2.TripDescriptor.SCHEDULED

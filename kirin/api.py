@@ -39,27 +39,19 @@ from kirin.cots import cots
 from kirin import app
 from kirin.new_relic import record_custom_parameter, record_exception
 
-#we always want pretty json
-flask_restful.representations.json.settings = {'indent': 4}
+# we always want pretty json
+flask_restful.representations.json.settings = {"indent": 4}
 
 api = flask_restful.Api(app, catch_all_404s=True)
 api.app.url_map.strict_slashes = False
 
-api.add_resource(resources.Index,
-                 '/',
-                 endpoint='index')
+api.add_resource(resources.Index, "/", endpoint="index")
 
-api.add_resource(resources.Status,
-                 '/status',
-                 endpoint='status')
+api.add_resource(resources.Status, "/status", endpoint="status")
 
-api.add_resource(cots.Cots,
-                 '/cots',
-                 endpoint='cots')
+api.add_resource(cots.Cots, "/cots", endpoint="cots")
 
-api.add_resource(gtfs_rt.GtfsRT,
-                 '/gtfs_rt',
-                 endpoint='gtfs_rt')
+api.add_resource(gtfs_rt.GtfsRT, "/gtfs_rt", endpoint="gtfs_rt")
 
 
 def log_exception(sender, exception):
@@ -78,10 +70,12 @@ def log_exception(sender, exception):
     else:
         logger.exception(error)
 
+
 got_request_exception.connect(log_exception, app)
+
 
 @app.after_request
 def access_log(response, *args, **kwargs):
-    logger = logging.getLogger('kirin.access')
+    logger = logging.getLogger("kirin.access")
     logger.info('"%s %s" %s', request.method, request.full_path, response.status_code)
     return response

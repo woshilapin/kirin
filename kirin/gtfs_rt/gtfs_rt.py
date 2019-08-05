@@ -43,39 +43,41 @@ from kirin.utils import manage_db_error
 
 def _get_gtfs_rt(req):
     if not req.data:
-        raise InvalidArguments('no gtfs_rt data provided')
+        raise InvalidArguments("no gtfs_rt data provided")
     return req.data
 
 
 class GtfsRT(Resource):
-
     def __init__(self):
-        url = current_app.config['NAVITIA_URL']
-        token = current_app.config.get('NAVITIA_GTFS_RT_TOKEN')
-        timeout = current_app.config.get('NAVITIA_TIMEOUT', 5)
-        instance = current_app.config['NAVITIA_GTFS_RT_INSTANCE']
-        query_timeout = current_app.config.get('NAVITIA_QUERY_CACHE_TIMEOUT', 600)
-        pubdate_timeout = current_app.config.get('NAVITIA_PUBDATE_CACHE_TIMEOUT', 600)
-        self.navitia_wrapper = navitia_wrapper.Navitia(url=url,
-                                                       token=token,
-                                                       timeout=timeout,
-                                                       cache=redis,
-                                                       query_timeout=query_timeout,
-                                                       pubdate_timeout=pubdate_timeout).instance(instance)
-        self.contributor = current_app.config['GTFS_RT_CONTRIBUTOR']
+        url = current_app.config["NAVITIA_URL"]
+        token = current_app.config.get("NAVITIA_GTFS_RT_TOKEN")
+        timeout = current_app.config.get("NAVITIA_TIMEOUT", 5)
+        instance = current_app.config["NAVITIA_GTFS_RT_INSTANCE"]
+        query_timeout = current_app.config.get("NAVITIA_QUERY_CACHE_TIMEOUT", 600)
+        pubdate_timeout = current_app.config.get("NAVITIA_PUBDATE_CACHE_TIMEOUT", 600)
+        self.navitia_wrapper = navitia_wrapper.Navitia(
+            url=url,
+            token=token,
+            timeout=timeout,
+            cache=redis,
+            query_timeout=query_timeout,
+            pubdate_timeout=pubdate_timeout,
+        ).instance(instance)
+        self.contributor = current_app.config["GTFS_RT_CONTRIBUTOR"]
 
     def post(self):
         raw_proto = _get_gtfs_rt(flask.globals.request)
 
         from kirin import gtfs_realtime_pb2
+
         # create a raw gtfs-rt obj, save the raw protobuf into the db
         proto = gtfs_realtime_pb2.FeedMessage()
         try:
             proto.ParseFromString(raw_proto)
         except DecodeError:
-            #We save the non-decodable flux gtfs-rt
-            manage_db_error(proto, 'gtfs-rt', contributor=self.contributor, status='KO', error='Decode Error')
-            raise InvalidArguments('invalid protobuf')
+            # We save the non-decodable flux gtfs-rt
+            manage_db_error(proto, "gtfs-rt", contributor=self.contributor, status="KO", error="Decode Error")
+            raise InvalidArguments("invalid protobuf")
         else:
             model_maker.handle(proto, self.navitia_wrapper, self.contributor)
-            return 'OK', 200
+            return "OK", 200

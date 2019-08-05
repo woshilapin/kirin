@@ -27,7 +27,7 @@ detailed in the present specification.
 Kirin property | COTS object | Comment/Mapping rule
 --- | --- | ---
 connector |  | Fixed value `cots`.
-raw_data | _Complete received feed_ | 
+raw_data | _Complete received feed_ |
 contributor |  | Fixed value specified in the configuration of Kirin.
 trip_updates |  | List of trip updates information, see `TripUpdates` below.
 
@@ -114,7 +114,7 @@ sent to Navitia using the available information in the COTS stream.
 Ideas to explore and validate:
 * The commercial mode of the new line is determined based on the value of *nouvelleVersion/codeMarqueTransporteur*. When the value is `TER`, if the *nouvelleVersion/indicateurFer* is `FERRE`, then the commercial mode is set to `Train TER`. In case of a new road trip, the commercial mode is set to `Car TER`. In all other cases, the commercial mode is set after the value of *nouvelleVersion/codeMarqueTransporteur*.
 
-#### Recording the VehicleJourneys 
+#### Recording the VehicleJourneys
 Each `VehicleJourney` found in Navitia corresponding to the COTS stream is recorded, so that they
 are all impacted.
 

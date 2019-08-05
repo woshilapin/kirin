@@ -43,18 +43,19 @@ def get_cots(req):
     get COTS stream, for the moment, it's the raw json
     """
     if not req.data:
-        raise InvalidArguments('no COTS data provided')
+        raise InvalidArguments("no COTS data provided")
     return req.data
 
 
 class Cots(AbstractSNCFResource):
-
     def __init__(self):
-        super(Cots, self).__init__(make_navitia_wrapper(),
-                                   current_app.config.get('NAVITIA_TIMEOUT', 5),
-                                   current_app.config['COTS_CONTRIBUTOR'],
-                                   KirinModelBuilder)
+        super(Cots, self).__init__(
+            make_navitia_wrapper(),
+            current_app.config.get("NAVITIA_TIMEOUT", 5),
+            current_app.config["COTS_CONTRIBUTOR"],
+            KirinModelBuilder,
+        )
 
     def post(self):
         raw_json = get_cots(flask.globals.request)
-        return self.process_post(raw_json, 'cots', is_new_complete=True)
+        return self.process_post(raw_json, "cots", is_new_complete=True)

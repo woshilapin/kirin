@@ -42,19 +42,18 @@ import datetime
 from kirin.core.model import TripUpdate, RealTimeUpdate
 from utils import should_retry_exception, make_kirin_lock_name, get_lock
 
-TASK_STOP_MAX_DELAY = app.config['TASK_STOP_MAX_DELAY']
-TASK_WAIT_FIXED = app.config['TASK_WAIT_FIXED']
+TASK_STOP_MAX_DELAY = app.config["TASK_STOP_MAX_DELAY"]
+TASK_WAIT_FIXED = app.config["TASK_WAIT_FIXED"]
 
 
-
-
-
-#we don't want celery to mess with our logging configuration
+# we don't want celery to mess with our logging configuration
 @setup_logging.connect
 def celery_setup_logging(*args, **kwargs):
     pass
 
+
 celery = make_celery(app)
+
 
 @task_postrun.connect
 def close_session(*args, **kwargs):
@@ -66,61 +65,60 @@ def close_session(*args, **kwargs):
 
 
 @celery.task(bind=True)
-@retry(stop_max_delay=TASK_STOP_MAX_DELAY,
-       wait_fixed=TASK_WAIT_FIXED,
-       retry_on_exception=should_retry_exception)
+@retry(stop_max_delay=TASK_STOP_MAX_DELAY, wait_fixed=TASK_WAIT_FIXED, retry_on_exception=should_retry_exception)
 def purge_trip_update(self, config):
-    func_name = 'purge_trip_update'
-    contributor = config['contributor']
-    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={'contributor': contributor})
-    logger.debug('purge trip update for %s', contributor)
+    func_name = "purge_trip_update"
+    contributor = config["contributor"]
+    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": contributor})
+    logger.debug("purge trip update for %s", contributor)
 
     lock_name = make_kirin_lock_name(func_name, contributor)
-    with get_lock(logger, lock_name, app.config['REDIS_LOCK_TIMEOUT_PURGE']) as locked:
+    with get_lock(logger, lock_name, app.config["REDIS_LOCK_TIMEOUT_PURGE"]) as locked:
         if not locked:
-            logger.warning('%s for %s is already in progress', func_name, contributor)
+            logger.warning("%s for %s is already in progress", func_name, contributor)
             return
-        until = datetime.date.today() - datetime.timedelta(days=int(config['nb_days_to_keep']))
-        logger.info('purge trip update for {} until {}'.format(contributor, until))
+        until = datetime.date.today() - datetime.timedelta(days=int(config["nb_days_to_keep"]))
+        logger.info("purge trip update for {} until {}".format(contributor, until))
 
         TripUpdate.remove_by_contributors_and_period(contributors=[contributor], start_date=None, end_date=until)
-        logger.info('%s for %s is finished', func_name, contributor)
+        logger.info("%s for %s is finished", func_name, contributor)
 
 
 @celery.task(bind=True)
-@retry(stop_max_delay=TASK_STOP_MAX_DELAY,
-       wait_fixed=TASK_WAIT_FIXED,
-       retry_on_exception=should_retry_exception)
+@retry(stop_max_delay=TASK_STOP_MAX_DELAY, wait_fixed=TASK_WAIT_FIXED, retry_on_exception=should_retry_exception)
 def purge_rt_update(self, config):
-    func_name = 'purge_rt_update'
-    connector = config['connector']
+    func_name = "purge_rt_update"
+    connector = config["connector"]
 
-    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={'connector': connector})
-    logger.debug('purge realtime update for %s', connector)
+    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={"connector": connector})
+    logger.debug("purge realtime update for %s", connector)
 
     lock_name = make_kirin_lock_name(func_name, connector)
-    with get_lock(logger, lock_name, app.config['REDIS_LOCK_TIMEOUT_PURGE']) as locked:
+    with get_lock(logger, lock_name, app.config["REDIS_LOCK_TIMEOUT_PURGE"]) as locked:
         if not locked:
-            logger.warning('%s for %s is already in progress', func_name, connector)
+            logger.warning("%s for %s is already in progress", func_name, connector)
             return
 
-        until = datetime.date.today() - datetime.timedelta(days=int(config['nb_days_to_keep']))
-        logger.info('purge realtime update for {} until {}'.format(connector, until))
+        until = datetime.date.today() - datetime.timedelta(days=int(config["nb_days_to_keep"]))
+        logger.info("purge realtime update for {} until {}".format(connector, until))
 
         # TODO:  we want to purge on "contributor" later, not "connector".
         RealTimeUpdate.remove_by_connectors_until(connectors=[connector], until=until)
-        logger.info('%s for %s is finished', func_name, connector)
-
+        logger.info("%s for %s is finished", func_name, connector)
 
 
 from kirin.gtfs_rt.tasks import gtfs_poller
+
+
 @celery.task(bind=True)
 def poller(self):
-    config = {'contributor': app.config.get('GTFS_RT_CONTRIBUTOR'),
-              'navitia_url': app.config.get('NAVITIA_URL'),
-              'token': app.config.get('NAVITIA_GTFS_RT_TOKEN'),
-              'coverage': app.config.get('NAVITIA_GTFS_RT_INSTANCE'),
-              'feed_url': app.config.get('GTFS_RT_FEED_URL')}
+    config = {
+        "contributor": app.config.get("GTFS_RT_CONTRIBUTOR"),
+        "navitia_url": app.config.get("NAVITIA_URL"),
+        "token": app.config.get("NAVITIA_GTFS_RT_TOKEN"),
+        "coverage": app.config.get("NAVITIA_GTFS_RT_INSTANCE"),
+        "feed_url": app.config.get("GTFS_RT_FEED_URL"),
+    }
     gtfs_poller.delay(config)
 
 
@@ -130,8 +128,10 @@ def purge_gtfs_trip_update(self):
     This task will remove ONLY TripUpdate, StoptimeUpdate and VehicleJourney that are created by gtfs-rt but the
     RealTimeUpdate are kept so that we can replay it for debug purpose. RealTimeUpdate will be remove by another task
     """
-    config = {'contributor': app.config.get('GTFS_RT_CONTRIBUTOR'),
-              'nb_days_to_keep': app.config.get('NB_DAYS_TO_KEEP_TRIP_UPDATE')}
+    config = {
+        "contributor": app.config.get("GTFS_RT_CONTRIBUTOR"),
+        "nb_days_to_keep": app.config.get("NB_DAYS_TO_KEEP_TRIP_UPDATE"),
+    }
     purge_trip_update.delay(config)
 
 
@@ -140,8 +140,7 @@ def purge_gtfs_rt_update(self):
     """
     This task will remove realtime update
     """
-    config = {'nb_days_to_keep': app.config.get('NB_DAYS_TO_KEEP_RT_UPDATE'),
-              'connector': 'gtfs-rt'}
+    config = {"nb_days_to_keep": app.config.get("NB_DAYS_TO_KEEP_RT_UPDATE"), "connector": "gtfs-rt"}
     purge_rt_update.delay(config)
 
 
@@ -151,8 +150,7 @@ def purge_cots_trip_update(self):
     This task will remove ONLY TripUpdate, StopTimeUpdate and VehicleJourney that are created by COTS but the
     RealTimeUpdate are kept so that we can replay it for debug purpose. RealTimeUpdate will be remove by another task
     """
-    config = {'contributor': app.config.get('COTS_CONTRIBUTOR'),
-              'nb_days_to_keep': 10}
+    config = {"contributor": app.config.get("COTS_CONTRIBUTOR"), "nb_days_to_keep": 10}
     purge_trip_update.delay(config)
 
 
@@ -161,6 +159,5 @@ def purge_cots_rt_update(self):
     """
     This task will remove realtime update
     """
-    config = {'nb_days_to_keep': 100,
-              'connector': 'cots'}
+    config = {"nb_days_to_keep": 100, "connector": "cots"}
     purge_rt_update.delay(config)

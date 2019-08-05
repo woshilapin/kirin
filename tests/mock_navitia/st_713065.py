@@ -33,9 +33,7 @@ import navitia_response
 
 response = navitia_response.NavitiaResponse()
 
-response.queries = [
-    'stop_points/?filter=stop_area.has_code("CR-CI-CH", "0087-713065-BV")&count=1'
-]
+response.queries = ['stop_points/?filter=stop_area.has_code("CR-CI-CH", "0087-713065-BV")&count=1']
 
 response.response_code = 200
 

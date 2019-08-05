@@ -32,20 +32,19 @@
 import logging
 import requests
 from kirin import gtfs_realtime_pb2
-import navitia_wrapper
+
 from kirin.tasks import celery
-from kirin.utils import should_retry_exception, make_kirin_lock_name, get_lock, manage_db_error, \
-    manage_db_no_new
+from kirin.utils import should_retry_exception, make_kirin_lock_name, get_lock, manage_db_error, manage_db_no_new
 from kirin.gtfs_rt import model_maker
 from retrying import retry
 from kirin import app, redis
 from kirin import new_relic
-from kirin.core import model
 from google.protobuf.message import DecodeError
-from kirin.exceptions import InvalidArguments
+import navitia_wrapper
 
-TASK_STOP_MAX_DELAY = app.config['TASK_STOP_MAX_DELAY']
-TASK_WAIT_FIXED = app.config['TASK_WAIT_FIXED']
+
+TASK_STOP_MAX_DELAY = app.config["TASK_STOP_MAX_DELAY"]
+TASK_WAIT_FIXED = app.config["TASK_WAIT_FIXED"]
 
 
 class InvalidFeed(Exception):
@@ -53,45 +52,41 @@ class InvalidFeed(Exception):
 
 
 def _is_newer(config):
-    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={'contributor': config['contributor']})
-    contributor = config['contributor']
+    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": config["contributor"]})
+    contributor = config["contributor"]
     try:
-        head = requests.head(config['feed_url'], timeout=config.get('timeout', 1))
+        head = requests.head(config["feed_url"], timeout=config.get("timeout", 1))
 
         new_etag = head.headers.get("ETag")
         if not new_etag:
             return True  # unable to get a ETag, we continue the polling
 
-        etag_key = '|'.join([contributor, 'polling_HEAD'])
+        etag_key = "|".join([contributor, "polling_HEAD"])
         old_etag = redis.get(etag_key)
 
         if new_etag == old_etag:
-            logger.info('get the same ETag of %s, skipping the polling for %s',
-                        etag_key,
-                        contributor)
+            logger.info("get the same ETag of %s, skipping the polling for %s", etag_key, contributor)
             return False
 
         redis.set(etag_key, new_etag)
 
     except Exception as e:
-        logger.debug('exception occurred when checking the newer version of gtfs for %s: %s',
-                     contributor,
-                     str(e))
+        logger.debug(
+            "exception occurred when checking the newer version of gtfs for %s: %s", contributor, str(e)
+        )
     return True  # whatever the exception is, we don't want to break the polling
 
 
-@celery.task(bind=True)
-@retry(stop_max_delay=TASK_STOP_MAX_DELAY,
-       wait_fixed=TASK_WAIT_FIXED,
-       retry_on_exception=should_retry_exception)
+@celery.task(bind=True)  # type: ignore
+@retry(stop_max_delay=TASK_STOP_MAX_DELAY, wait_fixed=TASK_WAIT_FIXED, retry_on_exception=should_retry_exception)
 def gtfs_poller(self, config):
-    func_name = 'gtfs_poller'
-    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={'contributor': config['contributor']})
-    logger.debug('polling of %s', config['feed_url'])
+    func_name = "gtfs_poller"
+    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": config["contributor"]})
+    logger.debug("polling of %s", config["feed_url"])
 
-    contributor = config['contributor']
+    contributor = config["contributor"]
     lock_name = make_kirin_lock_name(func_name, contributor)
-    with get_lock(logger, lock_name, app.config['REDIS_LOCK_TIMEOUT_POLLER']) as locked:
+    with get_lock(logger, lock_name, app.config["REDIS_LOCK_TIMEOUT_POLLER"]) as locked:
         if not locked:
             new_relic.ignore_transaction()
             return
@@ -101,33 +96,35 @@ def gtfs_poller(self, config):
         # If the HEAD request or Redis get/set fail, we just ignore this part and do the polling anyway
         if not _is_newer(config):
             new_relic.ignore_transaction()
-            manage_db_no_new(connector='gtfs-rt', contributor=contributor)
+            manage_db_no_new(connector="gtfs-rt", contributor=contributor)
             return
 
         try:
-            response = requests.get(config['feed_url'], timeout=config.get('timeout', 1))
+            response = requests.get(config["feed_url"], timeout=config.get("timeout", 1))
             response.raise_for_status()
 
         except Exception as e:
-            manage_db_error(data='', connector='gtfs-rt', contributor=contributor,
-                            status='KO', error='Http Error')
+            manage_db_error(
+                data="", connector="gtfs-rt", contributor=contributor, status="KO", error="Http Error"
+            )
             logger.debug(str(e))
             return
 
-        nav = navitia_wrapper.Navitia(url=config['navitia_url'],
-                                      token=config['token'],
-                                      timeout=5,
-                                      cache=redis,
-                                      query_timeout=app.config.get('NAVITIA_QUERY_CACHE_TIMEOUT', 600),
-                                      pubdate_timeout=app.config.get('NAVITIA_PUBDATE_CACHE_TIMEOUT', 600))\
-            .instance(config['coverage'])
+        nav = navitia_wrapper.Navitia(
+            url=config["navitia_url"],
+            token=config["token"],
+            timeout=5,
+            cache=redis,
+            query_timeout=app.config.get("NAVITIA_QUERY_CACHE_TIMEOUT", 600),
+            pubdate_timeout=app.config.get("NAVITIA_PUBDATE_CACHE_TIMEOUT", 600),
+        ).instance(config["coverage"])
 
         proto = gtfs_realtime_pb2.FeedMessage()
         try:
             proto.ParseFromString(response.content)
         except DecodeError:
-            manage_db_error(proto, 'gtfs-rt', contributor=contributor, status='KO', error='Decode Error')
-            logger.debug('invalid protobuf')
+            manage_db_error(proto, "gtfs-rt", contributor=contributor, status="KO", error="Decode Error")
+            logger.debug("invalid protobuf")
         else:
             model_maker.handle(proto, nav, contributor)
-            logger.info('%s for %s is finished', func_name, contributor)
+            logger.info("%s for %s is finished", func_name, contributor)
