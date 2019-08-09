@@ -13,7 +13,6 @@ down_revision = "4d9df787c7a7"
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 trip_effect = sa.Enum(
     "NO_SERVICE",

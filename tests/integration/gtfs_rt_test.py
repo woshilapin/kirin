@@ -38,7 +38,6 @@ from kirin.core.model import RealTimeUpdate, db, TripUpdate, StopTimeUpdate, Veh
 from kirin.core.populate_pb import to_posix_time, convert_to_gtfsrt
 from kirin import gtfs_rt
 from kirin.core.types import TripEffect
-from kirin.tasks import purge_trip_update, purge_rt_update
 from tests import mock_navitia
 from tests.check_utils import dumb_nav_wrapper, api_post
 from kirin import gtfs_realtime_pb2, app

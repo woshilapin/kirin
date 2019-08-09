@@ -34,8 +34,6 @@ import datetime
 import logging
 import socket
 from collections import namedtuple
-from dateutil import parser
-import pytz
 
 import kirin
 from kirin.core import model
