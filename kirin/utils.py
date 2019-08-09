@@ -76,9 +76,9 @@ def make_navitia_wrapper():
     """
     return a navitia wrapper to call the navitia API
     """
-    url = current_app.config["NAVITIA_URL"]
-    token = current_app.config.get("NAVITIA_TOKEN")
-    instance = current_app.config["NAVITIA_INSTANCE"]
+    url = current_app.config[str("NAVITIA_URL")]
+    token = current_app.config.get(str("NAVITIA_TOKEN"))
+    instance = current_app.config[str("NAVITIA_INSTANCE")]
     return navitia_wrapper.Navitia(url=url, token=token).instance(instance)
 
 
@@ -129,7 +129,7 @@ def should_retry_exception(exception):
 def make_kirin_lock_name(*args):
     from kirin import app
 
-    return "|".join([app.config["TASK_LOCK_PREFIX"]] + [str(a) for a in args])
+    return "|".join([app.config[str("TASK_LOCK_PREFIX")]] + [str(a) for a in args])
 
 
 def save_gtfs_rt_with_error(data, connector, contributor, status, error=None):

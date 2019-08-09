@@ -44,8 +44,8 @@ from google.protobuf.message import DecodeError
 import navitia_wrapper
 
 
-TASK_STOP_MAX_DELAY = app.config["TASK_STOP_MAX_DELAY"]
-TASK_WAIT_FIXED = app.config["TASK_WAIT_FIXED"]
+TASK_STOP_MAX_DELAY = app.config[str("TASK_STOP_MAX_DELAY")]
+TASK_WAIT_FIXED = app.config[str("TASK_WAIT_FIXED")]
 
 
 class InvalidFeed(Exception):
@@ -87,7 +87,7 @@ def gtfs_poller(self, config):
 
     contributor = config["contributor"]
     lock_name = make_kirin_lock_name(func_name, contributor)
-    with get_lock(logger, lock_name, app.config["REDIS_LOCK_TIMEOUT_POLLER"]) as locked:
+    with get_lock(logger, lock_name, app.config[str("REDIS_LOCK_TIMEOUT_POLLER")]) as locked:
         if not locked:
             new_relic.ignore_transaction()
             return
@@ -116,8 +116,8 @@ def gtfs_poller(self, config):
             token=config["token"],
             timeout=5,
             cache=redis,
-            query_timeout=app.config.get("NAVITIA_QUERY_CACHE_TIMEOUT", 600),
-            pubdate_timeout=app.config.get("NAVITIA_PUBDATE_CACHE_TIMEOUT", 600),
+            query_timeout=app.config.get(str("NAVITIA_QUERY_CACHE_TIMEOUT"), 600),
+            pubdate_timeout=app.config.get(str("NAVITIA_PUBDATE_CACHE_TIMEOUT"), 600),
         ).instance(config["coverage"])
 
         proto = gtfs_realtime_pb2.FeedMessage()

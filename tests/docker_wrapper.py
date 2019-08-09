@@ -50,7 +50,7 @@ def _get_docker_file():
     """
     from io import BytesIO
 
-    return BytesIO("FROM " + POSTGRES_IMAGE)
+    return BytesIO(str("FROM " + POSTGRES_IMAGE))
 
 
 class PostgresDocker(object):

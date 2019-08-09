@@ -8,7 +8,7 @@ from distutils.spawn import find_executable
 import sh
 import os
 
-protoc = find_executable("protoc")
+protoc = find_executable(str("protoc"))
 
 
 class BuildPbfCommand(Command):
@@ -50,4 +50,4 @@ version = '{}'""".format(
             )
 
 
-setup(name="kirin", cmdclass={"build_pbf": BuildPbfCommand, "build_version": BuildVersionCommand})
+setup(name=str("kirin"), cmdclass={str("build_pbf"): BuildPbfCommand, str("build_version"): BuildVersionCommand})

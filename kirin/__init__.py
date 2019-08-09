@@ -41,8 +41,8 @@ from kirin.rabbitmq_handler import RabbitMQHandler
 # so we need to remove threading from the import
 import sys
 
-if "threading" in sys.modules:
-    del sys.modules["threading"]
+if str("threading") in sys.modules:
+    del sys.modules[str("threading")]
 # end of conflict's patch
 
 
@@ -53,13 +53,13 @@ from kirin import utils
 from kirin.helper import KirinRequest
 
 app = Flask(__name__)
-app.config.from_object("kirin.default_settings")  # type: ignore
+app.config.from_object(str("kirin.default_settings"))  # type: ignore
 if "KIRIN_CONFIG_FILE" in os.environ:
-    app.config.from_envvar("KIRIN_CONFIG_FILE")  # type: ignore
+    app.config.from_envvar(str("KIRIN_CONFIG_FILE"))  # type: ignore
 app.request_class = KirinRequest
 
-if "LOGGER" in app.config:
-    logging.config.dictConfig(app.config["LOGGER"])
+if str("LOGGER") in app.config:
+    logging.config.dictConfig(app.config[str("LOGGER")])
 else:  # Default is std out
     handler = logging.StreamHandler(stream=sys.stdout)
     app.logger.addHandler(handler)
@@ -67,9 +67,9 @@ else:  # Default is std out
 
 from kirin import new_relic
 
-new_relic.init(app.config["NEW_RELIC_CONFIG_FILE"])
+new_relic.init(app.config[str("NEW_RELIC_CONFIG_FILE")])
 
-if app.config["USE_GEVENT"]:
+if app.config[str("USE_GEVENT")]:
     from gevent import monkey
 
     monkey.patch_all()
@@ -84,10 +84,10 @@ manager = Manager(app)
 from redis import Redis
 
 redis = Redis(
-    host=app.config["REDIS_HOST"],
-    port=app.config["REDIS_PORT"],
-    db=app.config["REDIS_DB"],
-    password=app.config["REDIS_PASSWORD"],
+    host=app.config[str("REDIS_HOST")],
+    port=app.config[str("REDIS_PORT")],
+    db=app.config[str("REDIS_DB")],
+    password=app.config[str("REDIS_PASSWORD")],
 )
 
 # activate a command
@@ -101,11 +101,11 @@ db.init_app(app)
 
 # We need to log all kinds of patch, all patch must be done as soon as possible
 logger = logging.getLogger(__name__)
-if "threading" not in sys.modules:
+if str("threading") not in sys.modules:
     logger.info("threading is deleted from sys.modules")
 logger.info("Configs: %s", app.config)
 
 
-rabbitmq_handler = RabbitMQHandler(app.config["RABBITMQ_CONNECTION_STRING"], app.config["EXCHANGE"])
+rabbitmq_handler = RabbitMQHandler(app.config[str("RABBITMQ_CONNECTION_STRING")], app.config[str("EXCHANGE")])
 
 import kirin.api

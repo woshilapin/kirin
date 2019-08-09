@@ -56,5 +56,5 @@ def init_flask_db(docker):
     )
 
     # re-init the db by overriding the db_url
-    app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+    app.config[str("SQLALCHEMY_DATABASE_URI")] = db_url
     db.init_app(app)

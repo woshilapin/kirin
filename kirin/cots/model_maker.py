@@ -294,13 +294,13 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
     def __init__(self, nav, contributor=None):
         super(KirinModelBuilder, self).__init__(nav, contributor)
         self.message_handler = MessageHandler(
-            api_key=current_app.config["COTS_PAR_IV_API_KEY"],
-            resource_server=current_app.config["COTS_PAR_IV_MOTIF_RESOURCE_SERVER"],
-            token_server=current_app.config["COTS_PAR_IV_TOKEN_SERVER"],
-            client_id=current_app.config["COTS_PAR_IV_CLIENT_ID"],
-            client_secret=current_app.config["COTS_PAR_IV_CLIENT_SECRET"],
-            grant_type=current_app.config["COTS_PAR_IV_GRANT_TYPE"],
-            timeout=current_app.config["COTS_PAR_IV_REQUEST_TIMEOUT"],
+            api_key=current_app.config[str("COTS_PAR_IV_API_KEY")],
+            resource_server=current_app.config[str("COTS_PAR_IV_MOTIF_RESOURCE_SERVER")],
+            token_server=current_app.config[str("COTS_PAR_IV_TOKEN_SERVER")],
+            client_id=current_app.config[str("COTS_PAR_IV_CLIENT_ID")],
+            client_secret=current_app.config[str("COTS_PAR_IV_CLIENT_SECRET")],
+            grant_type=current_app.config[str("COTS_PAR_IV_GRANT_TYPE")],
+            timeout=current_app.config[str("COTS_PAR_IV_REQUEST_TIMEOUT")],
         )
 
     def build(self, rt_update):

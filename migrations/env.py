@@ -20,7 +20,7 @@ target_metadata = model.meta
 # target_metadata = mymodel.Base.metadata
 from flask import current_app
 
-config.set_main_option("sqlalchemy.url", current_app.config.get("SQLALCHEMY_DATABASE_URI"))
+config.set_main_option("sqlalchemy.url", current_app.config.get(str("SQLALCHEMY_DATABASE_URI")))
 target_metadata = current_app.extensions["migrate"].db.metadata
 
 # other values from the config, defined by the needs of env.py,

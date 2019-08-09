@@ -43,8 +43,8 @@ import datetime
 from kirin.core.model import TripUpdate, RealTimeUpdate
 from kirin.utils import should_retry_exception, make_kirin_lock_name, get_lock
 
-TASK_STOP_MAX_DELAY = app.config["TASK_STOP_MAX_DELAY"]
-TASK_WAIT_FIXED = app.config["TASK_WAIT_FIXED"]
+TASK_STOP_MAX_DELAY = app.config[str("TASK_STOP_MAX_DELAY")]
+TASK_WAIT_FIXED = app.config[str("TASK_WAIT_FIXED")]
 
 
 # we don't want celery to mess with our logging configuration
@@ -74,7 +74,7 @@ def purge_trip_update(self, config):
     logger.debug("purge trip update for %s", contributor)
 
     lock_name = make_kirin_lock_name(func_name, contributor)
-    with get_lock(logger, lock_name, app.config["REDIS_LOCK_TIMEOUT_PURGE"]) as locked:
+    with get_lock(logger, lock_name, app.config[str("REDIS_LOCK_TIMEOUT_PURGE")]) as locked:
         if not locked:
             logger.warning("%s for %s is already in progress", func_name, contributor)
             return
@@ -95,7 +95,7 @@ def purge_rt_update(self, config):
     logger.debug("purge realtime update for %s", connector)
 
     lock_name = make_kirin_lock_name(func_name, connector)
-    with get_lock(logger, lock_name, app.config["REDIS_LOCK_TIMEOUT_PURGE"]) as locked:
+    with get_lock(logger, lock_name, app.config[str("REDIS_LOCK_TIMEOUT_PURGE")]) as locked:
         if not locked:
             logger.warning("%s for %s is already in progress", func_name, connector)
             return
@@ -114,11 +114,11 @@ from kirin.gtfs_rt.tasks import gtfs_poller
 @celery.task(bind=True)
 def poller(self):
     config = {
-        "contributor": app.config.get("GTFS_RT_CONTRIBUTOR"),
-        "navitia_url": app.config.get("NAVITIA_URL"),
-        "token": app.config.get("NAVITIA_GTFS_RT_TOKEN"),
-        "coverage": app.config.get("NAVITIA_GTFS_RT_INSTANCE"),
-        "feed_url": app.config.get("GTFS_RT_FEED_URL"),
+        "contributor": app.config.get(str("GTFS_RT_CONTRIBUTOR")),
+        "navitia_url": app.config.get(str("NAVITIA_URL")),
+        "token": app.config.get(str("NAVITIA_GTFS_RT_TOKEN")),
+        "coverage": app.config.get(str("NAVITIA_GTFS_RT_INSTANCE")),
+        "feed_url": app.config.get(str("GTFS_RT_FEED_URL")),
     }
     gtfs_poller.delay(config)
 
@@ -130,8 +130,8 @@ def purge_gtfs_trip_update(self):
     RealTimeUpdate are kept so that we can replay it for debug purpose. RealTimeUpdate will be remove by another task
     """
     config = {
-        "contributor": app.config.get("GTFS_RT_CONTRIBUTOR"),
-        "nb_days_to_keep": app.config.get("NB_DAYS_TO_KEEP_TRIP_UPDATE"),
+        "contributor": app.config.get(str("GTFS_RT_CONTRIBUTOR")),
+        "nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_TRIP_UPDATE")),
     }
     purge_trip_update.delay(config)
 
@@ -141,7 +141,7 @@ def purge_gtfs_rt_update(self):
     """
     This task will remove realtime update
     """
-    config = {"nb_days_to_keep": app.config.get("NB_DAYS_TO_KEEP_RT_UPDATE"), "connector": "gtfs-rt"}
+    config = {"nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_RT_UPDATE")), "connector": "gtfs-rt"}
     purge_rt_update.delay(config)
 
 
@@ -151,7 +151,7 @@ def purge_cots_trip_update(self):
     This task will remove ONLY TripUpdate, StopTimeUpdate and VehicleJourney that are created by COTS but the
     RealTimeUpdate are kept so that we can replay it for debug purpose. RealTimeUpdate will be remove by another task
     """
-    config = {"contributor": app.config.get("COTS_CONTRIBUTOR"), "nb_days_to_keep": 10}
+    config = {"contributor": app.config.get(str("COTS_CONTRIBUTOR")), "nb_days_to_keep": 10}
     purge_trip_update.delay(config)
 
 

@@ -290,7 +290,7 @@ def test_gtfs_rt_purge(basic_gtfs_rt_data, mock_rabbitmq):
         assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 1
 
         # VehicleJourney affected is old, so it's affected by TripUpdate purge (based on base-VJ's date)
-        contrib = app.config.get("GTFS_RT_CONTRIBUTOR")
+        contrib = app.config.get(str("GTFS_RT_CONTRIBUTOR"))
         until = datetime.date(2012, 12, 31)
         TripUpdate.remove_by_contributors_and_period(contributors=[contrib], start_date=None, end_date=until)
 
@@ -1747,7 +1747,7 @@ def test_gtfs_start_midnight_utc_model_builder_with_post(gtfs_rt_data_with_vj_st
 
 def test_gtfs_rt_api_with_decode_error(basic_gtfs_rt_data):
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=basic_gtfs_rt_data.SerializeToString() + ">toto")
+    resp = tester.post("/gtfs_rt", data=basic_gtfs_rt_data.SerializeToString() + str(">toto"))
     assert resp.status_code == 400
 
     def check(nb_rt_update):

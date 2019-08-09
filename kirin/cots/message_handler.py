@@ -72,8 +72,8 @@ class MessageHandler:
         self.grant_type = grant_type
         self.timeout = timeout
         self.breaker = pybreaker.CircuitBreaker(
-            fail_max=current_app.config["COTS_PAR_IV_CIRCUIT_BREAKER_MAX_FAIL"],
-            reset_timeout=current_app.config["COTS_PAR_IV_CIRCUIT_BREAKER_TIMEOUT_S"],
+            fail_max=current_app.config[str("COTS_PAR_IV_CIRCUIT_BREAKER_MAX_FAIL")],
+            reset_timeout=current_app.config[str("COTS_PAR_IV_CIRCUIT_BREAKER_TIMEOUT_S")],
         )
 
     def __repr__(self):
@@ -115,7 +115,7 @@ class MessageHandler:
             )
             raise SubServiceError(str(e))
 
-    @app.cache.memoize(timeout=app.config.get("COTS_PAR_IV_TIMEOUT_TOKEN", 60 * 60))
+    @app.cache.memoize(timeout=app.config.get(str("COTS_PAR_IV_TIMEOUT_TOKEN"), 60 * 60))
     def _get_access_token(self):
         headers = {"X-API-Key": str(self.api_key)}
         data = {"client_id": self.client_id, "client_secret": self.client_secret, "grant_type": self.grant_type}
@@ -144,7 +144,7 @@ class MessageHandler:
                 messages[m["id"]] = m["labelExt"]
         return messages
 
-    @app.cache.memoize(timeout=app.config.get("COTS_PAR_IV_CACHE_TIMEOUT", 60 * 60))
+    @app.cache.memoize(timeout=app.config.get(str("COTS_PAR_IV_CACHE_TIMEOUT"), 60 * 60))
     def _call_webservice_safer(self):
         try:
             return self._call_webservice()
