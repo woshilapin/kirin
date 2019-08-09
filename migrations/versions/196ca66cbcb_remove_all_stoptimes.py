@@ -5,6 +5,7 @@ Revises: 49feac4289a4
 Create Date: 2015-11-30 15:18:15.104863
 
 """
+from __future__ import absolute_import, print_function, unicode_literals, division
 
 # revision identifiers, used by Alembic.
 revision = "196ca66cbcb"

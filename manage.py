@@ -30,6 +30,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
+from __future__ import absolute_import, print_function, unicode_literals, division
 from kirin import app, db
 import sys
 from flask_script import Manager

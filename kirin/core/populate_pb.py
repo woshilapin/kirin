@@ -29,6 +29,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import pytz
+from __future__ import absolute_import, print_function, unicode_literals, division
 
 from kirin import gtfs_realtime_pb2, kirin_pb2, chaos_pb2
 from kirin.core.types import stop_time_status_to_protobuf

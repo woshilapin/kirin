@@ -30,6 +30,7 @@
 # www.navitia.io
 import logging
 
+from __future__ import absolute_import, print_function, unicode_literals, division
 import flask
 from flask.globals import current_app
 from flask_restful import Resource

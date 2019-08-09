@@ -28,6 +28,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 import navitia_response
+from __future__ import absolute_import, print_function, unicode_literals, division
 
 response = navitia_response.NavitiaResponse()
 

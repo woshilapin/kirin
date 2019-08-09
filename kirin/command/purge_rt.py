@@ -29,6 +29,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
+from __future__ import absolute_import, print_function, unicode_literals, division
 from kirin import manager
 from kirin.core.model import db, RealTimeUpdate
 import datetime
