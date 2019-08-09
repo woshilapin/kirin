@@ -161,7 +161,7 @@ def check_db_870154_delay():
         assert len(StopTimeUpdate.query.all()) == 12
         db_trip = TripUpdate.find_by_dated_vj("OCE:SN870154F01001", datetime(2018, 11, 2, 9, 54, tzinfo=utc))
         assert db_trip
-        assert db_trip.message == u"Régulation du trafic"
+        assert db_trip.message == "Régulation du trafic"
         # Cots contain deleted as well as delayed stop_times
         assert db_trip.effect == "REDUCED_SERVICE"
 
@@ -171,7 +171,7 @@ def check_db_870154_delay():
         assert fifth_st.stop_id == "stop_point:OCE:SP:TrainTER-87613661"
         assert fifth_st.arrival_status == "delete"
         assert fifth_st.departure_status == "delete"
-        assert fifth_st.message == u"Affluence exceptionnelle de voyageurs"
+        assert fifth_st.message == "Affluence exceptionnelle de voyageurs"
 
         sixth_st = db_trip.stop_time_updates[5]
         assert sixth_st.stop_id == "stop_point:OCE:SP:TrainTER-87613109"
@@ -181,7 +181,7 @@ def check_db_870154_delay():
         assert sixth_st.departure_status == "update"
         assert sixth_st.departure == datetime(2018, 11, 2, 11, 5)
         assert sixth_st.departure_delay == timedelta(minutes=10)
-        assert sixth_st.message == u"Régulation du trafic"  # Only departure cause is used
+        assert sixth_st.message == "Régulation du trafic"  # Only departure cause is used
 
         seventh_st = db_trip.stop_time_updates[6]
         assert seventh_st.stop_id == "stop_point:OCE:SP:TrainTER-87613091"
@@ -191,7 +191,7 @@ def check_db_870154_delay():
         assert seventh_st.departure_status == "update"
         assert seventh_st.departure == datetime(2018, 11, 2, 11, 12)
         assert seventh_st.departure_delay == timedelta(minutes=10)
-        assert seventh_st.message == u"Régulation du trafic"
+        assert seventh_st.message == "Régulation du trafic"
 
         eight_st = db_trip.stop_time_updates[7]
         assert eight_st.stop_id == "stop_point:OCE:SP:TrainTER-87613075"
@@ -201,7 +201,7 @@ def check_db_870154_delay():
         assert eight_st.departure_status == "update"
         assert eight_st.departure == datetime(2018, 11, 2, 11, 28)
         assert eight_st.departure_delay == timedelta(minutes=10)
-        assert eight_st.message == u"Régulation du trafic"
+        assert eight_st.message == "Régulation du trafic"
 
         ninth_st = db_trip.stop_time_updates[8]
         assert ninth_st.stop_id == "stop_point:OCE:SP:TrainTER-87613059"
@@ -211,7 +211,7 @@ def check_db_870154_delay():
         assert ninth_st.departure_status == "update"
         assert ninth_st.departure == datetime(2018, 11, 2, 11, 40)
         assert ninth_st.departure_delay == timedelta(minutes=10)
-        assert ninth_st.message == u"Régulation du trafic"
+        assert ninth_st.message == "Régulation du trafic"
 
         tenth_st = db_trip.stop_time_updates[9]
         assert tenth_st.stop_id == "stop_point:OCE:SP:TrainTER-87613042"
@@ -221,7 +221,7 @@ def check_db_870154_delay():
         assert tenth_st.departure_status == "update"
         assert tenth_st.departure == datetime(2018, 11, 2, 11, 47)
         assert tenth_st.departure_delay == timedelta(minutes=10)
-        assert tenth_st.message == u"Régulation du trafic"
+        assert tenth_st.message == "Régulation du trafic"
 
         eleventh_st = db_trip.stop_time_updates[10]
         assert eleventh_st.stop_id == "stop_point:OCE:SP:TrainTER-87594572"
@@ -231,7 +231,7 @@ def check_db_870154_delay():
         assert eleventh_st.departure_status == "update"
         assert eleventh_st.departure == datetime(2018, 11, 2, 12, 2)
         assert eleventh_st.departure_delay == timedelta(minutes=10)
-        assert eleventh_st.message == u"Régulation du trafic"
+        assert eleventh_st.message == "Régulation du trafic"
 
         twelfth_st = db_trip.stop_time_updates[11]
         assert twelfth_st.stop_id == "stop_point:OCE:SP:TrainTER-87594002"
@@ -241,7 +241,7 @@ def check_db_870154_delay():
         assert twelfth_st.departure_status == "none"
         assert twelfth_st.departure == datetime(2018, 11, 2, 12, 25)
         assert twelfth_st.departure_delay == timedelta(minutes=10)
-        assert twelfth_st.message == u"Régulation du trafic"
+        assert twelfth_st.message == "Régulation du trafic"
 
 
 def check_db_870154_normal():
@@ -317,7 +317,7 @@ def check_db_870154_normal():
         assert tenth_st.departure_status == "update"
         assert tenth_st.departure == datetime(2018, 11, 2, 11, 47)
         assert tenth_st.departure_delay == timedelta(minutes=10)
-        assert tenth_st.message == u"Régulation du trafic"
+        assert tenth_st.message == "Régulation du trafic"
 
         eleventh_st = db_trip.stop_time_updates[10]
         assert eleventh_st.stop_id == "stop_point:OCE:SP:TrainTER-87594572"
@@ -618,7 +618,7 @@ def check_db_6113_trip_removal():
         assert db_trip_removal.vj_id == db_trip_removal.vj.id
         assert db_trip_removal.status == "delete"
         assert db_trip_removal.effect == "NO_SERVICE"
-        assert db_trip_removal.message == u"Accident à un Passage à Niveau"
+        assert db_trip_removal.message == "Accident à un Passage à Niveau"
         # full trip removal : no stop_time to precise
         assert len(db_trip_removal.stop_time_updates) == 0
 
@@ -638,7 +638,7 @@ def check_db_6111_trip_removal_pass_midnight():
         assert db_trip_removal.vj_id == db_trip_removal.vj.id
         assert db_trip_removal.status == "delete"
         assert db_trip_removal.effect == "NO_SERVICE"
-        assert db_trip_removal.message == u"Accident à un Passage à Niveau"
+        assert db_trip_removal.message == "Accident à un Passage à Niveau"
         # full trip removal : no stop_time to precise
         assert len(db_trip_removal.stop_time_updates) == 0
 
@@ -657,7 +657,7 @@ def check_db_6114_trip_removal():
         assert db_trip_removal.vj.get_start_timestamp() == datetime(2015, 10, 6, 10, 37, tzinfo=utc)
         assert db_trip_removal.vj_id == db_trip_removal.vj.id
         assert db_trip_removal.status == "delete"
-        assert db_trip_removal.message == u"Accident à un Passage à Niveau"
+        assert db_trip_removal.message == "Accident à un Passage à Niveau"
         # full trip removal : no stop_time to precise
         assert len(db_trip_removal.stop_time_updates) == 0
 
@@ -773,24 +773,24 @@ def check_db_840427_partial_removal(contributor=None):
         assert ch_st.stop_id == "stop_point:OCE:SP:TrainTER-87142000"  # Chaumont
         assert ch_st.arrival_status == "none"  # the train still arrives in this stop
         assert ch_st.departure_status == "delete"
-        assert ch_st.message == u"Défaut d'alimentation électrique"
+        assert ch_st.message == "Défaut d'alimentation électrique"
 
         bar_st = db_trip_partial_removed.stop_time_updates[4]
         assert bar_st.stop_id == "stop_point:OCE:SP:TrainTER-87118299"  # Bar-sur-Aube
         assert bar_st.arrival_status == "delete"
         assert bar_st.departure_status == "delete"
-        assert bar_st.message == u"Défaut d'alimentation électrique"
+        assert bar_st.message == "Défaut d'alimentation électrique"
 
         ven_st = db_trip_partial_removed.stop_time_updates[5]
         assert ven_st.stop_id == "stop_point:OCE:SP:TrainTER-87118257"  # Vendeuvre
         assert ven_st.arrival_status == "delete"
         assert ven_st.departure_status == "delete"
-        assert ven_st.message == u"Défaut d'alimentation électrique"
+        assert ven_st.message == "Défaut d'alimentation électrique"
 
         tro_st = db_trip_partial_removed.stop_time_updates[6]
         assert tro_st.stop_id == "stop_point:OCE:SP:TrainTER-87118000"  # Troyes
         assert tro_st.arrival_status == "delete"
         assert tro_st.departure_status == "none"  # the train still does not leave from this stop
-        assert tro_st.message == u"Défaut d'alimentation électrique"
+        assert tro_st.message == "Défaut d'alimentation électrique"
 
         assert db_trip_partial_removed.contributor == contributor

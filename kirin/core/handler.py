@@ -56,7 +56,7 @@ def persist(real_time_update):
 def log_stu_modif(trip_update, stu, string_additional_info):
     logger = logging.getLogger(__name__)
     logger.debug(
-        u"TripUpdate on navitia vj {nav_id} on {date}, "
+        "TripUpdate on navitia vj {nav_id} on {date}, "
         "StopTimeUpdate {order} modified: {add_info}".format(
             nav_id=trip_update.vj.navitia_trip_id,
             date=trip_update.vj.get_utc_circulation_date(),
@@ -77,7 +77,7 @@ def manage_consistency(trip_update):
         # rejections
         if stu.order != current_order:
             logger.warning(
-                u"TripUpdate on navitia vj {nav_id} on {date} rejected: "
+                "TripUpdate on navitia vj {nav_id} on {date} rejected: "
                 "order problem [STU index ({stu_index}) != kirin index ({kirin_index})]".format(
                     nav_id=trip_update.vj.navitia_trip_id,
                     date=trip_update.vj.get_utc_circulation_date(),
@@ -94,7 +94,7 @@ def manage_consistency(trip_update):
                 stu.arrival = previous_stop_event.time
             if stu.arrival is None:
                 logger.warning(
-                    u"TripUpdate on navitia vj {nav_id} on {date} rejected: "
+                    "TripUpdate on navitia vj {nav_id} on {date} rejected: "
                     "StopTimeUpdate missing arrival time".format(
                         nav_id=trip_update.vj.navitia_trip_id, date=trip_update.vj.get_utc_circulation_date()
                     )
@@ -372,7 +372,7 @@ def is_new_stop_event_valid(event_name, stop_id, stop_order, nav_stop, db_tu, ne
     # stop-event can NOT be an add in new_stu if it was ALREADY served in navitia or kirin db
     if is_added_new and is_served_old:
         logger.warning(
-            u"Can't add {event} for stop_time {stop_id}, because it is ALREADY served in "
+            "Can't add {event} for stop_time {stop_id}, because it is ALREADY served in "
             "kirin db or Navitia base-schedule VJ.".format(event=event_name, stop_id=stop_id)
         )
         return False
@@ -381,7 +381,7 @@ def is_new_stop_event_valid(event_name, stop_id, stop_order, nav_stop, db_tu, ne
     # it can NOT happen if stop-event was NOT served before in navitia or kirin db
     if not is_added_new and not is_served_old:
         logger.warning(
-            u"Can't modify {event} for stop_time {stop_id}, because it is NOT served in "
+            "Can't modify {event} for stop_time {stop_id}, because it is NOT served in "
             "kirin db nor in Navitia base-schedule VJ.".format(event=event_name, stop_id=stop_id)
         )
         return False

@@ -33,9 +33,7 @@ def upgrade():
 
     # remove all the constraints on circulation_date
     op.drop_index("circulation_date_idx", table_name="vehicle_journey")
-    op.drop_constraint(
-        u"vehicle_journey_navitia_trip_id_circulation_date_idx", "vehicle_journey", type_="unique"
-    )
+    op.drop_constraint("vehicle_journey_navitia_trip_id_circulation_date_idx", "vehicle_journey", type_="unique")
     op.alter_column("vehicle_journey", "circulation_date", nullable=True)
 
 
@@ -47,7 +45,7 @@ def downgrade():
     # add all the constraints on circulation_date
     op.alter_column("vehicle_journey", "circulation_date", nullable=False)
     op.create_unique_constraint(
-        u"vehicle_journey_navitia_trip_id_circulation_date_idx",
+        "vehicle_journey_navitia_trip_id_circulation_date_idx",
         "vehicle_journey",
         ["navitia_trip_id", "circulation_date"],
     )
