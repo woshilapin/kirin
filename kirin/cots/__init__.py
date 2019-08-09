@@ -30,4 +30,4 @@
 # www.navitia.io
 
 from __future__ import absolute_import, print_function, unicode_literals, division
-from model_maker import KirinModelBuilder
+from kirin.cots.model_maker import KirinModelBuilder

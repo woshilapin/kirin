@@ -41,7 +41,7 @@ from retrying import retry
 from kirin import app
 import datetime
 from kirin.core.model import TripUpdate, RealTimeUpdate
-from utils import should_retry_exception, make_kirin_lock_name, get_lock
+from kirin.utils import should_retry_exception, make_kirin_lock_name, get_lock
 
 TASK_STOP_MAX_DELAY = app.config["TASK_STOP_MAX_DELAY"]
 TASK_WAIT_FIXED = app.config["TASK_WAIT_FIXED"]

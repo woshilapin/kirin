@@ -49,7 +49,7 @@ if "threading" in sys.modules:
 from flask import Flask
 import logging.config
 from flask_script import Manager
-import utils
+from kirin import utils
 from kirin.helper import KirinRequest
 
 app = Flask(__name__)

@@ -30,7 +30,7 @@
 # www.navitia.io
 
 from __future__ import absolute_import, print_function, unicode_literals, division
-import navitia_response
+from tests.mock_navitia import navitia_response
 
 response = navitia_response.NavitiaResponse()
 

@@ -35,12 +35,11 @@ import logging
 from amqp.exceptions import ConnectionForced
 import gevent
 from retrying import retry
-from kirin import task_pb2
+from kirin import task_pb2, gtfs_realtime_pb2
 from google.protobuf.message import DecodeError
 import socket
 from kirin.core.model import TripUpdate, db
 from kirin.core.populate_pb import convert_to_gtfsrt
-import gtfs_realtime_pb2
 from kirin.utils import str_to_date, record_call
 from datetime import datetime
 from kombu.mixins import ConsumerProducerMixin
