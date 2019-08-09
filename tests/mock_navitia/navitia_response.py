@@ -33,6 +33,6 @@ from typing import List
 
 
 class NavitiaResponse(object):
-    queries = []  # type: List[str]
-    response_code = None
-    json_response = None
+    queries = []  # type: List[unicode]
+    response_code = None  # type: int
+    json_response = None  # type: unicode
