@@ -79,6 +79,7 @@ class TimestampMixin(object):
 
 Db_TripEffect = db.Enum(*[e.name for e in TripEffect], name="trip_effect")
 Db_ModificationType = db.Enum(*[t.name for t in ModificationType], name="modification_type")
+Db_connector_type = db.Enum("cots", "gtfs-rt", name="connector_type", metadata=meta)
 
 
 def get_utc_timezoned_timestamp_safe(timestamp):
@@ -434,7 +435,7 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
 
     id = db.Column(postgresql.UUID, default=gen_uuid, primary_key=True)
     received_at = db.Column(db.DateTime, nullable=False)
-    connector = db.Column(db.Enum("cots", "gtfs-rt", name="connector_type"), nullable=False)
+    connector = db.Column(Db_connector_type, nullable=False)
     status = db.Column(db.Enum("OK", "KO", "pending", name="rt_status"), nullable=False)
     db.Index("status_idx", status)
     error = db.Column(db.Text, nullable=True)
