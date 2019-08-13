@@ -37,6 +37,8 @@ from aniso8601 import parse_date
 from pythonjsonlogger import jsonlogger
 from flask.globals import current_app
 import navitia_wrapper
+from pytz import utc
+
 from kirin import new_relic
 from redis.exceptions import ConnectionError
 from contextlib import contextmanager
@@ -81,6 +83,14 @@ def make_navitia_wrapper():
     token = current_app.config.get(str("NAVITIA_TOKEN"))
     instance = current_app.config[str("NAVITIA_INSTANCE")]
     return navitia_wrapper.Navitia(url=url, token=token).instance(instance)
+
+
+def to_navitia_utc_str(naive_utc_dt):
+    """
+    format a naive UTC datetime to a navitia-readable UTC-aware str
+    (to avoid managing coverage's timezone)
+    """
+    return utc.localize(naive_utc_dt).strftime("%Y%m%dT%H%M%S%z")
 
 
 def make_rt_update(data, connector, contributor, status="OK"):

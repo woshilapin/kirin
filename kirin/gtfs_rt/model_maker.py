@@ -38,7 +38,7 @@ from kirin import core
 from kirin.core import model
 from kirin.core.types import ModificationType, get_higher_status, get_effect_by_stop_time_status
 from kirin.exceptions import KirinException
-from kirin.utils import make_rt_update, floor_datetime
+from kirin.utils import make_rt_update, floor_datetime, to_navitia_utc_str
 from kirin.utils import record_internal_failure, record_call
 from kirin import app
 import itertools
@@ -74,11 +74,6 @@ def handle(proto, navitia_wrapper, contributor):
     )
     record_call("Simple feed publication", **log_dict)
     logging.getLogger(__name__).info("Simple feed publication", extra=log_dict)
-
-
-def to_str(date):
-    # the date is in UTC, thus we don't have to care about the coverage's timezone
-    return date.strftime("%Y%m%dT%H%M%SZ")
 
 
 class KirinModelBuilder(object):
@@ -200,8 +195,8 @@ class KirinModelBuilder(object):
         navitia_vjs = self.navitia.vehicle_journeys(
             q={
                 "filter": "vehicle_journey.has_code({}, {})".format(self.stop_code_key, vj_source_code),
-                "since": to_str(utc_since_dt),
-                "until": to_str(utc_until_dt),
+                "since": to_navitia_utc_str(naive_utc_since_dt),
+                "until": to_navitia_utc_str(naive_utc_until_dt),
                 "depth": "2",  # we need this depth to get the stoptime's stop_area
             }
         )

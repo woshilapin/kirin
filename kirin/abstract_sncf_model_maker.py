@@ -34,7 +34,7 @@ from datetime import timedelta
 
 import jmespath
 
-from kirin.utils import record_internal_failure
+from kirin.utils import record_internal_failure, to_navitia_utc_str
 from kirin.exceptions import ObjectNotFound, InvalidArguments
 from abc import ABCMeta
 import six
@@ -60,13 +60,6 @@ class ActionOnTrip(Enum):
 def make_navitia_empty_vj(headsign):
     headsign = TRAIN_ID_FORMAT.format(headsign)
     return {"id": headsign, "trip": {"id": headsign}}
-
-
-def to_navitia_str(dt):
-    """
-    format a datetime to a navitia-readable str
-    """
-    return dt.strftime("%Y%m%dT%H%M%S%z")
 
 
 def headsigns(str_headsign):
@@ -159,8 +152,8 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
             navitia_vjs = self.navitia.vehicle_journeys(
                 q={
                     "headsign": train_number,
-                    "since": to_navitia_str(extended_since_dt),
-                    "until": to_navitia_str(extended_until_dt),
+                    "since": to_navitia_utc_str(extended_since_dt),
+                    "until": to_navitia_utc_str(extended_until_dt),
                     "depth": "2",  # we need this depth to get the stoptime's stop_area
                     "show_codes": "true",  # we need the stop_points CRCICH codes
                 }
