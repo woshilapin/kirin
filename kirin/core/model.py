@@ -113,7 +113,7 @@ class VehicleJourney(db.Model):  # type: ignore
         navitia_trip_id, start_timestamp, name="vehicle_journey_navitia_trip_id_start_timestamp_idx"
     )
 
-    def __init__(self, navitia_vj, utc_since_dt, utc_until_dt, vj_start_dt=None):
+    def __init__(self, navitia_vj, naive_utc_since_dt, naive_utc_until_dt, naive_vj_start_dt=None):
         """
         Create a circulation (VJ on a given day) from:
             * the navitia VJ (circulation times without a specific day)
@@ -131,11 +131,11 @@ class VehicleJourney(db.Model):  # type: ignore
               actual start-timestamp:        |                |                | 03T02:00       |
 
         :param navitia_vj: json dict of navitia's response when looking for a VJ.
-        :param utc_since_dt: UTC datetime BEFORE start of considered circulation,
+        :param naive_utc_since_dt: naive UTC datetime BEFORE start of considered circulation,
             typically the "since" parameter of the search in navitia.
-        :param utc_until_dt: UTC datetime AFTER start of considered circulation,
+        :param naive_utc_until_dt: naive UTC datetime AFTER start of considered circulation,
             typically the "until" parameter of the search in navitia.
-        :param vj_start_dt: UTC datetime of the first stop_time of vj.
+        :param naive_vj_start_dt: naive UTC datetime of the first stop_time of vj.
         """
         self.id = gen_uuid()
         if "trip" in navitia_vj and "id" in navitia_vj["trip"]:
@@ -143,8 +143,8 @@ class VehicleJourney(db.Model):  # type: ignore
 
         # For an added trip, we use vj_start_dt as in flux cots where as for existing one
         # compute start_timestamp (in UTC) from first stop_time, to be the closest AFTER provided utc_since_dt.
-        if not navitia_vj.get("stop_times", None) and vj_start_dt:
-            self.start_timestamp = vj_start_dt
+        if not navitia_vj.get("stop_times", None) and naive_vj_start_dt:
+            self.start_timestamp = naive_vj_start_dt
         else:
             first_stop_time = navitia_vj.get("stop_times", [{}])[0]
             start_time = first_stop_time["utc_arrival_time"]  # converted in datetime.time() in python wrapper
@@ -156,12 +156,12 @@ class VehicleJourney(db.Model):  # type: ignore
 
             # if since = 20010102T2300 and start_time = 0200, actual start_timestamp = 20010103T0200.
             # So adding one day to start_timestamp obtained (20010102T0200) if it's before since.
-            if self.start_timestamp < utc_since_dt:
+            if self.start_timestamp < naive_utc_since_dt:
                 self.start_timestamp += timedelta(days=1)
             # simple consistency check (for now): the start timestamp must also be BEFORE utc_until_dt
-            if utc_until_dt < self.start_timestamp:
+            if naive_utc_until_dt < self.start_timestamp:
                 msg = "impossible to calculate the circulation date of vj: {} on period [{}, {}]".format(
-                    navitia_vj.get("id"), utc_since_dt, utc_until_dt
+                    navitia_vj.get("id"), naive_utc_since_dt, naive_utc_until_dt
                 )
                 raise ObjectNotFound(msg)
 
