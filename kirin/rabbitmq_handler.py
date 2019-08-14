@@ -30,6 +30,8 @@
 # www.navitia.io
 
 from __future__ import absolute_import, print_function, unicode_literals, division
+
+import six
 from kombu import BrokerConnection, Exchange, Queue, Producer
 import logging
 from amqp.exceptions import ConnectionForced
@@ -78,7 +80,7 @@ class RTReloader(ConsumerProducerMixin):
                 body = str(message.payload)
                 task.ParseFromString(body)
             except DecodeError as e:
-                log.warn("invalid protobuf: {}".format(str(e)))
+                log.warn("invalid protobuf: {}".format(six.text_type(e)))
                 return
 
             log.info("Getting a full feed publication request", extra={"task": task})

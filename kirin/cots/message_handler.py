@@ -32,6 +32,7 @@ import logging
 
 import pybreaker
 import requests as requests
+import six
 
 from kirin import app
 from flask.globals import current_app
@@ -111,13 +112,13 @@ class MessageHandler:
             raise  # Do not change exceptions that were just raised
         except Exception as e:
             logging.getLogger(__name__).exception(
-                "COTS cause message sub-service handling " "error : {}".format(str(e))
+                "COTS cause message sub-service handling error : {}".format(six.text_type(e))
             )
-            raise SubServiceError(str(e))
+            raise SubServiceError(six.text_type(e))
 
     @app.cache.memoize(timeout=app.config.get(str("COTS_PAR_IV_TIMEOUT_TOKEN"), 60 * 60))
     def _get_access_token(self):
-        headers = {"X-API-Key": str(self.api_key)}
+        headers = {"X-API-Key": self.api_key}
         data = {"client_id": self.client_id, "client_secret": self.client_secret, "grant_type": self.grant_type}
 
         response = self._service_caller(method=requests.post, url=self.token_server, headers=headers, data=data)
@@ -159,6 +160,6 @@ class MessageHandler:
                 return self._call_webservice_safer().get(index)
             except Exception as e:
                 logging.getLogger(__name__).exception(
-                    "COTS cause message sub-service handling " "error : {}".format(str(e))
+                    "COTS cause message sub-service handling error : {}".format(six.text_type(e))
                 )
                 return None

@@ -32,6 +32,7 @@ from __future__ import absolute_import, print_function, unicode_literals, divisi
 import logging
 
 import pytz
+import six
 from aniso8601 import parse_date
 from pythonjsonlogger import jsonlogger
 from flask.globals import current_app
@@ -129,7 +130,7 @@ def should_retry_exception(exception):
 def make_kirin_lock_name(*args):
     from kirin import app
 
-    return "|".join([app.config[str("TASK_LOCK_PREFIX")]] + [str(a) for a in args])
+    return "|".join([app.config[str("TASK_LOCK_PREFIX")]] + [a for a in args])
 
 
 def save_gtfs_rt_with_error(data, connector, contributor, status, error=None):

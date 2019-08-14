@@ -30,6 +30,9 @@
 # www.navitia.io
 from __future__ import absolute_import, print_function, unicode_literals, division
 import os
+
+import six
+
 from kirin import app, db
 import pytest
 import flask_migrate
@@ -61,7 +64,7 @@ def clean_db():
     before all tests the database is cleared
     """
     with app.app_context():
-        tables = [str(table) for table in db.metadata.sorted_tables]
+        tables = [six.text_type(table) for table in db.metadata.sorted_tables]
         db.session.execute("TRUNCATE {} CASCADE;".format(", ".join(tables)))
         db.session.commit()
 

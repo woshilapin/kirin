@@ -32,6 +32,8 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 import logging
 import requests
+import six
+
 from kirin import gtfs_realtime_pb2
 
 from kirin.tasks import celery
@@ -73,7 +75,9 @@ def _is_newer(config):
 
     except Exception as e:
         logger.debug(
-            "exception occurred when checking the newer version of gtfs for %s: %s", contributor, str(e)
+            "exception occurred when checking the newer version of gtfs for %s: %s",
+            contributor,
+            six.text_type(e),
         )
     return True  # whatever the exception is, we don't want to break the polling
 
@@ -108,7 +112,7 @@ def gtfs_poller(self, config):
             manage_db_error(
                 data="", connector="gtfs-rt", contributor=contributor, status="KO", error="Http Error"
             )
-            logger.debug(str(e))
+            logger.debug(six.text_type(e))
             return
 
         nav = navitia_wrapper.Navitia(
