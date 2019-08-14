@@ -46,7 +46,7 @@ import calendar
 
 
 def handle(proto, navitia_wrapper, contributor):
-    data = str(proto)  # temp, for the moment, we save the protobuf as text
+    data = six.binary_type(proto)  # temp, for the moment, we save the protobuf as text
     rt_update = make_rt_update(data, "gtfs-rt", contributor=contributor)
     start_datetime = datetime.datetime.utcnow()
     try:

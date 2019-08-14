@@ -134,7 +134,7 @@ def make_kirin_lock_name(*args):
 
 
 def save_gtfs_rt_with_error(data, connector, contributor, status, error=None):
-    raw_data = str(data)
+    raw_data = six.binary_type(data)
     rt_update = make_rt_update(raw_data, connector=connector, contributor=contributor, status=status)
     rt_update.status = status
     rt_update.error = error
@@ -164,7 +164,7 @@ def manage_db_error(data, connector, contributor, status, error=None):
     parameters: data, connector, contributor, status, error
     """
     last = model.RealTimeUpdate.get_last_rtu(connector, contributor)
-    if last and last.status == status and last.error == error and last.raw_data == str(data):
+    if last and last.status == status and last.error == error and last.raw_data == six.binary_type(data):
         poke_updated_at(last)
     else:
         save_gtfs_rt_with_error(data, connector, contributor, status, error)
