@@ -31,7 +31,6 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 import logging
 
-import pytz
 import six
 from aniso8601 import parse_date
 from pythonjsonlogger import jsonlogger
@@ -118,19 +117,6 @@ def record_call(status, **kwargs):
     params = {"status": status}
     params.update(kwargs)
     new_relic.record_custom_event("kirin_status", params)
-
-
-def get_timezone(stop_time):
-    # TODO: we must use the coverage timezone, not the stop_area timezone, as they can be different.
-    # We don't have this information now but we should have it in the near future
-    str_tz = stop_time.get("stop_point", {}).get("stop_area", {}).get("timezone")
-    if not str_tz:
-        raise Exception("impossible to convert local to utc without the timezone")
-
-    tz = pytz.timezone(str_tz)
-    if not tz:
-        raise Exception("impossible to find timezone: '{}'".format(str_tz))
-    return tz
 
 
 def should_retry_exception(exception):
