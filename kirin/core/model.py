@@ -122,6 +122,11 @@ class VehicleJourney(db.Model):  # type: ignore
             typically the "until" parameter of the search in navitia.
         :param naive_vj_start_dt: naive UTC datetime of the first stop_time of vj.
         """
+        assert naive_utc_since_dt.tzinfo is None
+        assert naive_utc_until_dt.tzinfo is None
+        if naive_vj_start_dt is not None:
+            assert naive_vj_start_dt.tzinfo is None
+
         self.id = gen_uuid()
         if "trip" in navitia_vj and "id" in navitia_vj["trip"]:
             self.navitia_trip_id = navitia_vj["trip"]["id"]

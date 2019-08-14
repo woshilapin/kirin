@@ -132,6 +132,9 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
         if (naive_utc_since_dt is None) or (naive_utc_until_dt is None):
             return []
 
+        assert naive_utc_since_dt.tzinfo is None
+        assert naive_utc_until_dt.tzinfo is None
+
         vjs = {}
         # to get the date of the vj we use the start/end of the vj + some tolerance
         # since the SNCF data and navitia data might not be synchronized

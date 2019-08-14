@@ -89,6 +89,7 @@ def to_navitia_utc_str(naive_utc_dt):
     format a naive UTC datetime to a navitia-readable UTC-aware str
     (to avoid managing coverage's timezone)
     """
+    assert naive_utc_dt.tzinfo is None
     return utc.localize(naive_utc_dt).strftime("%Y%m%dT%H%M%S%z")
 
 

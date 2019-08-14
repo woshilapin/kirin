@@ -199,6 +199,8 @@ class KirinModelBuilder(object):
         :param naive_utc_until_dt: naive UTC datetime that ends the search period.
             Typically the supposed datetime of last base-schedule stop_time.
         """
+        assert naive_utc_since_dt.tzinfo is None
+        assert naive_utc_until_dt.tzinfo is None
         navitia_vjs = self.navitia.vehicle_journeys(
             q={
                 "filter": "vehicle_journey.has_code({}, {})".format(self.stop_code_key, vj_source_code),
