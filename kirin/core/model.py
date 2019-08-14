@@ -30,7 +30,6 @@
 # www.navitia.io
 from __future__ import absolute_import, print_function, unicode_literals, division
 from datetime import timedelta
-from pytz import utc
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import backref, deferred
 from sqlalchemy.ext.orderinglist import ordering_list
@@ -80,20 +79,6 @@ class TimestampMixin(object):
 Db_TripEffect = db.Enum(*[e.name for e in TripEffect], name="trip_effect")
 Db_ModificationType = db.Enum(*[t.name for t in ModificationType], name="modification_type")
 Db_ConnectorType = db.Enum(*[c.value for c in ConnectorType], name="connector_type", metadata=meta)
-
-
-def get_utc_timezoned_timestamp_safe(timestamp):
-    """
-    Return a UTC-localized timestamp (easier to manipulate)
-    Result is a changed datetime if it was in another timezone,
-        or just explicitly timezoned in UTC otherwise.
-    :param timestamp: datetime considered UTC if not timezoned
-    :return: datetime brought to UTC
-    """
-    if timestamp.tzinfo is None or timestamp.tzinfo.utcoffset(timestamp) is None:
-        return utc.localize(timestamp)
-    else:
-        return timestamp.astimezone(utc)
 
 
 class VehicleJourney(db.Model):  # type: ignore
@@ -152,7 +137,7 @@ class VehicleJourney(db.Model):  # type: ignore
                 start_time = first_stop_time[
                     "utc_departure_time"
                 ]  # converted in datetime.time() in python wrapper
-            self.start_timestamp = utc.localize(datetime.datetime.combine(utc_since_dt.date(), start_time))
+            self.start_timestamp = datetime.datetime.combine(naive_utc_since_dt.date(), start_time)
 
             # if since = 20010102T2300 and start_time = 0200, actual start_timestamp = 20010103T0200.
             # So adding one day to start_timestamp obtained (20010102T0200) if it's before since.
@@ -168,7 +153,7 @@ class VehicleJourney(db.Model):  # type: ignore
         self.navitia_vj = navitia_vj  # Not persisted
 
     def get_start_timestamp(self):
-        return get_utc_timezoned_timestamp_safe(self.start_timestamp)
+        return self.start_timestamp
 
     def get_utc_circulation_date(self):
         return self.get_start_timestamp().date()

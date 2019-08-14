@@ -35,7 +35,7 @@ import logging
 from datetime import datetime
 from operator import itemgetter
 
-from dateutil import parser, tz
+from dateutil import parser
 from flask.globals import current_app
 from pytz import utc
 
@@ -137,9 +137,13 @@ def _retrieve_interesting_pdp(list_pdp):
     return res
 
 
-def as_utc_dt(str_time):
+def as_utc_naive_dt(str_time):
     try:
-        return parser.parse(str_time, dayfirst=False, yearfirst=True, ignoretz=False).astimezone(utc)
+        return (
+            parser.parse(str_time, dayfirst=False, yearfirst=True, ignoretz=False)
+            .astimezone(utc)
+            .replace(tzinfo=None)
+        )
     except Exception as e:
         raise InvalidArguments(
             'Impossible to parse timezoned datetime from "{s}": {m}'.format(s=str_time, m=e.message)
@@ -166,7 +170,7 @@ def as_duration(seconds):
 
 def _retrieve_stop_event_datetime(cots_traveler_time):
     base_schedule_datetime = get_value(cots_traveler_time, "dateHeure", nullable=True)
-    return as_utc_dt(base_schedule_datetime) if base_schedule_datetime else None
+    return as_utc_naive_dt(base_schedule_datetime) if base_schedule_datetime else None
 
 
 def _retrieve_projected_time(source_ref, list_proj_time):
@@ -240,7 +244,7 @@ def _get_first_stop_datetime(list_pdps, hour_obj_name, skip_fully_added_stops=Tr
         p = next((p for p in list_pdps), None)
 
     str_time = get_value(get_value(p, hour_obj_name), "dateHeure") if p else None
-    return as_utc_dt(str_time) if str_time else None
+    return as_utc_naive_dt(str_time) if str_time else None
 
 
 def _get_action_on_trip(train_numbers, dict_version, pdps):
@@ -357,7 +361,7 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
     @staticmethod
     def _check_stop_time_consistency(last_stop_time_depart, projected_stop_time, pdp_code):
         last_stop_time_depart = (
-            last_stop_time_depart if last_stop_time_depart is not None else datetime.fromtimestamp(0, tz.tzutc())
+            last_stop_time_depart if last_stop_time_depart is not None else datetime.fromtimestamp(0)
         )
 
         projected_arrival = projected_stop_time.get("Arrivee")

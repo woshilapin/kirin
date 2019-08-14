@@ -33,7 +33,6 @@ import datetime
 import logging
 
 import six
-from pytz import utc
 from kirin import core
 from kirin.core import model
 from kirin.core.types import ModificationType, get_higher_status, get_effect_by_stop_time_status
@@ -93,7 +92,7 @@ class KirinModelBuilder(object):
 
         The TripUpdates are not yet associated with the RealTimeUpdate
         """
-        utc_data_time = utc.localize(datetime.datetime.utcfromtimestamp(data.header.timestamp))
+        utc_data_time = datetime.datetime.utcfromtimestamp(data.header.timestamp)
         self.log.debug(
             "Start processing GTFS-rt: timestamp = {} ({})".format(data.header.timestamp, utc_data_time)
         )
