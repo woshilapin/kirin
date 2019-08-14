@@ -33,7 +33,6 @@ from copy import deepcopy
 from datetime import timedelta
 import datetime
 import pytest
-from pytz import utc
 from kirin.core.model import RealTimeUpdate, db, TripUpdate, StopTimeUpdate, VehicleJourney
 from kirin.core.populate_pb import to_posix_time, convert_to_gtfsrt
 from kirin import gtfs_rt
@@ -444,7 +443,7 @@ def test_gtfs_rt_pass_midnight(pass_midnight_gtfs_rt_data, mock_rabbitmq):
 
         assert trip_update
 
-        assert trip_update.vj.get_start_timestamp() == datetime.datetime(2012, 6, 16, 3, 30, tzinfo=utc)
+        assert trip_update.vj.get_start_timestamp() == datetime.datetime(2012, 6, 16, 3, 30)
 
         # using navitia's time in UTC, and the stop is in sherbrooke, so UTC-4h
         first_stop = trip_update.stop_time_updates[0]
@@ -597,7 +596,7 @@ def test_gtfs_rt_pass_midnight_utc(pass_midnight_utc_gtfs_rt_data, mock_rabbitmq
 
         assert trip_update
 
-        assert trip_update.vj.get_start_timestamp() == datetime.datetime(2012, 6, 15, 23, 30, tzinfo=utc)
+        assert trip_update.vj.get_start_timestamp() == datetime.datetime(2012, 6, 15, 23, 30)
 
         # using navitia's time in UTC
         first_stop = trip_update.stop_time_updates[0]
@@ -1254,7 +1253,7 @@ def test_gtfs_lollipop_model_builder_with_post(lollipop_gtfs_rt_data):
 
             assert trip_update
 
-            assert trip_update.vj.get_start_timestamp() == datetime.datetime(2012, 6, 15, 14, 00, tzinfo=utc)
+            assert trip_update.vj.get_start_timestamp() == datetime.datetime(2012, 6, 15, 14, 00)
 
             first_stop = trip_update.stop_time_updates[0]
             assert first_stop.stop_id == "StopR1"
@@ -1445,7 +1444,7 @@ def test_gtfs_lollipop_with_second_passage_model_builder_with_post(lollipop_gtfs
 
             assert trip_update
 
-            assert trip_update.vj.get_start_timestamp() == datetime.datetime(2012, 6, 15, 14, 00, tzinfo=utc)
+            assert trip_update.vj.get_start_timestamp() == datetime.datetime(2012, 6, 15, 14, 00)
 
             first_stop = trip_update.stop_time_updates[0]
             assert first_stop.stop_id == "StopR1"
@@ -1645,7 +1644,7 @@ def test_gtfs_start_midnight_model_builder_with_post(gtfs_rt_data_with_vj_starti
 
             assert trip_update
 
-            assert trip_update.vj.get_start_timestamp() == datetime.datetime(2017, 12, 12, 5, 0, tzinfo=utc)
+            assert trip_update.vj.get_start_timestamp() == datetime.datetime(2017, 12, 12, 5, 0)
 
             first_stop = trip_update.stop_time_updates[0]
             assert first_stop.stop_id == "StopR1"
@@ -1710,7 +1709,7 @@ def test_gtfs_start_midnight_utc_model_builder_with_post(gtfs_rt_data_with_vj_st
 
             assert trip_update
 
-            assert trip_update.vj.get_start_timestamp() == datetime.datetime(2017, 12, 12, 00, 00, tzinfo=utc)
+            assert trip_update.vj.get_start_timestamp() == datetime.datetime(2017, 12, 12, 00, 00)
 
             first_stop = trip_update.stop_time_updates[0]
             assert first_stop.stop_id == "StopR1"

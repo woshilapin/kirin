@@ -32,7 +32,6 @@ from __future__ import absolute_import, print_function, unicode_literals, divisi
 from datetime import timedelta
 
 import pytest
-from pytz import utc
 
 from kirin.core.handler import handle
 from kirin.core.model import RealTimeUpdate, TripUpdate, VehicleJourney, StopTimeUpdate
@@ -50,8 +49,8 @@ def create_trip_update(id, trip_id, circulation_date, stops, status="update"):
                     {"utc_arrival_time": datetime.time(8, 10), "stop_point": {"stop_area": {"timezone": "UTC"}}}
                 ],
             },
-            utc.localize(datetime.datetime.combine(circulation_date, datetime.time(7, 10))),
-            utc.localize(datetime.datetime.combine(circulation_date, datetime.time(9, 10))),
+            datetime.datetime.combine(circulation_date, datetime.time(7, 10)),
+            datetime.datetime.combine(circulation_date, datetime.time(9, 10)),
         ),
         status,
     )
@@ -166,9 +165,7 @@ def navitia_vj():
 
 def _create_db_vj(navitia_vj):
     return VehicleJourney(
-        navitia_vj,
-        utc.localize(datetime.datetime(2015, 9, 8, 7, 10, 0)),
-        utc.localize(datetime.datetime(2015, 9, 8, 11, 5, 0)),
+        navitia_vj, datetime.datetime(2015, 9, 8, 7, 10, 0), datetime.datetime(2015, 9, 8, 11, 5, 0)
     )
 
 
@@ -265,9 +262,7 @@ def test_past_midnight():
     }
     with app.app_context():
         vj = VehicleJourney(
-            navitia_vj,
-            utc.localize(datetime.datetime(2015, 9, 8, 21, 15, 0)),
-            utc.localize(datetime.datetime(2015, 9, 9, 4, 20, 0)),
+            navitia_vj, datetime.datetime(2015, 9, 8, 21, 15, 0), datetime.datetime(2015, 9, 9, 4, 20, 0)
         )
         trip_update = TripUpdate(vj, status="update")
         st = StopTimeUpdate({"id": "sa:2"}, departure_delay=timedelta(minutes=31), dep_status="update", order=1)

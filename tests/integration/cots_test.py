@@ -30,7 +30,6 @@
 # www.navitia.io
 from __future__ import absolute_import, print_function, unicode_literals, division
 from datetime import datetime
-from pytz import utc
 
 import pytest
 
@@ -164,7 +163,7 @@ def test_cots_delayed_simple_post(mock_rabbitmq):
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 6
         db_trip_delayed = TripUpdate.find_by_dated_vj(
-            "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21, tzinfo=utc)
+            "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21)
         )
         assert db_trip_delayed.stop_time_updates[4].message is None
     db_trip_delayed = check_db_96231_delayed()

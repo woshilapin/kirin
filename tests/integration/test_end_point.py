@@ -29,7 +29,6 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 from __future__ import absolute_import, print_function, unicode_literals, division
-from pytz import utc
 
 from tests.check_utils import api_get
 from kirin.core import model
@@ -77,8 +76,8 @@ def setup_database():
                     {"utc_arrival_time": time(9, 0), "stop_point": {"stop_area": {"timezone": "Europe/Paris"}}}
                 ],
             },
-            utc.localize(datetime(2015, 11, 4, 8, 0, 0)),
-            utc.localize(datetime(2015, 11, 4, 10, 0, 0)),
+            datetime(2015, 11, 4, 8, 0, 0),
+            datetime(2015, 11, 4, 10, 0, 0),
         )
         vj2 = model.VehicleJourney(
             {
@@ -87,8 +86,8 @@ def setup_database():
                     {"utc_arrival_time": time(9, 0), "stop_point": {"stop_area": {"timezone": "Europe/Paris"}}}
                 ],
             },
-            utc.localize(datetime(2015, 11, 4, 8, 0, 0)),
-            utc.localize(datetime(2015, 11, 4, 10, 0, 0)),
+            datetime(2015, 11, 4, 8, 0, 0),
+            datetime(2015, 11, 4, 10, 0, 0),
         )
         vj3 = model.VehicleJourney(
             {
@@ -97,8 +96,8 @@ def setup_database():
                     {"utc_arrival_time": time(9, 0), "stop_point": {"stop_area": {"timezone": "Europe/Paris"}}}
                 ],
             },
-            utc.localize(datetime(2015, 11, 4, 8, 0, 0)),
-            utc.localize(datetime(2015, 11, 4, 10, 0, 0)),
+            datetime(2015, 11, 4, 8, 0, 0),
+            datetime(2015, 11, 4, 10, 0, 0),
         )
         tu1 = model.TripUpdate(vj1, contributor="realtime.cots")
         tu2 = model.TripUpdate(vj2, contributor="realtime.cots")

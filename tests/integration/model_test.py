@@ -30,7 +30,6 @@
 # www.navitia.io
 
 from __future__ import absolute_import, print_function, unicode_literals, division
-from pytz import utc
 
 from kirin.core.model import VehicleJourney, TripUpdate, StopTimeUpdate, RealTimeUpdate, Contributor
 from kirin.core.types import ConnectorType
@@ -49,8 +48,8 @@ def create_trip_update(vj_id, trip_id, circulation_date):
                 {"utc_arrival_time": datetime.time(8, 0), "stop_point": {"stop_area": {"timezone": "UTC"}}}
             ],
         },
-        utc.localize(datetime.datetime.combine(circulation_date, datetime.time(7, 0))),
-        utc.localize(datetime.datetime.combine(circulation_date, datetime.time(9, 0))),
+        datetime.datetime.combine(circulation_date, datetime.time(7, 0)),
+        datetime.datetime.combine(circulation_date, datetime.time(9, 0)),
     )
     vj.id = vj_id
     trip_update.vj = vj
