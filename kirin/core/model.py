@@ -38,7 +38,7 @@ from flask_sqlalchemy import SQLAlchemy
 import datetime
 import sqlalchemy
 from sqlalchemy import desc
-from kirin.core.types import ModificationType, TripEffect
+from kirin.core.types import ModificationType, TripEffect, ConnectorType
 from kirin.exceptions import ObjectNotFound
 
 db = SQLAlchemy()
@@ -79,7 +79,7 @@ class TimestampMixin(object):
 
 Db_TripEffect = db.Enum(*[e.name for e in TripEffect], name="trip_effect")
 Db_ModificationType = db.Enum(*[t.name for t in ModificationType], name="modification_type")
-Db_connector_type = db.Enum("cots", "gtfs-rt", name="connector_type", metadata=meta)
+Db_ConnectorType = db.Enum(*[c.value for c in ConnectorType], name="connector_type", metadata=meta)
 
 
 def get_utc_timezoned_timestamp_safe(timestamp):
@@ -312,6 +312,7 @@ class TripUpdate(db.Model, TimestampMixin):  # type: ignore
     message = db.Column(db.Text, nullable=True)
     contributor = db.Column(db.Text, nullable=True)
     db.Index("contributor_idx", contributor)
+    contributor_id = db.Column("contributor_id", postgresql.UUID, db.ForeignKey("contributor.id"))
     stop_time_updates = db.relationship(
         "StopTimeUpdate",
         backref="trip_update",
@@ -435,7 +436,7 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
 
     id = db.Column(postgresql.UUID, default=gen_uuid, primary_key=True)
     received_at = db.Column(db.DateTime, nullable=False)
-    connector = db.Column(Db_connector_type, nullable=False)
+    connector = db.Column(Db_ConnectorType, nullable=False)
     status = db.Column(db.Enum("OK", "KO", "pending", name="rt_status"), nullable=False)
     db.Index("status_idx", status)
     error = db.Column(db.Text, nullable=True)
@@ -511,3 +512,24 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         q = cls.query.filter_by(connector=connector, contributor=contributor)
         q = q.order_by(desc(cls.created_at))
         return q.first()
+
+
+class Contributor(db.Model):  # type: ignore
+    """
+    Contributor models a feeder for a specific coverage.
+    """
+
+    id = db.Column(postgresql.UUID, default=gen_uuid, primary_key=True)
+    name = db.Column(db.Text, nullable=False)
+    coverage = db.Column(db.Text, nullable=False)
+    token = db.Column(db.Text, nullable=True)
+    feed_url = db.Column(db.Text, nullable=True)
+    connector_type = db.Column(Db_ConnectorType, nullable=False)
+
+    def __init__(self, name, coverage, connector_type, token=None, feed_url=None):
+        self.id = gen_uuid()
+        self.name = name
+        self.coverage = coverage
+        self.connector_type = connector_type
+        self.token = token
+        self.feed_url = feed_url

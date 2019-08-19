@@ -72,6 +72,16 @@ class TripEffect(Enum):
     STOP_MOVED = 9
 
 
+class ConnectorType(Enum):
+    """
+    Represent the type of data provided by a connector.
+
+    """
+
+    cots = "cots"
+    gtfs_rt = "gtfs-rt"
+
+
 def get_higher_status(st1, st2):
     return max([st1, st2], key=get_modification_type_order)
 

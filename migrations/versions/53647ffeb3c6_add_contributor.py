@@ -24,7 +24,11 @@ def upgrade():
         sa.Column("coverage", sa.Text(), nullable=False),
         sa.Column("token", sa.Text(), nullable=True),
         sa.Column("feed_url", sa.Text(), nullable=True),
-        sa.Column("connector_type", model.Db_connector_type, nullable=False),
+        sa.Column(
+            "connector_type",
+            sa.Enum("cots", "gtfs-rt", name="connector_type", metadata=model.meta),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
 

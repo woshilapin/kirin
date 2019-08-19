@@ -32,7 +32,8 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 from pytz import utc
 
-from kirin.core.model import VehicleJourney, TripUpdate, StopTimeUpdate, RealTimeUpdate
+from kirin.core.model import VehicleJourney, TripUpdate, StopTimeUpdate, RealTimeUpdate, Contributor
+from kirin.core.types import ConnectorType
 from kirin import db, app
 import datetime
 import pytest
@@ -429,3 +430,19 @@ def test_update_stoptime():
 
         st.update_departure(time=None, status=None, delay=datetime.timedelta(minutes=0))
         assert st.departure_delay == datetime.timedelta(minutes=0)
+
+
+def test_contributor_creation():
+    with app.app_context():
+        cots = Contributor("george", "idf", ConnectorType.cots.value)
+        gtfs_rt = Contributor("gerard", "idf", ConnectorType.gtfs_rt.value)
+
+        db.session.add(cots)
+        db.session.add(gtfs_rt)
+        db.session.commit()
+
+        assert cots.id is not None
+        assert cots != gtfs_rt.id
+        assert cots.name == "george"
+        assert cots.coverage == "idf"
+        assert cots.connector_type == ConnectorType.cots.value
