@@ -28,7 +28,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, print_function, unicode_literals, division
 import logging
 from datetime import timedelta
 
@@ -75,17 +75,17 @@ def headsigns(str_headsign):
     The parity is the number after the '/', it gives an alternative train number.
 
     >>> headsigns('2038')
-    ['2038']
+    [u'2038']
     >>> headsigns('002038')
-    ['2038']
+    [u'2038']
     >>> headsigns('002038/12')
-    ['2038', '2012']
+    [u'2038', u'2012']
     >>> headsigns('2038/3')
-    ['2038', '2033']
+    [u'2038', u'2033']
     >>> headsigns('2038/123')
-    ['2038', '2123']
+    [u'2038', u'2123']
     >>> headsigns('2038/12345')
-    ['2038', '12345']
+    [u'2038', u'12345']
 
     """
     h = str_headsign.lstrip("0")

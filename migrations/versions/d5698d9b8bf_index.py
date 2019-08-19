@@ -5,13 +5,13 @@ Revises: 57117f136777
 Create Date: 2015-10-07 11:14:28.537210
 
 """
+from __future__ import absolute_import, print_function, unicode_literals, division
 
 # revision identifiers, used by Alembic.
 revision = "d5698d9b8bf"
 down_revision = "57117f136777"
 
 from alembic import op
-import sqlalchemy as sa
 
 
 def upgrade():

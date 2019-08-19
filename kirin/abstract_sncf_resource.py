@@ -26,6 +26,9 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from __future__ import absolute_import, print_function, unicode_literals, division
+
+import six
 from flask_restful import Resource
 
 import logging
@@ -60,14 +63,14 @@ class AbstractSNCFResource(Resource):
             rt_update.error = e.data["error"]
             model.db.session.add(rt_update)
             model.db.session.commit()
-            record_call("failure", reason=str(e), contributor=self.contributor)
+            record_call("failure", reason=six.text_type(e), contributor=self.contributor)
             raise
         except Exception as e:
             rt_update.status = "KO"
             rt_update.error = e.message
             model.db.session.add(rt_update)
             model.db.session.commit()
-            record_call("failure", reason=str(e), contributor=self.contributor)
+            record_call("failure", reason=six.text_type(e), contributor=self.contributor)
             raise
 
         _, log_dict = core.handle(rt_update, trip_updates, self.contributor, is_new_complete=is_new_complete)

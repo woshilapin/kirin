@@ -29,4 +29,5 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
-from model_maker import KirinModelBuilder
+from __future__ import absolute_import, print_function, unicode_literals, division
+from kirin.cots.model_maker import KirinModelBuilder

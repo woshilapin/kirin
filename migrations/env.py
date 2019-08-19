@@ -1,4 +1,4 @@
-from __future__ import with_statement
+from __future__ import with_statement, absolute_import, print_function, unicode_literals, division
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 from logging.config import fileConfig
@@ -20,7 +20,7 @@ target_metadata = model.meta
 # target_metadata = mymodel.Base.metadata
 from flask import current_app
 
-config.set_main_option("sqlalchemy.url", current_app.config.get("SQLALCHEMY_DATABASE_URI"))
+config.set_main_option("sqlalchemy.url", current_app.config.get(str("SQLALCHEMY_DATABASE_URI")))
 target_metadata = current_app.extensions["migrate"].db.metadata
 
 # other values from the config, defined by the needs of env.py,

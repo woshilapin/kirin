@@ -28,6 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from __future__ import absolute_import, print_function, unicode_literals, division
 from datetime import timedelta
 from pytz import utc
 from sqlalchemy.dialects import postgresql
@@ -470,7 +471,7 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         from kirin import app
 
         result = {"last_update": {}, "last_valid_update": {}, "last_update_error": {}}
-        contributor = [app.config["COTS_CONTRIBUTOR"], app.config["GTFS_RT_CONTRIBUTOR"]]
+        contributor = [app.config[str("COTS_CONTRIBUTOR")], app.config[str("GTFS_RT_CONTRIBUTOR")]]
         for c in contributor:
             sql = db.session.query(cls.created_at, cls.status, cls.updated_at, cls.error)
             sql = sql.filter(cls.contributor == c)

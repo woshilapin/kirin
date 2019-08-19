@@ -29,6 +29,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
+from __future__ import absolute_import, print_function, unicode_literals, division
 from flask_restful import Resource, url_for
 import kirin
 from kirin.version import version
@@ -51,6 +52,6 @@ class Status(Resource):
         res["version"] = version
         res["db_pool_status"] = kirin.db.engine.pool.status()
         res["db_version"] = kirin.db.engine.scalar("select version_num from alembic_version;")
-        res["navitia_url"] = current_app.config["NAVITIA_URL"]
+        res["navitia_url"] = current_app.config[str("NAVITIA_URL")]
         res["rabbitmq_info"] = kirin.rabbitmq_handler.info()
         return res, 200

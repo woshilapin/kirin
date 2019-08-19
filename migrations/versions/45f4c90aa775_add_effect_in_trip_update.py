@@ -5,6 +5,7 @@ Revises: 4d9df787c7a7
 Create Date: 2018-11-23 09:55:16.326118
 
 """
+from __future__ import absolute_import, print_function, unicode_literals, division
 
 # revision identifiers, used by Alembic.
 revision = "45f4c90aa775"
@@ -12,7 +13,6 @@ down_revision = "4d9df787c7a7"
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 trip_effect = sa.Enum(
     "NO_SERVICE",

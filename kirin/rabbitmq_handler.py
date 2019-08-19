@@ -28,17 +28,20 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+
+from __future__ import absolute_import, print_function, unicode_literals, division
+
+import six
 from kombu import BrokerConnection, Exchange, Queue, Producer
 import logging
 from amqp.exceptions import ConnectionForced
 import gevent
 from retrying import retry
-from kirin import task_pb2
+from kirin import task_pb2, gtfs_realtime_pb2
 from google.protobuf.message import DecodeError
 import socket
 from kirin.core.model import TripUpdate, db
 from kirin.core.populate_pb import convert_to_gtfsrt
-import gtfs_realtime_pb2
 from kirin.utils import str_to_date, record_call
 from datetime import datetime
 from kombu.mixins import ConsumerProducerMixin
@@ -77,7 +80,7 @@ class RTReloader(ConsumerProducerMixin):
                 body = str(message.payload)
                 task.ParseFromString(body)
             except DecodeError as e:
-                log.warn("invalid protobuf: {}".format(str(e)))
+                log.warn("invalid protobuf: {}".format(six.text_type(e)))
                 return
 
             log.info("Getting a full feed publication request", extra={"task": task})

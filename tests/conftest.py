@@ -28,6 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from __future__ import absolute_import, print_function, unicode_literals, division
 from contextlib import closing
 
 from kirin import app, db
@@ -55,5 +56,5 @@ def init_flask_db(docker):
     )
 
     # re-init the db by overriding the db_url
-    app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+    app.config[str("SQLALCHEMY_DATABASE_URI")] = db_url
     db.init_app(app)

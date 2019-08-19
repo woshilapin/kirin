@@ -28,8 +28,8 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-import logging
 
+from __future__ import absolute_import, print_function, unicode_literals, division
 import flask
 from flask.globals import current_app
 from flask_restful import Resource
@@ -49,12 +49,12 @@ def _get_gtfs_rt(req):
 
 class GtfsRT(Resource):
     def __init__(self):
-        url = current_app.config["NAVITIA_URL"]
-        token = current_app.config.get("NAVITIA_GTFS_RT_TOKEN")
-        timeout = current_app.config.get("NAVITIA_TIMEOUT", 5)
-        instance = current_app.config["NAVITIA_GTFS_RT_INSTANCE"]
-        query_timeout = current_app.config.get("NAVITIA_QUERY_CACHE_TIMEOUT", 600)
-        pubdate_timeout = current_app.config.get("NAVITIA_PUBDATE_CACHE_TIMEOUT", 600)
+        url = current_app.config[str("NAVITIA_URL")]
+        token = current_app.config.get(str("NAVITIA_GTFS_RT_TOKEN"))
+        timeout = current_app.config.get(str("NAVITIA_TIMEOUT"), 5)
+        instance = current_app.config[str("NAVITIA_GTFS_RT_INSTANCE")]
+        query_timeout = current_app.config.get(str("NAVITIA_QUERY_CACHE_TIMEOUT"), 600)
+        pubdate_timeout = current_app.config.get(str("NAVITIA_PUBDATE_CACHE_TIMEOUT"), 600)
         self.navitia_wrapper = navitia_wrapper.Navitia(
             url=url,
             token=token,
@@ -63,7 +63,7 @@ class GtfsRT(Resource):
             query_timeout=query_timeout,
             pubdate_timeout=pubdate_timeout,
         ).instance(instance)
-        self.contributor = current_app.config["GTFS_RT_CONTRIBUTOR"]
+        self.contributor = current_app.config[str("GTFS_RT_CONTRIBUTOR")]
 
     def post(self):
         raw_proto = _get_gtfs_rt(flask.globals.request)

@@ -28,6 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from __future__ import absolute_import, print_function, unicode_literals, division
 from copy import deepcopy
 from datetime import timedelta
 import datetime
@@ -37,7 +38,6 @@ from kirin.core.model import RealTimeUpdate, db, TripUpdate, StopTimeUpdate, Veh
 from kirin.core.populate_pb import to_posix_time, convert_to_gtfsrt
 from kirin import gtfs_rt
 from kirin.core.types import TripEffect
-from kirin.tasks import purge_trip_update, purge_rt_update
 from tests import mock_navitia
 from tests.check_utils import dumb_nav_wrapper, api_post
 from kirin import gtfs_realtime_pb2, app
@@ -192,7 +192,7 @@ def test_gtfs_model_builder(basic_gtfs_rt_data, basic_gtfs_rt_data_without_delay
         assert fourth_stop.message is None
 
         feed = convert_to_gtfsrt(trip_updates)
-        assert feed.entity[0].trip_update.trip.start_date == u"20120615"  # must be UTC start date
+        assert feed.entity[0].trip_update.trip.start_date == "20120615"  # must be UTC start date
 
         # if there is no delay field (delay is optional in StopTimeEvent), effect = 'UNKNOWN_EFFECT'
         rt_update = RealTimeUpdate(data, connector="gtfs-rt", contributor="realtime.gtfs")
@@ -290,7 +290,7 @@ def test_gtfs_rt_purge(basic_gtfs_rt_data, mock_rabbitmq):
         assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 1
 
         # VehicleJourney affected is old, so it's affected by TripUpdate purge (based on base-VJ's date)
-        contrib = app.config.get("GTFS_RT_CONTRIBUTOR")
+        contrib = app.config.get(str("GTFS_RT_CONTRIBUTOR"))
         until = datetime.date(2012, 12, 31)
         TripUpdate.remove_by_contributors_and_period(contributors=[contrib], start_date=None, end_date=until)
 
@@ -419,7 +419,7 @@ def test_gtfs_pass_midnight_model_builder(pass_midnight_gtfs_rt_data):
         assert fourth_stop.message is None
 
         feed = convert_to_gtfsrt(trip_updates)
-        assert feed.entity[0].trip_update.trip.start_date == u"20120616"  # must be UTC start date
+        assert feed.entity[0].trip_update.trip.start_date == "20120616"  # must be UTC start date
 
 
 def test_gtfs_rt_pass_midnight(pass_midnight_gtfs_rt_data, mock_rabbitmq):
@@ -572,7 +572,7 @@ def test_gtfs_pass_midnight_utc_model_builder(pass_midnight_utc_gtfs_rt_data):
         assert fourth_stop.message is None
 
         feed = convert_to_gtfsrt(trip_updates)
-        assert feed.entity[0].trip_update.trip.start_date == u"20120615"  # must be UTC start date
+        assert feed.entity[0].trip_update.trip.start_date == "20120615"  # must be UTC start date
 
 
 def test_gtfs_rt_pass_midnight_utc(pass_midnight_utc_gtfs_rt_data, mock_rabbitmq):
@@ -1113,7 +1113,7 @@ def test_gtfs_lollipop_model_builder(lollipop_gtfs_rt_data):
         assert fifth_stop.message is None
 
         feed = convert_to_gtfsrt(trip_updates)
-        assert feed.entity[0].trip_update.trip.start_date == u"20120615"
+        assert feed.entity[0].trip_update.trip.start_date == "20120615"
 
 
 """
@@ -1421,7 +1421,7 @@ def test_gtfs_lollipop_for_second_passage_model_builder(lollipop_gtfs_rt_from_se
         assert fifth_stop.message is None
 
         feed = convert_to_gtfsrt(trip_updates)
-        assert feed.entity[0].trip_update.trip.start_date == u"20120615"
+        assert feed.entity[0].trip_update.trip.start_date == "20120615"
 
 
 def test_gtfs_lollipop_with_second_passage_model_builder_with_post(lollipop_gtfs_rt_from_second_passage_data):
@@ -1747,7 +1747,7 @@ def test_gtfs_start_midnight_utc_model_builder_with_post(gtfs_rt_data_with_vj_st
 
 def test_gtfs_rt_api_with_decode_error(basic_gtfs_rt_data):
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=basic_gtfs_rt_data.SerializeToString() + ">toto")
+    resp = tester.post("/gtfs_rt", data=basic_gtfs_rt_data.SerializeToString() + str(">toto"))
     assert resp.status_code == 400
 
     def check(nb_rt_update):
@@ -1909,4 +1909,4 @@ def test_gtfs_pass_midnight_negative_delay_utc_model_builder(pass_midnight_negat
         assert fourth_stop.message is None
 
         feed = convert_to_gtfsrt(trip_updates)
-        assert feed.entity[0].trip_update.trip.start_date == u"20120615"  # must be UTC start date
+        assert feed.entity[0].trip_update.trip.start_date == "20120615"  # must be UTC start date

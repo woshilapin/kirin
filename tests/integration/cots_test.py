@@ -28,6 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from __future__ import absolute_import, print_function, unicode_literals, division
 from datetime import datetime
 from pytz import utc
 
@@ -576,7 +577,7 @@ def test_wrong_planned_stop_time_reference_post():
     assert status == 400
     assert res.get("message") == "Invalid arguments"
     assert "error" in res
-    assert u'invalid json, impossible to find source "ESCALE" in any json dict of list:' in res.get("error")
+    assert 'invalid json, impossible to find source "ESCALE" in any json dict of list:' in res.get("error")
 
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) == 1
@@ -1372,7 +1373,7 @@ def test_cots_add_trip_existing_in_navitia():
     assert status == 400
     assert res.get("message") == "Invalid arguments"
     assert "error" in res
-    assert u"Invalid action, trip 6113 already present in navitia" in res.get("error")
+    assert "Invalid action, trip 6113 already present in navitia" in res.get("error")
 
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) == 1

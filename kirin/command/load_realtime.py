@@ -29,6 +29,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
+from __future__ import absolute_import, print_function, unicode_literals, division
 from kirin import manager
 import kirin
 
@@ -39,5 +40,5 @@ def load_realtime():
     Launch the server that serve realtime updates to starting kraken
     """
     kirin.rabbitmq_handler.listen_load_realtime(
-        kirin.app.config["LOAD_REALTIME_QUEUE"], kirin.app.config["MAX_RETRIES"]
+        kirin.app.config[str("LOAD_REALTIME_QUEUE")], kirin.app.config[str("MAX_RETRIES")]
     )

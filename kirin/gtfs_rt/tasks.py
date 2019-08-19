@@ -29,8 +29,11 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
+from __future__ import absolute_import, print_function, unicode_literals, division
 import logging
 import requests
+import six
+
 from kirin import gtfs_realtime_pb2
 
 from kirin.tasks import celery
@@ -43,8 +46,8 @@ from google.protobuf.message import DecodeError
 import navitia_wrapper
 
 
-TASK_STOP_MAX_DELAY = app.config["TASK_STOP_MAX_DELAY"]
-TASK_WAIT_FIXED = app.config["TASK_WAIT_FIXED"]
+TASK_STOP_MAX_DELAY = app.config[str("TASK_STOP_MAX_DELAY")]
+TASK_WAIT_FIXED = app.config[str("TASK_WAIT_FIXED")]
 
 
 class InvalidFeed(Exception):
@@ -72,7 +75,9 @@ def _is_newer(config):
 
     except Exception as e:
         logger.debug(
-            "exception occurred when checking the newer version of gtfs for %s: %s", contributor, str(e)
+            "exception occurred when checking the newer version of gtfs for %s: %s",
+            contributor,
+            six.text_type(e),
         )
     return True  # whatever the exception is, we don't want to break the polling
 
@@ -86,7 +91,7 @@ def gtfs_poller(self, config):
 
     contributor = config["contributor"]
     lock_name = make_kirin_lock_name(func_name, contributor)
-    with get_lock(logger, lock_name, app.config["REDIS_LOCK_TIMEOUT_POLLER"]) as locked:
+    with get_lock(logger, lock_name, app.config[str("REDIS_LOCK_TIMEOUT_POLLER")]) as locked:
         if not locked:
             new_relic.ignore_transaction()
             return
@@ -107,7 +112,7 @@ def gtfs_poller(self, config):
             manage_db_error(
                 data="", connector="gtfs-rt", contributor=contributor, status="KO", error="Http Error"
             )
-            logger.debug(str(e))
+            logger.debug(six.text_type(e))
             return
 
         nav = navitia_wrapper.Navitia(
@@ -115,8 +120,8 @@ def gtfs_poller(self, config):
             token=config["token"],
             timeout=5,
             cache=redis,
-            query_timeout=app.config.get("NAVITIA_QUERY_CACHE_TIMEOUT", 600),
-            pubdate_timeout=app.config.get("NAVITIA_PUBDATE_CACHE_TIMEOUT", 600),
+            query_timeout=app.config.get(str("NAVITIA_QUERY_CACHE_TIMEOUT"), 600),
+            pubdate_timeout=app.config.get(str("NAVITIA_PUBDATE_CACHE_TIMEOUT"), 600),
         ).instance(config["coverage"])
 
         proto = gtfs_realtime_pb2.FeedMessage()

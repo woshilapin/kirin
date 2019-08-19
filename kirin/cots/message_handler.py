@@ -27,10 +27,12 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from __future__ import absolute_import, print_function, unicode_literals, division
 import logging
 
 import pybreaker
 import requests as requests
+import six
 
 from kirin import app
 from flask.globals import current_app
@@ -71,8 +73,8 @@ class MessageHandler:
         self.grant_type = grant_type
         self.timeout = timeout
         self.breaker = pybreaker.CircuitBreaker(
-            fail_max=current_app.config["COTS_PAR_IV_CIRCUIT_BREAKER_MAX_FAIL"],
-            reset_timeout=current_app.config["COTS_PAR_IV_CIRCUIT_BREAKER_TIMEOUT_S"],
+            fail_max=current_app.config[str("COTS_PAR_IV_CIRCUIT_BREAKER_MAX_FAIL")],
+            reset_timeout=current_app.config[str("COTS_PAR_IV_CIRCUIT_BREAKER_TIMEOUT_S")],
         )
 
     def __repr__(self):
@@ -110,13 +112,13 @@ class MessageHandler:
             raise  # Do not change exceptions that were just raised
         except Exception as e:
             logging.getLogger(__name__).exception(
-                "COTS cause message sub-service handling " "error : {}".format(str(e))
+                "COTS cause message sub-service handling error : {}".format(six.text_type(e))
             )
-            raise SubServiceError(str(e))
+            raise SubServiceError(six.text_type(e))
 
-    @app.cache.memoize(timeout=app.config.get("COTS_PAR_IV_TIMEOUT_TOKEN", 60 * 60))
+    @app.cache.memoize(timeout=app.config.get(str("COTS_PAR_IV_TIMEOUT_TOKEN"), 60 * 60))
     def _get_access_token(self):
-        headers = {"X-API-Key": str(self.api_key)}
+        headers = {"X-API-Key": self.api_key}
         data = {"client_id": self.client_id, "client_secret": self.client_secret, "grant_type": self.grant_type}
 
         response = self._service_caller(method=requests.post, url=self.token_server, headers=headers, data=data)
@@ -143,7 +145,7 @@ class MessageHandler:
                 messages[m["id"]] = m["labelExt"]
         return messages
 
-    @app.cache.memoize(timeout=app.config.get("COTS_PAR_IV_CACHE_TIMEOUT", 60 * 60))
+    @app.cache.memoize(timeout=app.config.get(str("COTS_PAR_IV_CACHE_TIMEOUT"), 60 * 60))
     def _call_webservice_safer(self):
         try:
             return self._call_webservice()
@@ -158,6 +160,6 @@ class MessageHandler:
                 return self._call_webservice_safer().get(index)
             except Exception as e:
                 logging.getLogger(__name__).exception(
-                    "COTS cause message sub-service handling " "error : {}".format(str(e))
+                    "COTS cause message sub-service handling error : {}".format(six.text_type(e))
                 )
                 return None

@@ -28,9 +28,11 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from __future__ import absolute_import, print_function, unicode_literals, division
 import datetime
 import logging
 
+import six
 from pytz import utc
 from kirin import core
 from kirin.core import model
@@ -44,7 +46,7 @@ import calendar
 
 
 def handle(proto, navitia_wrapper, contributor):
-    data = str(proto)  # temp, for the moment, we save the protobuf as text
+    data = six.binary_type(proto)  # temp, for the moment, we save the protobuf as text
     rt_update = make_rt_update(data, "gtfs-rt", contributor=contributor)
     start_datetime = datetime.datetime.utcnow()
     try:
@@ -55,14 +57,14 @@ def handle(proto, navitia_wrapper, contributor):
         rt_update.error = e.data["error"]
         model.db.session.add(rt_update)
         model.db.session.commit()
-        record_call("failure", reason=str(e), contributor=contributor)
+        record_call("failure", reason=six.text_type(e), contributor=contributor)
         raise
     except Exception as e:
         rt_update.status = "KO"
         rt_update.error = e.message
         model.db.session.add(rt_update)
         model.db.session.commit()
-        record_call("failure", reason=str(e), contributor=contributor)
+        record_call("failure", reason=six.text_type(e), contributor=contributor)
         raise
 
     real_time_update, log_dict = core.handle(rt_update, trip_updates, contributor)

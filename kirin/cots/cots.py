@@ -29,6 +29,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
+from __future__ import absolute_import, print_function, unicode_literals, division
 import flask
 from flask.globals import current_app
 
@@ -51,8 +52,8 @@ class Cots(AbstractSNCFResource):
     def __init__(self):
         super(Cots, self).__init__(
             make_navitia_wrapper(),
-            current_app.config.get("NAVITIA_TIMEOUT", 5),
-            current_app.config["COTS_CONTRIBUTOR"],
+            current_app.config.get(str("NAVITIA_TIMEOUT"), 5),
+            current_app.config[str("COTS_CONTRIBUTOR")],
             KirinModelBuilder,
         )
 

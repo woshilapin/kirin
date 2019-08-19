@@ -27,8 +27,10 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+from __future__ import absolute_import, print_function, unicode_literals, division
 from datetime import timedelta
 import pytest
+import six
 
 from kirin import db, app
 from kirin.core import model, handle
@@ -172,7 +174,7 @@ def test_get_action_on_trip_add(mock_navitia_fixture):
         assert action_on_trip == ActionOnTrip.PREVIOUSLY_ADDED.name
 
         # Clean database for further test
-        tables = [str(table) for table in db.metadata.sorted_tables]
+        tables = [six.text_type(table) for table in db.metadata.sorted_tables]
         db.session.execute("TRUNCATE {} CASCADE;".format(", ".join(tables)))
         db.session.commit()
 
