@@ -37,6 +37,7 @@ from kirin.core.types import ConnectorType
 from kirin import db, app
 import datetime
 import pytest
+import sqlalchemy
 
 
 def create_trip_update(vj_id, trip_id, circulation_date):
@@ -443,4 +444,11 @@ def test_contributor_creation():
         assert contrib.coverage == "idf"
         assert contrib.connector_type == ConnectorType.cots.value
 
-        Contributor("realtime.george", "another-coverage", ConnectorType.cots.value)
+        contrib_with_same_id = Contributor("realtime.george", "another-coverage", ConnectorType.cots.value)
+
+        with pytest.raises(sqlalchemy.orm.exc.FlushError):
+            """
+            Adding a second contributor with the same id should fail
+            """
+            db.session.add(contrib_with_same_id)
+            db.session.commit()
