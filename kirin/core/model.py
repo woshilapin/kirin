@@ -517,18 +517,17 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
 class Contributor(db.Model):  # type: ignore
     """
     Contributor models a feeder for a specific coverage.
+    It's ID refers to its Kraken's name (eg. 'realtime.bla')
     """
 
-    id = db.Column(postgresql.UUID, default=gen_uuid, primary_key=True)
-    name = db.Column(db.Text, nullable=False)
+    id = db.Column(db.Text, nullable=False, primary_key=True)
     coverage = db.Column(db.Text, nullable=False)
     token = db.Column(db.Text, nullable=True)
     feed_url = db.Column(db.Text, nullable=True)
     connector_type = db.Column(Db_ConnectorType, nullable=False)
 
-    def __init__(self, name, coverage, connector_type, token=None, feed_url=None):
-        self.id = gen_uuid()
-        self.name = name
+    def __init__(self, id, coverage, connector_type, token=None, feed_url=None):
+        self.id = id
         self.coverage = coverage
         self.connector_type = connector_type
         self.token = token

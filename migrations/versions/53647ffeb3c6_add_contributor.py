@@ -19,8 +19,7 @@ from kirin.core import model
 def upgrade():
     op.create_table(
         "contributor",
-        sa.Column("id", postgresql.UUID(), nullable=False),
-        sa.Column("name", sa.Text(), nullable=False),
+        sa.Column("id", sa.Text(), nullable=False),
         sa.Column("coverage", sa.Text(), nullable=False),
         sa.Column("token", sa.Text(), nullable=True),
         sa.Column("feed_url", sa.Text(), nullable=True),
@@ -34,12 +33,11 @@ def upgrade():
 
     op.add_column(
         "real_time_update",
-        sa.Column("contributor_id", postgresql.UUID(), sa.ForeignKey("contributor.id"), nullable=True),
+        sa.Column("contributor_id", sa.Text(), sa.ForeignKey("contributor.id"), nullable=True),
     )
 
     op.add_column(
-        "trip_update",
-        sa.Column("contributor_id", postgresql.UUID(), sa.ForeignKey("contributor.id"), nullable=True),
+        "trip_update", sa.Column("contributor_id", sa.Text(), sa.ForeignKey("contributor.id"), nullable=True)
     )
 
 

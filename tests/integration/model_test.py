@@ -434,15 +434,13 @@ def test_update_stoptime():
 
 def test_contributor_creation():
     with app.app_context():
-        cots = Contributor("george", "idf", ConnectorType.cots.value)
-        gtfs_rt = Contributor("gerard", "idf", ConnectorType.gtfs_rt.value)
+        contrib = Contributor("realtime.george", "idf", ConnectorType.cots.value)
 
-        db.session.add(cots)
-        db.session.add(gtfs_rt)
+        db.session.add(contrib)
         db.session.commit()
 
-        assert cots.id is not None
-        assert cots != gtfs_rt.id
-        assert cots.name == "george"
-        assert cots.coverage == "idf"
-        assert cots.connector_type == ConnectorType.cots.value
+        assert contrib.id == "realtime.george"
+        assert contrib.coverage == "idf"
+        assert contrib.connector_type == ConnectorType.cots.value
+
+        Contributor("realtime.george", "another-coverage", ConnectorType.cots.value)
