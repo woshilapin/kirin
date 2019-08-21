@@ -31,17 +31,6 @@ def upgrade():
         sa.PrimaryKeyConstraint("id"),
     )
 
-    op.add_column(
-        "real_time_update",
-        sa.Column("contributor_id", sa.Text(), sa.ForeignKey("contributor.id"), nullable=True),
-    )
-
-    op.add_column(
-        "trip_update", sa.Column("contributor_id", sa.Text(), sa.ForeignKey("contributor.id"), nullable=True)
-    )
-
 
 def downgrade():
-    op.drop_column("real_time_update", "contributor_id")
-    op.drop_column("trip_update", "contributor_id")
     op.drop_table("contributor")

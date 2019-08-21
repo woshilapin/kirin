@@ -312,7 +312,6 @@ class TripUpdate(db.Model, TimestampMixin):  # type: ignore
     message = db.Column(db.Text, nullable=True)
     contributor = db.Column(db.Text, nullable=True)
     db.Index("contributor_idx", contributor)
-    contributor_id = db.Column("contributor_id", postgresql.UUID, db.ForeignKey("contributor.id"))
     stop_time_updates = db.relationship(
         "StopTimeUpdate",
         backref="trip_update",
