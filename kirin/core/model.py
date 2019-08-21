@@ -516,7 +516,7 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
 class Contributor(db.Model):  # type: ignore
     """
     Contributor models a feeder for a specific coverage.
-    It's ID refers to its Kraken's name (eg. 'realtime.bla')
+    Its ID refers to its Kraken's name (eg. 'realtime.bla')
     """
 
     id = db.Column(db.Text, nullable=False, primary_key=True)
