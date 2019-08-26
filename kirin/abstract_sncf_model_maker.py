@@ -35,7 +35,7 @@ from datetime import timedelta
 import jmespath
 
 from kirin.utils import record_internal_failure, to_navitia_utc_str
-from kirin.exceptions import ObjectNotFound, InvalidArguments
+from kirin.exceptions import ObjectNotFound, InvalidArguments, InternalException
 from abc import ABCMeta
 import six
 from kirin.core import model
@@ -132,8 +132,8 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
         if (naive_utc_since_dt is None) or (naive_utc_until_dt is None):
             return []
 
-        assert naive_utc_since_dt.tzinfo is None
-        assert naive_utc_until_dt.tzinfo is None
+        if naive_utc_since_dt.tzinfo is not None or naive_utc_until_dt.tzinfo is not None:
+            raise InternalException("Invalid datetime provided: must be naive (and UTC)")
 
         vjs = {}
         # to get the date of the vj we use the start/end of the vj + some tolerance

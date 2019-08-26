@@ -36,7 +36,7 @@ import six
 from kirin import core
 from kirin.core import model
 from kirin.core.types import ModificationType, get_higher_status, get_effect_by_stop_time_status
-from kirin.exceptions import KirinException
+from kirin.exceptions import KirinException, InternalException
 from kirin.utils import make_rt_update, floor_datetime, to_navitia_utc_str
 from kirin.utils import record_internal_failure, record_call
 from kirin import app
@@ -199,8 +199,8 @@ class KirinModelBuilder(object):
         :param naive_utc_until_dt: naive UTC datetime that ends the search period.
             Typically the supposed datetime of last base-schedule stop_time.
         """
-        assert naive_utc_since_dt.tzinfo is None
-        assert naive_utc_until_dt.tzinfo is None
+        if naive_utc_since_dt.tzinfo is not None or naive_utc_until_dt.tzinfo is not None:
+            raise InternalException("Invalid datetime provided: must be naive (and UTC)")
         navitia_vjs = self.navitia.vehicle_journeys(
             q={
                 "filter": "vehicle_journey.has_code({}, {})".format(self.stop_code_key, vj_source_code),

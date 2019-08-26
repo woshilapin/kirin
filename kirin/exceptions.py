@@ -58,6 +58,11 @@ class MessageNotPublished(KirinException):
     message = "impossible to publish message on network"
 
 
+class InternalException(KirinException):
+    code = 500
+    message = "an internal error occurred"
+
+
 class SubServiceError(KirinException):
     code = 404
     message = "object not found (error on sub-service)"

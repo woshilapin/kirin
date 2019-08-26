@@ -42,6 +42,7 @@ from kirin import new_relic
 from redis.exceptions import ConnectionError
 from contextlib import contextmanager
 from kirin.core import model
+from kirin.exceptions import InternalException
 
 
 def floor_datetime(datetime):
@@ -89,7 +90,8 @@ def to_navitia_utc_str(naive_utc_dt):
     format a naive UTC datetime to a navitia-readable UTC-aware str
     (to avoid managing coverage's timezone)
     """
-    assert naive_utc_dt.tzinfo is None
+    if naive_utc_dt.tzinfo is not None:
+        raise InternalException("Invalid datetime provided: must be naive (and UTC)")
     return utc.localize(naive_utc_dt).strftime("%Y%m%dT%H%M%S%z")
 
 
