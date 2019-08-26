@@ -45,7 +45,7 @@ class KirinException(HTTPException):
 
 class InvalidArguments(KirinException):
     code = 400
-    message = "Invalid arguments"
+    message = "invalid arguments"
 
 
 class ObjectNotFound(KirinException):
