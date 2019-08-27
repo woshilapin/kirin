@@ -120,11 +120,41 @@ def test_post_new_partial_contributor(test_client):
     assert contrib.id == "realtime.tokyo"
     assert contrib.coverage == "jp"
     assert contrib.connector_type == "gtfs-rt"
-    assert contrib.token == "blablablabla"
-    assert contrib.feed_url == "http://nihongo.jp"
+    assert contrib.navitia_token == None
+    assert contrib.feed_url == None
 
 
 def test_post_contributor_with_wrong_connector_type(test_client):
     new_contrib = {"id": "realtime.tokyo", "coverage": "jp", "connector_type": "THIS-TYPE-DOES-NOT-EXIST"}
     resp = test_client.post("/contributors", json=new_contrib)
     assert resp.status_code == 400
+
+
+def test_post_2_contributors_with_same_id_should_fail(test_client):
+    resp = test_client.post(
+        "/contributors", json={"id": "realtime.test", "navitia_coverage": "jp", "connector_type": "gtfs-rt"}
+    )
+    resp = test_client.post(
+        "/contributors", json={"id": "realtime.test", "navitia_coverage": "fr", "connector_type": "cots"}
+    )
+    assert resp.status_code == 400
+
+
+def test_post_contributor_with_wrong_connector_type_should_fail(test_client):
+    resp = test_client.post("/contributors", json={
+        "id": "realtime.tokyo",
+        "navitia_coverage": "jp",
+        "connector_type": "THIS-TYPE-DOES-NOT-EXIST",
+    })
+    assert resp.status_code == 400
+
+
+def test_post_new_valid_contributor_with_unknown_parameter_should_work(test_client):
+    resp = test_client.post("/contributors", json={
+        "UNKNOWN_PARAM": "gibberish",
+        "id": "realtime.tokyo",
+        "navitia_coverage": "jp",
+        "connector_type": "gtfs-rt",
+    })
+    assert resp.status_code == 201
+
