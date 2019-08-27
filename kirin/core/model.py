@@ -520,14 +520,14 @@ class Contributor(db.Model):  # type: ignore
     """
 
     id = db.Column(db.Text, nullable=False, primary_key=True)
-    coverage = db.Column(db.Text, nullable=False)
-    token = db.Column(db.Text, nullable=True)
+    navitia_coverage = db.Column(db.Text, nullable=False)
+    navitia_token = db.Column(db.Text, nullable=True)
     feed_url = db.Column(db.Text, nullable=True)
     connector_type = db.Column(Db_ConnectorType, nullable=False)
 
-    def __init__(self, id, coverage, connector_type, token=None, feed_url=None):
+    def __init__(self, id, navitia_coverage, connector_type, navitia_token=None, feed_url=None):
         self.id = id
-        self.coverage = coverage
+        self.navitia_coverage = navitia_coverage
         self.connector_type = connector_type
-        self.token = token
+        self.navitia_token = navitia_token
         self.feed_url = feed_url

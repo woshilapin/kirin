@@ -441,7 +441,7 @@ def test_contributor_creation():
         db.session.commit()
 
         assert contrib.id == "realtime.george"
-        assert contrib.coverage == "idf"
+        assert contrib.navitia_coverage == "idf"
         assert contrib.connector_type == ConnectorType.cots.value
 
         contrib_with_same_id = Contributor("realtime.george", "another-coverage", ConnectorType.cots.value)

@@ -20,8 +20,8 @@ def upgrade():
     op.create_table(
         "contributor",
         sa.Column("id", sa.Text(), nullable=False),
-        sa.Column("coverage", sa.Text(), nullable=False),
-        sa.Column("token", sa.Text(), nullable=True),
+        sa.Column("navitia_coverage", sa.Text(), nullable=False),
+        sa.Column("navitia_token", sa.Text(), nullable=True),
         sa.Column("feed_url", sa.Text(), nullable=True),
         sa.Column(
             "connector_type",
