@@ -32,10 +32,12 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 from pytz import utc
 
-from kirin.core.model import VehicleJourney, TripUpdate, StopTimeUpdate, RealTimeUpdate
+from kirin.core.model import VehicleJourney, TripUpdate, StopTimeUpdate, RealTimeUpdate, Contributor
+from kirin.core.types import ConnectorType
 from kirin import db, app
 import datetime
 import pytest
+import sqlalchemy
 
 
 def create_trip_update(vj_id, trip_id, circulation_date):
@@ -429,3 +431,24 @@ def test_update_stoptime():
 
         st.update_departure(time=None, status=None, delay=datetime.timedelta(minutes=0))
         assert st.departure_delay == datetime.timedelta(minutes=0)
+
+
+def test_contributor_creation():
+    with app.app_context():
+        contrib = Contributor("realtime.george", "idf", ConnectorType.cots.value)
+
+        db.session.add(contrib)
+        db.session.commit()
+
+        assert contrib.id == "realtime.george"
+        assert contrib.navitia_coverage == "idf"
+        assert contrib.connector_type == ConnectorType.cots.value
+
+        contrib_with_same_id = Contributor("realtime.george", "another-coverage", ConnectorType.cots.value)
+
+        with pytest.raises(sqlalchemy.orm.exc.FlushError):
+            """
+            Adding a second contributor with the same id should fail
+            """
+            db.session.add(contrib_with_same_id)
+            db.session.commit()
