@@ -30,7 +30,8 @@
 # www.navitia.io
 
 from __future__ import absolute_import, print_function, unicode_literals, division
-from flask_restful import Resource, marshal_with_field, fields
+import flask
+from flask_restful import Resource, marshal_with_field, marshal_with, fields, abort
 from kirin.core import model
 
 contributor_fields = {
@@ -51,3 +52,20 @@ class Contributors(Resource):
             q = q.filter(model.Contributor.id == id)
 
         return q.all()
+
+    @marshal_with(contributor_fields)
+    def post(self):
+        data = flask.request.get_json()
+        try:
+
+            new_contrib = model.Contributor(
+                data["id"], data["coverage"], data["connector_type"], data["token"], data["feed_url"]
+            )
+            model.db.session.add(new_contrib)
+            model.db.session.commit()
+            return new_contrib, 201
+        except KeyError as e:
+            err_msg = "Missing attribute '{}' in input data to construct a contributor".format(e)
+            abort(400, message=err_msg)
+        except Exception as e:
+            abort(400, message="Error while creating contributor - {}".format(e))

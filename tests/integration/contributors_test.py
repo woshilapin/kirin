@@ -90,3 +90,41 @@ def test_get_contributors_with_wrong_id(test_client, with_contributors):
 
     contrib = json.loads(resp.data)
     assert len(contrib) == 0
+
+
+def test_post_new_contributor(test_client):
+    new_contrib = {
+        "id": "realtime.tokyo",
+        "coverage": "jp",
+        "token": "blablablabla",
+        "feed_url": "http://nihongo.jp",
+        "connector_type": "gtfs-rt",
+    }
+    resp = test_client.post("/contributors", json=new_contrib)
+    assert resp.status_code == 201
+
+    contrib = db.session.query(model.Contributor).filter(model.Contributor.id == "realtime.tokyo").first()
+    assert contrib.id == "realtime.tokyo"
+    assert contrib.coverage == "jp"
+    assert contrib.connector_type == "gtfs-rt"
+    assert contrib.token == "blablablabla"
+    assert contrib.feed_url == "http://nihongo.jp"
+
+
+def test_post_new_partial_contributor(test_client):
+    new_contrib = {"id": "realtime.tokyo", "coverage": "jp", "connector_type": "gtfs-rt"}
+    resp = test_client.post("/contributors", json=new_contrib)
+    assert resp.status_code == 201
+
+    contrib = db.session.query(model.Contributor).filter(model.Contributor.id == "realtime.tokyo").first()
+    assert contrib.id == "realtime.tokyo"
+    assert contrib.coverage == "jp"
+    assert contrib.connector_type == "gtfs-rt"
+    assert contrib.token == "blablablabla"
+    assert contrib.feed_url == "http://nihongo.jp"
+
+
+def test_post_contributor_with_wrong_connector_type(test_client):
+    new_contrib = {"id": "realtime.tokyo", "coverage": "jp", "connector_type": "THIS-TYPE-DOES-NOT-EXIST"}
+    resp = test_client.post("/contributors", json=new_contrib)
+    assert resp.status_code == 400
