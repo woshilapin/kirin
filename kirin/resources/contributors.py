@@ -36,8 +36,8 @@ from kirin.core import model
 
 contributor_fields = {
     "id": fields.String,
-    "coverage": fields.String,
-    "token": fields.String,
+    "navitia_coverage": fields.String,
+    "navitia_token": fields.String,
     "feed_url": fields.String,
     "connector_type": fields.String,
 }
@@ -56,10 +56,11 @@ class Contributors(Resource):
     @marshal_with(contributor_fields)
     def post(self):
         data = flask.request.get_json()
+        token = data.get("navitia_token", None)
+        feed_url = data.get("feed_url", None)
         try:
-
             new_contrib = model.Contributor(
-                data["id"], data["coverage"], data["connector_type"], data["token"], data["feed_url"]
+                data["id"], data["navitia_coverage"], data["connector_type"], token, feed_url
             )
             model.db.session.add(new_contrib)
             model.db.session.commit()

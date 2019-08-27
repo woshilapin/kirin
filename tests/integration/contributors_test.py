@@ -78,9 +78,9 @@ def test_get_contributors_with_specific_id(test_client, with_contributors):
     contrib = json.loads(resp.data)
     assert len(contrib) == 1
     assert contrib[0]["id"] == "realtime.paris"
-    assert contrib[0]["coverage"] == "idf"
+    assert contrib[0]["navitia_coverage"] == "idf"
     assert contrib[0]["connector_type"] == "gtfs-rt"
-    assert contrib[0]["token"] == "my_other_token"
+    assert contrib[0]["navitia_token"] == "my_other_token"
     assert contrib[0]["feed_url"] == "http://otherfeed.url"
 
 
@@ -95,8 +95,8 @@ def test_get_contributors_with_wrong_id(test_client, with_contributors):
 def test_post_new_contributor(test_client):
     new_contrib = {
         "id": "realtime.tokyo",
-        "coverage": "jp",
-        "token": "blablablabla",
+        "navitia_coverage": "jp",
+        "navitia_token": "blablablabla",
         "feed_url": "http://nihongo.jp",
         "connector_type": "gtfs-rt",
     }
@@ -105,20 +105,20 @@ def test_post_new_contributor(test_client):
 
     contrib = db.session.query(model.Contributor).filter(model.Contributor.id == "realtime.tokyo").first()
     assert contrib.id == "realtime.tokyo"
-    assert contrib.coverage == "jp"
+    assert contrib.navitia_coverage == "jp"
     assert contrib.connector_type == "gtfs-rt"
-    assert contrib.token == "blablablabla"
+    assert contrib.navitia_token == "blablablabla"
     assert contrib.feed_url == "http://nihongo.jp"
 
 
 def test_post_new_partial_contributor(test_client):
-    new_contrib = {"id": "realtime.tokyo", "coverage": "jp", "connector_type": "gtfs-rt"}
+    new_contrib = {"id": "realtime.tokyo", "navitia_coverage": "jp", "connector_type": "gtfs-rt"}
     resp = test_client.post("/contributors", json=new_contrib)
     assert resp.status_code == 201
 
     contrib = db.session.query(model.Contributor).filter(model.Contributor.id == "realtime.tokyo").first()
     assert contrib.id == "realtime.tokyo"
-    assert contrib.coverage == "jp"
+    assert contrib.navitia_coverage == "jp"
     assert contrib.connector_type == "gtfs-rt"
     assert contrib.navitia_token == None
     assert contrib.feed_url == None
