@@ -124,6 +124,27 @@ def test_post_new_partial_contributor(test_client):
     assert contrib.feed_url == None
 
 
+def test_post_with_id_in_the_resource_path(test_client):
+    resp = test_client.post(
+        "/contributors/realtime.test", json={"navitia_coverage": "jp", "connector_type": "gtfs-rt"}
+    )
+    assert resp.status_code == 201
+
+    contrib = db.session.query(model.Contributor).filter(model.Contributor.id == "realtime.test").first()
+    assert contrib.id == "realtime.test"
+
+
+def test_post_with_id_in_the_resource_path_and_data(test_client):
+    resp = test_client.post(
+        "/contributors/the_real_id",
+        json={"id": "overridden_id", "navitia_coverage": "jp", "connector_type": "gtfs-rt"},
+    )
+    assert resp.status_code == 201
+
+    assert 1 == db.session.query(model.Contributor).filter(model.Contributor.id == "the_real_id").count()
+    assert 0 == db.session.query(model.Contributor).filter(model.Contributor.id == "overridden_id").count()
+
+
 def test_post_contributor_with_wrong_connector_type(test_client):
     new_contrib = {"id": "realtime.tokyo", "coverage": "jp", "connector_type": "THIS-TYPE-DOES-NOT-EXIST"}
     resp = test_client.post("/contributors", json=new_contrib)
@@ -141,20 +162,21 @@ def test_post_2_contributors_with_same_id_should_fail(test_client):
 
 
 def test_post_contributor_with_wrong_connector_type_should_fail(test_client):
-    resp = test_client.post("/contributors", json={
-        "id": "realtime.tokyo",
-        "navitia_coverage": "jp",
-        "connector_type": "THIS-TYPE-DOES-NOT-EXIST",
-    })
+    resp = test_client.post(
+        "/contributors",
+        json={"id": "realtime.tokyo", "navitia_coverage": "jp", "connector_type": "THIS-TYPE-DOES-NOT-EXIST"},
+    )
     assert resp.status_code == 400
 
 
 def test_post_new_valid_contributor_with_unknown_parameter_should_work(test_client):
-    resp = test_client.post("/contributors", json={
-        "UNKNOWN_PARAM": "gibberish",
-        "id": "realtime.tokyo",
-        "navitia_coverage": "jp",
-        "connector_type": "gtfs-rt",
-    })
+    resp = test_client.post(
+        "/contributors",
+        json={
+            "UNKNOWN_PARAM": "gibberish",
+            "id": "realtime.tokyo",
+            "navitia_coverage": "jp",
+            "connector_type": "gtfs-rt",
+        },
+    )
     assert resp.status_code == 201
-

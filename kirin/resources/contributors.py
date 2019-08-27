@@ -54,13 +54,16 @@ class Contributors(Resource):
         return q.all()
 
     @marshal_with(contributor_fields)
-    def post(self):
+    def post(self, id=None):
         data = flask.request.get_json()
+
+        id = id or data["id"]
         token = data.get("navitia_token", None)
         feed_url = data.get("feed_url", None)
+
         try:
             new_contrib = model.Contributor(
-                data["id"], data["navitia_coverage"], data["connector_type"], token, feed_url
+                id, data["navitia_coverage"], data["connector_type"], token, feed_url
             )
             model.db.session.add(new_contrib)
             model.db.session.commit()
