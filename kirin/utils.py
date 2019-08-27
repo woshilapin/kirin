@@ -88,7 +88,8 @@ def make_navitia_wrapper():
 def to_navitia_utc_str(naive_utc_dt):
     """
     format a naive UTC datetime to a navitia-readable UTC-aware str
-    (to avoid managing coverage's timezone)
+    (to avoid managing coverage's timezone,
+    as Navitia considers datetime without timezone as local to the coverage)
     """
     if naive_utc_dt.tzinfo is not None:
         raise InternalException("Invalid datetime provided: must be naive (and UTC)")
