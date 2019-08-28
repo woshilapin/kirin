@@ -30,10 +30,11 @@
 # www.navitia.io
 from __future__ import absolute_import, print_function, unicode_literals, division
 
-from kirin import app, db
+from kirin import app, db, resources
 from kirin.core import model
 from flask import json
 import pytest
+import jsonschema
 
 
 @pytest.yield_fixture
@@ -92,6 +93,10 @@ def test_get_contributors_with_wrong_id(test_client, with_contributors):
     assert len(contrib) == 0
 
 
+def test_post_schema_distributor_is_valid():
+    jsonschema.Draft4Validator.check_schema(resources.Contributors.post_data_schema)
+
+
 def test_post_new_contributor(test_client):
     new_contrib = {
         "id": "realtime.tokyo",
@@ -122,6 +127,11 @@ def test_post_new_partial_contributor(test_client):
     assert contrib.connector_type == "gtfs-rt"
     assert contrib.navitia_token == None
     assert contrib.feed_url == None
+
+
+def test_post_empty_contributor_should_fail(test_client):
+    resp = test_client.post("/contributors")
+    assert resp.status_code == 400
 
 
 def test_post_with_id_in_the_resource_path(test_client):

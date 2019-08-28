@@ -31,6 +31,7 @@
 
 from __future__ import absolute_import, print_function, unicode_literals, division
 import flask
+import jsonschema
 from flask_restful import Resource, marshal_with_field, marshal_with, fields, abort
 from kirin.core import model
 
@@ -44,6 +45,19 @@ contributor_fields = {
 
 
 class Contributors(Resource):
+
+    post_data_schema = {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "navitia_coverage": {"type": "string"},
+            "navitia_token": {"type": "string"},
+            "feed_url": {"type": "string", "format": "uri"},
+            "connector_type": {"type": "string", "enum": ["cots", "gtfs-rt"]},
+        },
+        "required": ["navitia_coverage", "connector_type"],
+    }
+
     @marshal_with_field(fields.List(fields.Nested(contributor_fields)))
     def get(self, id=None):
         q = model.db.session.query(model.Contributor)
@@ -57,7 +71,15 @@ class Contributors(Resource):
     def post(self, id=None):
         data = flask.request.get_json()
 
-        id = id or data["id"]
+        if data is None:
+            abort(400, message="No posted Json data to create a contributor")
+
+        try:
+            jsonschema.validate(data, self.post_data_schema)
+        except jsonschema.exceptions.ValidationError as e:
+            abort(400, message="Failed to validate posted Json data. Error: {}".format(e))
+
+        id = id or data.get("id", None)
         token = data.get("navitia_token", None)
         feed_url = data.get("feed_url", None)
 
