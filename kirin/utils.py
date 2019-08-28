@@ -31,16 +31,18 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 import logging
 
-import pytz
 import six
 from aniso8601 import parse_date
 from pythonjsonlogger import jsonlogger
 from flask.globals import current_app
 import navitia_wrapper
+from pytz import utc
+
 from kirin import new_relic
 from redis.exceptions import ConnectionError
 from contextlib import contextmanager
 from kirin.core import model
+from kirin.exceptions import InternalException
 
 
 def floor_datetime(datetime):
@@ -83,6 +85,17 @@ def make_navitia_wrapper():
     return navitia_wrapper.Navitia(url=url, token=token).instance(instance)
 
 
+def to_navitia_utc_str(naive_utc_dt):
+    """
+    format a naive UTC datetime to a navitia-readable UTC-aware str
+    (to avoid managing coverage's timezone,
+    as Navitia considers datetime without timezone as local to the coverage)
+    """
+    if naive_utc_dt.tzinfo is not None:
+        raise InternalException("Invalid datetime provided: must be naive (and UTC)")
+    return utc.localize(naive_utc_dt).strftime("%Y%m%dT%H%M%S%z")
+
+
 def make_rt_update(data, connector, contributor, status="OK"):
     """
     Create an RealTimeUpdate object for the query and persist it
@@ -108,19 +121,6 @@ def record_call(status, **kwargs):
     params = {"status": status}
     params.update(kwargs)
     new_relic.record_custom_event("kirin_status", params)
-
-
-def get_timezone(stop_time):
-    # TODO: we must use the coverage timezone, not the stop_area timezone, as they can be different.
-    # We don't have this information now but we should have it in the near future
-    str_tz = stop_time.get("stop_point", {}).get("stop_area", {}).get("timezone")
-    if not str_tz:
-        raise Exception("impossible to convert local to utc without the timezone")
-
-    tz = pytz.timezone(str_tz)
-    if not tz:
-        raise Exception("impossible to find timezone: '{}'".format(str_tz))
-    return tz
 
 
 def should_retry_exception(exception):

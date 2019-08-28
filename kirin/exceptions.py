@@ -45,7 +45,7 @@ class KirinException(HTTPException):
 
 class InvalidArguments(KirinException):
     code = 400
-    message = "Invalid arguments"
+    message = "invalid arguments"
 
 
 class ObjectNotFound(KirinException):
@@ -56,6 +56,11 @@ class ObjectNotFound(KirinException):
 class MessageNotPublished(KirinException):
     code = 500
     message = "impossible to publish message on network"
+
+
+class InternalException(KirinException):
+    code = 500
+    message = "an internal error occurred"
 
 
 class SubServiceError(KirinException):

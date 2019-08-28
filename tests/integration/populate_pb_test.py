@@ -31,8 +31,6 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 from datetime import timedelta
 
-from pytz import utc
-
 from kirin.core.model import RealTimeUpdate, TripUpdate, VehicleJourney, StopTimeUpdate
 from kirin.core.populate_pb import convert_to_gtfsrt, to_posix_time, fill_stop_times
 import datetime
@@ -67,9 +65,7 @@ def test_populate_pb_with_one_stop_time():
     with app.app_context():
         trip_update = TripUpdate()
         vj = VehicleJourney(
-            navitia_vj,
-            utc.localize(datetime.datetime(2015, 9, 8, 5, 10, 0)),
-            utc.localize(datetime.datetime(2015, 9, 8, 8, 10, 0)),
+            navitia_vj, datetime.datetime(2015, 9, 8, 5, 10, 0), datetime.datetime(2015, 9, 8, 8, 10, 0)
         )
         trip_update.vj = vj
         st = StopTimeUpdate({"id": "sa:1"}, departure=_dt("8:15"), arrival=None)
@@ -122,9 +118,7 @@ def test_populate_pb_with_two_stop_time():
     with app.app_context():
         trip_update = TripUpdate()
         vj = VehicleJourney(
-            navitia_vj,
-            utc.localize(datetime.datetime(2015, 9, 8, 5, 10, 0)),
-            utc.localize(datetime.datetime(2015, 9, 8, 8, 10, 0)),
+            navitia_vj, datetime.datetime(2015, 9, 8, 5, 10, 0), datetime.datetime(2015, 9, 8, 8, 10, 0)
         )
         trip_update.vj = vj
         real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
@@ -228,9 +222,7 @@ def test_populate_pb_with_deleted_stop_time():
     with app.app_context():
         trip_update = TripUpdate()
         vj = VehicleJourney(
-            navitia_vj,
-            utc.localize(datetime.datetime(2015, 9, 8, 5, 11, 0)),
-            utc.localize(datetime.datetime(2015, 9, 8, 10, 10, 0)),
+            navitia_vj, datetime.datetime(2015, 9, 8, 5, 11, 0), datetime.datetime(2015, 9, 8, 10, 10, 0)
         )
         trip_update.vj = vj
         real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
@@ -362,9 +354,7 @@ def test_populate_pb_with_cancelation():
     with app.app_context():
         trip_update = TripUpdate()
         vj = VehicleJourney(
-            navitia_vj,
-            utc.localize(datetime.datetime(2015, 9, 8, 7, 10, 0)),
-            utc.localize(datetime.datetime(2015, 9, 8, 11, 5, 0)),
+            navitia_vj, datetime.datetime(2015, 9, 8, 7, 10, 0), datetime.datetime(2015, 9, 8, 11, 5, 0)
         )
         trip_update.vj = vj
         trip_update.status = "delete"
@@ -409,9 +399,7 @@ def test_populate_pb_with_full_dataset():
     with app.app_context():
         trip_update = TripUpdate()
         vj = VehicleJourney(
-            navitia_vj,
-            utc.localize(datetime.datetime(2015, 9, 8, 7, 10, 0)),
-            utc.localize(datetime.datetime(2015, 9, 8, 9, 10, 0)),
+            navitia_vj, datetime.datetime(2015, 9, 8, 7, 10, 0), datetime.datetime(2015, 9, 8, 9, 10, 0)
         )
         trip_update.vj = vj
         trip_update.status = "delete"
@@ -508,9 +496,9 @@ def test_populate_pb_for_added_trip():
         trip_update = TripUpdate()
         vj = VehicleJourney(
             navitia_vj,
-            utc_since_dt=utc.localize(datetime.datetime(2015, 9, 8, 5, 10, 0)),
-            utc_until_dt=utc.localize(datetime.datetime(2015, 9, 8, 8, 10, 0)),
-            vj_start_dt=utc.localize(datetime.datetime(2015, 9, 8, 5, 10, 0)),
+            naive_utc_since_dt=datetime.datetime(2015, 9, 8, 5, 10, 0),
+            naive_utc_until_dt=datetime.datetime(2015, 9, 8, 8, 10, 0),
+            naive_vj_start_dt=datetime.datetime(2015, 9, 8, 5, 10, 0),
         )
         trip_update.vj = vj
         trip_update.status = "add"

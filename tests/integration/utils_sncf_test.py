@@ -33,7 +33,6 @@ from __future__ import absolute_import, print_function, unicode_literals, divisi
 from kirin import app
 from kirin.core.model import RealTimeUpdate, TripUpdate, StopTimeUpdate
 from datetime import timedelta, datetime
-from pytz import utc
 
 
 def check_db_96231_delayed(motif_externe_is_null=False):
@@ -42,12 +41,12 @@ def check_db_96231_delayed(motif_externe_is_null=False):
         assert len(TripUpdate.query.all()) >= 1
         assert len(StopTimeUpdate.query.all()) >= 6
         db_trip_delayed = TripUpdate.find_by_dated_vj(
-            "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21, tzinfo=utc)
+            "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21)
         )
         assert db_trip_delayed
 
         assert db_trip_delayed.vj.navitia_trip_id == "trip:OCETrainTER-87212027-85000109-3:11859"
-        assert db_trip_delayed.vj.get_start_timestamp() == datetime(2015, 9, 21, 15, 21, tzinfo=utc)
+        assert db_trip_delayed.vj.get_start_timestamp() == datetime(2015, 9, 21, 15, 21)
         assert db_trip_delayed.vj_id == db_trip_delayed.vj.id
         assert db_trip_delayed.status == "update"
         # Cots contain delayed stop_times only
@@ -114,11 +113,11 @@ def check_db_870154_partial_removal(contributor=None):
         assert len(RealTimeUpdate.query.all()) >= 1
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 12
-        db_trip = TripUpdate.find_by_dated_vj("OCE:SN870154F01001", datetime(2018, 11, 2, 9, 54, tzinfo=utc))
+        db_trip = TripUpdate.find_by_dated_vj("OCE:SN870154F01001", datetime(2018, 11, 2, 9, 54))
         assert db_trip
 
         assert db_trip.vj.navitia_trip_id == "OCE:SN870154F01001"
-        assert db_trip.vj.get_start_timestamp() == datetime(2018, 11, 2, 9, 54, tzinfo=utc)
+        assert db_trip.vj.get_start_timestamp() == datetime(2018, 11, 2, 9, 54)
         assert db_trip.vj_id == db_trip.vj.id
         assert db_trip.status == "update"
         # Cots contain deleted as well as delayed stop_times
@@ -159,7 +158,7 @@ def check_db_870154_delay():
         assert len(RealTimeUpdate.query.all()) >= 1
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 12
-        db_trip = TripUpdate.find_by_dated_vj("OCE:SN870154F01001", datetime(2018, 11, 2, 9, 54, tzinfo=utc))
+        db_trip = TripUpdate.find_by_dated_vj("OCE:SN870154F01001", datetime(2018, 11, 2, 9, 54))
         assert db_trip
         assert db_trip.message == "Régulation du trafic"
         # Cots contain deleted as well as delayed stop_times
@@ -249,7 +248,7 @@ def check_db_870154_normal():
         assert len(RealTimeUpdate.query.all()) >= 1
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 12
-        db_trip = TripUpdate.find_by_dated_vj("OCE:SN870154F01001", datetime(2018, 11, 2, 9, 54, tzinfo=utc))
+        db_trip = TripUpdate.find_by_dated_vj("OCE:SN870154F01001", datetime(2018, 11, 2, 9, 54))
         assert db_trip
         assert db_trip.message is None
 
@@ -343,11 +342,11 @@ def check_db_870154_normal():
 def check_db_96231_mixed_statuses_inside_stops(contributor=None):
     with app.app_context():
         db_trip_delayed = TripUpdate.find_by_dated_vj(
-            "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21, tzinfo=utc)
+            "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21)
         )
         assert db_trip_delayed
         assert db_trip_delayed.vj.navitia_trip_id == "trip:OCETrainTER-87212027-85000109-3:11859"
-        assert db_trip_delayed.vj.get_start_timestamp() == datetime(2015, 9, 21, 15, 21, tzinfo=utc)
+        assert db_trip_delayed.vj.get_start_timestamp() == datetime(2015, 9, 21, 15, 21)
         assert db_trip_delayed.vj_id == db_trip_delayed.vj.id
         assert db_trip_delayed.status == "update"
         # Cots contain delayed as well as removed stop_times
@@ -418,11 +417,11 @@ def check_db_96231_mixed_statuses_inside_stops(contributor=None):
 def check_db_96231_mixed_statuses_delay_removal_delay(contributor=None):
     with app.app_context():
         db_trip_delayed = TripUpdate.find_by_dated_vj(
-            "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21, tzinfo=utc)
+            "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21)
         )
         assert db_trip_delayed
         assert db_trip_delayed.vj.navitia_trip_id == "trip:OCETrainTER-87212027-85000109-3:11859"
-        assert db_trip_delayed.vj.get_start_timestamp() == datetime(2015, 9, 21, 15, 21, tzinfo=utc)
+        assert db_trip_delayed.vj.get_start_timestamp() == datetime(2015, 9, 21, 15, 21)
         assert db_trip_delayed.vj_id == db_trip_delayed.vj.id
         assert db_trip_delayed.status == "update"
         # Cots contain removed as well as delayed stop_times
@@ -494,12 +493,12 @@ def check_db_96231_normal(contributor=None):
         assert len(TripUpdate.query.all()) >= 1
         assert len(StopTimeUpdate.query.all()) >= 6
         db_trip_delayed = TripUpdate.find_by_dated_vj(
-            "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21, tzinfo=utc)
+            "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21)
         )
         assert db_trip_delayed
 
         assert db_trip_delayed.vj.navitia_trip_id == "trip:OCETrainTER-87212027-85000109-3:11859"
-        assert db_trip_delayed.vj.get_start_timestamp() == datetime(2015, 9, 21, 15, 21, tzinfo=utc)
+        assert db_trip_delayed.vj.get_start_timestamp() == datetime(2015, 9, 21, 15, 21)
         assert db_trip_delayed.vj_id == db_trip_delayed.vj.id
         assert db_trip_delayed.status == "update"
         assert db_trip_delayed.effect == "SIGNIFICANT_DELAYS"
@@ -557,12 +556,12 @@ def check_db_john_trip_removal():
         assert len(TripUpdate.query.all()) >= 2
         assert len(StopTimeUpdate.query.all()) >= 0
         db_trip1_removal = TripUpdate.find_by_dated_vj(
-            "trip:OCETGV-87686006-87751008-2:25768", datetime(2015, 9, 21, 13, 37, tzinfo=utc)
+            "trip:OCETGV-87686006-87751008-2:25768", datetime(2015, 9, 21, 13, 37)
         )
         assert db_trip1_removal
 
         assert db_trip1_removal.vj.navitia_trip_id == "trip:OCETGV-87686006-87751008-2:25768"
-        assert db_trip1_removal.vj.get_start_timestamp() == datetime(2015, 9, 21, 13, 37, tzinfo=utc)
+        assert db_trip1_removal.vj.get_start_timestamp() == datetime(2015, 9, 21, 13, 37)
         assert db_trip1_removal.vj_id == db_trip1_removal.vj.id
         assert db_trip1_removal.status == "delete"
         assert db_trip1_removal.effect == "NO_SERVICE"
@@ -570,12 +569,12 @@ def check_db_john_trip_removal():
         assert len(db_trip1_removal.stop_time_updates) == 0
 
         db_trip2_removal = TripUpdate.find_by_dated_vj(
-            "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21, tzinfo=utc)
+            "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21)
         )
         assert db_trip2_removal
 
         assert db_trip2_removal.vj.navitia_trip_id == "trip:OCETrainTER-87212027-85000109-3:11859"
-        assert db_trip2_removal.vj.get_start_timestamp() == datetime(2015, 9, 21, 15, 21, tzinfo=utc)
+        assert db_trip2_removal.vj.get_start_timestamp() == datetime(2015, 9, 21, 15, 21)
         assert db_trip2_removal.vj_id == db_trip2_removal.vj.id
         assert db_trip2_removal.status == "delete"
         assert db_trip2_removal.effect == "NO_SERVICE"
@@ -589,12 +588,12 @@ def check_db_96231_trip_removal():
         assert len(TripUpdate.query.all()) >= 1
         assert len(StopTimeUpdate.query.all()) >= 0
         db_trip_removal = TripUpdate.find_by_dated_vj(
-            "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21, tzinfo=utc)
+            "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21)
         )
         assert db_trip_removal
 
         assert db_trip_removal.vj.navitia_trip_id == "trip:OCETrainTER-87212027-85000109-3:11859"
-        assert db_trip_removal.vj.get_start_timestamp() == datetime(2015, 9, 21, 15, 21, tzinfo=utc)
+        assert db_trip_removal.vj.get_start_timestamp() == datetime(2015, 9, 21, 15, 21)
         assert db_trip_removal.vj_id == db_trip_removal.vj.id
         assert db_trip_removal.status == "delete"
         assert db_trip_removal.effect == "NO_SERVICE"
@@ -609,12 +608,12 @@ def check_db_6113_trip_removal():
         assert len(TripUpdate.query.all()) >= 1
         assert len(StopTimeUpdate.query.all()) >= 0
         db_trip_removal = TripUpdate.find_by_dated_vj(
-            "trip:OCETGV-87686006-87751008-2:25768", datetime(2015, 10, 6, 10, 37, tzinfo=utc)
+            "trip:OCETGV-87686006-87751008-2:25768", datetime(2015, 10, 6, 10, 37)
         )
         assert db_trip_removal
 
         assert db_trip_removal.vj.navitia_trip_id == "trip:OCETGV-87686006-87751008-2:25768"
-        assert db_trip_removal.vj.get_start_timestamp() == datetime(2015, 10, 6, 10, 37, tzinfo=utc)
+        assert db_trip_removal.vj.get_start_timestamp() == datetime(2015, 10, 6, 10, 37)
         assert db_trip_removal.vj_id == db_trip_removal.vj.id
         assert db_trip_removal.status == "delete"
         assert db_trip_removal.effect == "NO_SERVICE"
@@ -629,12 +628,12 @@ def check_db_6111_trip_removal_pass_midnight():
         assert len(TripUpdate.query.all()) >= 1
         assert len(StopTimeUpdate.query.all()) >= 0
         db_trip_removal = TripUpdate.find_by_dated_vj(
-            "trip:OCETGV-87686006-87751008-2:25768", datetime(2015, 10, 6, 20, 37, tzinfo=utc)
+            "trip:OCETGV-87686006-87751008-2:25768", datetime(2015, 10, 6, 20, 37)
         )
         assert db_trip_removal
 
         assert db_trip_removal.vj.navitia_trip_id == "trip:OCETGV-87686006-87751008-2:25768"
-        assert db_trip_removal.vj.get_start_timestamp() == datetime(2015, 10, 6, 20, 37, tzinfo=utc)
+        assert db_trip_removal.vj.get_start_timestamp() == datetime(2015, 10, 6, 20, 37)
         assert db_trip_removal.vj_id == db_trip_removal.vj.id
         assert db_trip_removal.status == "delete"
         assert db_trip_removal.effect == "NO_SERVICE"
@@ -649,12 +648,12 @@ def check_db_6114_trip_removal():
         assert len(TripUpdate.query.all()) >= 1
         assert len(StopTimeUpdate.query.all()) >= 0
         db_trip_removal = TripUpdate.find_by_dated_vj(
-            "trip:OCETGV-87686006-87751008-2:25768-2", datetime(2015, 10, 6, 10, 37, tzinfo=utc)
+            "trip:OCETGV-87686006-87751008-2:25768-2", datetime(2015, 10, 6, 10, 37)
         )
         assert db_trip_removal
 
         assert db_trip_removal.vj.navitia_trip_id == "trip:OCETGV-87686006-87751008-2:25768-2"
-        assert db_trip_removal.vj.get_start_timestamp() == datetime(2015, 10, 6, 10, 37, tzinfo=utc)
+        assert db_trip_removal.vj.get_start_timestamp() == datetime(2015, 10, 6, 10, 37)
         assert db_trip_removal.vj_id == db_trip_removal.vj.id
         assert db_trip_removal.status == "delete"
         assert db_trip_removal.message == "Accident à un Passage à Niveau"
@@ -668,12 +667,12 @@ def check_db_96231_partial_removal(contributor=None):
         assert len(TripUpdate.query.all()) >= 1
         assert len(StopTimeUpdate.query.all()) >= 6
         db_trip_partial_removed = TripUpdate.find_by_dated_vj(
-            "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21, tzinfo=utc)
+            "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21)
         )
         assert db_trip_partial_removed
 
         assert db_trip_partial_removed.vj.navitia_trip_id == "trip:OCETrainTER-87212027-85000109-3:11859"
-        assert db_trip_partial_removed.vj.get_start_timestamp() == datetime(2015, 9, 21, 15, 21, tzinfo=utc)
+        assert db_trip_partial_removed.vj.get_start_timestamp() == datetime(2015, 9, 21, 15, 21)
         assert db_trip_partial_removed.vj_id == db_trip_partial_removed.vj.id
         assert db_trip_partial_removed.status == "update"
         assert db_trip_partial_removed.effect == "REDUCED_SERVICE"
@@ -741,13 +740,11 @@ def check_db_96231_partial_removal(contributor=None):
 
 def check_db_840427_partial_removal(contributor=None):
     with app.app_context():
-        db_trip_partial_removed = TripUpdate.find_by_dated_vj(
-            "OCE:SN840427F03001", datetime(2017, 3, 18, 13, 5, tzinfo=utc)
-        )
+        db_trip_partial_removed = TripUpdate.find_by_dated_vj("OCE:SN840427F03001", datetime(2017, 3, 18, 13, 5))
         assert db_trip_partial_removed
 
         assert db_trip_partial_removed.vj.navitia_trip_id == "OCE:SN840427F03001"
-        assert db_trip_partial_removed.vj.get_start_timestamp() == datetime(2017, 3, 18, 13, 5, tzinfo=utc)
+        assert db_trip_partial_removed.vj.get_start_timestamp() == datetime(2017, 3, 18, 13, 5)
         assert db_trip_partial_removed.vj_id == db_trip_partial_removed.vj.id
         assert db_trip_partial_removed.status == "update"
         assert db_trip_partial_removed.effect == "REDUCED_SERVICE"

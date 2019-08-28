@@ -33,12 +33,11 @@ import datetime
 import logging
 
 import six
-from pytz import utc
 from kirin import core
 from kirin.core import model
 from kirin.core.types import ModificationType, get_higher_status, get_effect_by_stop_time_status
-from kirin.exceptions import KirinException
-from kirin.utils import make_rt_update, floor_datetime
+from kirin.exceptions import KirinException, InternalException
+from kirin.utils import make_rt_update, floor_datetime, to_navitia_utc_str
 from kirin.utils import record_internal_failure, record_call
 from kirin import app
 import itertools
@@ -76,11 +75,6 @@ def handle(proto, navitia_wrapper, contributor):
     logging.getLogger(__name__).info("Simple feed publication", extra=log_dict)
 
 
-def to_str(date):
-    # the date is in UTC, thus we don't have to care about the coverage's timezone
-    return date.strftime("%Y%m%dT%H%M%SZ")
-
-
 class KirinModelBuilder(object):
     def __init__(self, nav, contributor=None):
         self.navitia = nav
@@ -98,7 +92,7 @@ class KirinModelBuilder(object):
 
         The TripUpdates are not yet associated with the RealTimeUpdate
         """
-        utc_data_time = utc.localize(datetime.datetime.utcfromtimestamp(data.header.timestamp))
+        utc_data_time = datetime.datetime.utcfromtimestamp(data.header.timestamp)
         self.log.debug(
             "Start processing GTFS-rt: timestamp = {} ({})".format(data.header.timestamp, utc_data_time)
         )
@@ -132,7 +126,7 @@ class KirinModelBuilder(object):
         2. For the first stop point absent in trip_update.stop_time_updates we create a stop_time_update
         with no delay for that stop
         """
-        vjs = self._get_navitia_vjs(input_trip_update.trip, utc_data_time=utc_data_time)
+        vjs = self._get_navitia_vjs(input_trip_update.trip, naive_utc_data_time=utc_data_time)
         trip_updates = []
         for vj in vjs:
             trip_update = model.TripUpdate(vj=vj)
@@ -196,12 +190,22 @@ class KirinModelBuilder(object):
         return "{}.{}.{}".format(self.__class__, self.navitia.url, self.instance_data_pub_date)
 
     @app.cache.memoize(timeout=1200)
-    def _make_db_vj(self, vj_source_code, utc_since_dt, utc_until_dt):
+    def _make_db_vj(self, vj_source_code, naive_utc_since_dt, naive_utc_until_dt):
+        """
+        Search for navitia's vehicle journeys with given code, in the period provided
+        :param vj_source_code: the code to search for
+        :param naive_utc_since_dt: naive UTC datetime that starts the search period.
+            Typically the supposed datetime of first base-schedule stop_time.
+        :param naive_utc_until_dt: naive UTC datetime that ends the search period.
+            Typically the supposed datetime of last base-schedule stop_time.
+        """
+        if naive_utc_since_dt.tzinfo is not None or naive_utc_until_dt.tzinfo is not None:
+            raise InternalException("Invalid datetime provided: must be naive (and UTC)")
         navitia_vjs = self.navitia.vehicle_journeys(
             q={
                 "filter": "vehicle_journey.has_code({}, {})".format(self.stop_code_key, vj_source_code),
-                "since": to_str(utc_since_dt),
-                "until": to_str(utc_until_dt),
+                "since": to_navitia_utc_str(naive_utc_since_dt),
+                "until": to_navitia_utc_str(naive_utc_until_dt),
                 "depth": "2",  # we need this depth to get the stoptime's stop_area
             }
         )
@@ -209,7 +213,7 @@ class KirinModelBuilder(object):
         if not navitia_vjs:
             self.log.info(
                 "impossible to find vj {t} on [{s}, {u}]".format(
-                    t=vj_source_code, s=utc_since_dt, u=utc_until_dt
+                    t=vj_source_code, s=naive_utc_since_dt, u=naive_utc_until_dt
                 )
             )
             record_internal_failure("missing vj", contributor=self.contributor)
@@ -219,7 +223,7 @@ class KirinModelBuilder(object):
             vj_ids = [vj.get("id") for vj in navitia_vjs]
             self.log.info(
                 "too many vjs found for {t} on [{s}, {u}]: {ids}".format(
-                    t=vj_source_code, s=utc_since_dt, u=utc_until_dt, ids=vj_ids
+                    t=vj_source_code, s=naive_utc_since_dt, u=naive_utc_until_dt, ids=vj_ids
                 )
             )
             record_internal_failure("duplicate vjs", contributor=self.contributor)
@@ -228,18 +232,20 @@ class KirinModelBuilder(object):
         nav_vj = navitia_vjs[0]
 
         try:
-            vj = model.VehicleJourney(nav_vj, utc_since_dt, utc_until_dt)
+            vj = model.VehicleJourney(nav_vj, naive_utc_since_dt, naive_utc_until_dt)
             return [vj]
         except Exception as e:
             self.log.exception("Error while creating kirin VJ of {}: {}".format(nav_vj.get("id"), e))
             record_internal_failure("Error while creating kirin VJ", contributor=self.contributor)
             return []
 
-    def _get_navitia_vjs(self, trip, utc_data_time):
+    def _get_navitia_vjs(self, trip, naive_utc_data_time):
         vj_source_code = trip.trip_id
 
-        utc_since_dt = floor_datetime(utc_data_time - self.period_filter_tolerance)
-        utc_until_dt = floor_datetime(utc_data_time + self.period_filter_tolerance + datetime.timedelta(hours=1))
+        utc_since_dt = floor_datetime(naive_utc_data_time - self.period_filter_tolerance)
+        utc_until_dt = floor_datetime(
+            naive_utc_data_time + self.period_filter_tolerance + datetime.timedelta(hours=1)
+        )
         self.log.debug(
             "searching for vj {} on [{}, {}] in navitia".format(vj_source_code, utc_since_dt, utc_until_dt)
         )

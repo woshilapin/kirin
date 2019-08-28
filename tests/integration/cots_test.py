@@ -30,7 +30,6 @@
 # www.navitia.io
 from __future__ import absolute_import, print_function, unicode_literals, division
 from datetime import datetime
-from pytz import utc
 
 import pytest
 
@@ -140,7 +139,7 @@ def test_save_bad_raw_cots():
     bad_cots = get_fixture_data("bad_cots.json")
     res = api_post("/cots", data=bad_cots, check=False)
     assert res[1] == 400
-    assert res[0]["message"] == "Invalid arguments"
+    assert res[0]["message"] == "invalid arguments"
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().status == "KO"
@@ -164,7 +163,7 @@ def test_cots_delayed_simple_post(mock_rabbitmq):
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 6
         db_trip_delayed = TripUpdate.find_by_dated_vj(
-            "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21, tzinfo=utc)
+            "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21)
         )
         assert db_trip_delayed.stop_time_updates[4].message is None
     db_trip_delayed = check_db_96231_delayed()
@@ -575,7 +574,7 @@ def test_wrong_planned_stop_time_reference_post():
     res, status = api_post("/cots", check=False, data=cots_file)
 
     assert status == 400
-    assert res.get("message") == "Invalid arguments"
+    assert res.get("message") == "invalid arguments"
     assert "error" in res
     assert 'invalid json, impossible to find source "ESCALE" in any json dict of list:' in res.get("error")
 
@@ -835,7 +834,7 @@ def test_cots_added_stop_time_earlier_than_previous():
     cots_add_file = get_fixture_data("cots_train_96231_add_stop_time_earlier_than_previous.json")
     res, status = api_post("/cots", data=cots_add_file, check=False)
     assert status == 400
-    assert res.get("message") == "Invalid arguments"
+    assert res.get("message") == "invalid arguments"
     with app.app_context():
         assert (
             RealTimeUpdate.query.first().error
@@ -1371,7 +1370,7 @@ def test_cots_add_trip_existing_in_navitia():
     cots_add_file = get_fixture_data("cots_train_6113_add_trip_present_in_navitia.json")
     res, status = api_post("/cots", check=False, data=cots_add_file)
     assert status == 400
-    assert res.get("message") == "Invalid arguments"
+    assert res.get("message") == "invalid arguments"
     assert "error" in res
     assert "Invalid action, trip 6113 already present in navitia" in res.get("error")
 

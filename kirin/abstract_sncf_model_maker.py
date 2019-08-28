@@ -34,8 +34,8 @@ from datetime import timedelta
 
 import jmespath
 
-from kirin.utils import record_internal_failure
-from kirin.exceptions import ObjectNotFound, InvalidArguments
+from kirin.utils import record_internal_failure, to_navitia_utc_str
+from kirin.exceptions import ObjectNotFound, InvalidArguments, InternalException
 from abc import ABCMeta
 import six
 from kirin.core import model
@@ -60,13 +60,6 @@ class ActionOnTrip(Enum):
 def make_navitia_empty_vj(headsign):
     headsign = TRAIN_ID_FORMAT.format(headsign)
     return {"id": headsign, "trip": {"id": headsign}}
-
-
-def to_navitia_str(dt):
-    """
-    format a datetime to a navitia-readable str
-    """
-    return dt.strftime("%Y%m%dT%H%M%S%z")
 
 
 def headsigns(str_headsign):
@@ -123,25 +116,30 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
         self.contributor = contributor
 
     def _get_navitia_vjs(
-        self, headsign_str, utc_since_dt, utc_until_dt, action_on_trip=ActionOnTrip.NOT_ADDED.name
+        self, headsign_str, naive_utc_since_dt, naive_utc_until_dt, action_on_trip=ActionOnTrip.NOT_ADDED.name
     ):
         """
         Search for navitia's vehicle journeys with given headsigns, in the period provided
-        :param utc_since_dt: UTC datetime that starts the search period.
+        :param headsign_str: the headsigns to search for (can be multiple expressed in one string, like "2512/3")
+        :param naive_utc_since_dt: naive UTC datetime that starts the search period.
             Typically the supposed datetime of first base-schedule stop_time.
-        :param utc_until_dt: UTC datetime that ends the search period.
+        :param naive_utc_until_dt: naive UTC datetime that ends the search period.
             Typically the supposed datetime of last base-schedule stop_time.
+        :param action_on_trip: action to be performed on trip. This param is used to do consistency check
         """
         log = logging.getLogger(__name__)
 
-        if (utc_since_dt is None) or (utc_until_dt is None):
+        if (naive_utc_since_dt is None) or (naive_utc_until_dt is None):
             return []
+
+        if naive_utc_since_dt.tzinfo is not None or naive_utc_until_dt.tzinfo is not None:
+            raise InternalException("Invalid datetime provided: must be naive (and UTC)")
 
         vjs = {}
         # to get the date of the vj we use the start/end of the vj + some tolerance
         # since the SNCF data and navitia data might not be synchronized
-        extended_since_dt = utc_since_dt - SNCF_SEARCH_MARGIN
-        extended_until_dt = utc_until_dt + SNCF_SEARCH_MARGIN
+        extended_since_dt = naive_utc_since_dt - SNCF_SEARCH_MARGIN
+        extended_until_dt = naive_utc_until_dt + SNCF_SEARCH_MARGIN
 
         # using a set to deduplicate
         # one headsign_str (ex: "96320/1") can lead to multiple headsigns (ex: ["96320", "96321"])
@@ -159,13 +157,14 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
             navitia_vjs = self.navitia.vehicle_journeys(
                 q={
                     "headsign": train_number,
-                    "since": to_navitia_str(extended_since_dt),
-                    "until": to_navitia_str(extended_until_dt),
+                    "since": to_navitia_utc_str(extended_since_dt),
+                    "until": to_navitia_utc_str(extended_until_dt),
                     "depth": "2",  # we need this depth to get the stoptime's stop_area
                     "show_codes": "true",  # we need the stop_points CRCICH codes
                 }
             )
 
+            # Consistency check on action applied to trip
             if action_on_trip == ActionOnTrip.NOT_ADDED.name:
                 if not navitia_vjs:
                     logging.getLogger(__name__).info(
@@ -187,7 +186,7 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
 
                 try:
                     vj = model.VehicleJourney(
-                        nav_vj, extended_since_dt, extended_until_dt, vj_start_dt=utc_since_dt
+                        nav_vj, extended_since_dt, extended_until_dt, naive_vj_start_dt=naive_utc_since_dt
                     )
                     vjs[nav_vj["id"]] = vj
                 except Exception as e:
