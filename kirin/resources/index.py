@@ -38,7 +38,6 @@ class Index(Resource):
         response = {
             "status": {"href": url_for("status", _external=True)},
             "cots": {"href": url_for("cots", _external=True)},
-            "gtfs_rt": {"href": url_for("gtfs_rt", _external=True)},
             "contributors": {"href": url_for("contributors", _external=True)},
         }
         return response, 200
