@@ -256,11 +256,11 @@ def _get_action_on_trip(train_numbers, dict_version, pdps):
     cots_trip_status = get_value(dict_version, "statutOperationnel", TripStatus.PERTURBEE.name)
 
     # We have to verify if the trip exists in database
-    utc_vj_start = _get_first_stop_datetime(pdps, "horaireVoyageurDepart", skip_fully_added_stops=False)
-    utc_vj_end = _get_first_stop_datetime(reversed(pdps), "horaireVoyageurArrivee", skip_fully_added_stops=False)
+    vj_start = _get_first_stop_datetime(pdps, "horaireVoyageurDepart", skip_fully_added_stops=False)
+    vj_end = _get_first_stop_datetime(reversed(pdps), "horaireVoyageurArrivee", skip_fully_added_stops=False)
     train_id = TRAIN_ID_FORMAT.format(train_numbers)
     trip_added_in_db = model.TripUpdate.find_vj_by_period(
-        train_id, start_date=utc_vj_start - SNCF_SEARCH_MARGIN, end_date=utc_vj_end + SNCF_SEARCH_MARGIN
+        train_id, start_date=vj_start - SNCF_SEARCH_MARGIN, end_date=vj_end + SNCF_SEARCH_MARGIN
     )
 
     action_on_trip = ActionOnTrip.NOT_ADDED.name
@@ -341,16 +341,16 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
         return trip_updates
 
     def _get_vjs(self, train_numbers, pdps, action_on_trip=ActionOnTrip.NOT_ADDED.name):
-        utc_vj_start = _get_first_stop_datetime(
+        vj_start = _get_first_stop_datetime(
             pdps, "horaireVoyageurDepart", skip_fully_added_stops=(action_on_trip == ActionOnTrip.NOT_ADDED.name)
         )
-        utc_vj_end = _get_first_stop_datetime(
+        vj_end = _get_first_stop_datetime(
             reversed(pdps),
             "horaireVoyageurArrivee",
             skip_fully_added_stops=(action_on_trip == ActionOnTrip.NOT_ADDED.name),
         )
 
-        return self._get_navitia_vjs(train_numbers, utc_vj_start, utc_vj_end, action_on_trip=action_on_trip)
+        return self._get_navitia_vjs(train_numbers, vj_start, vj_end, action_on_trip=action_on_trip)
 
     def _record_and_log(self, logger, log_str):
         log_dict = {"log": log_str}

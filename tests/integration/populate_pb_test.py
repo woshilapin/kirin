@@ -496,9 +496,9 @@ def test_populate_pb_for_added_trip():
         trip_update = TripUpdate()
         vj = VehicleJourney(
             navitia_vj,
-            naive_utc_since_dt=datetime.datetime(2015, 9, 8, 5, 10, 0),
-            naive_utc_until_dt=datetime.datetime(2015, 9, 8, 8, 10, 0),
-            naive_vj_start_dt=datetime.datetime(2015, 9, 8, 5, 10, 0),
+            since_dt=datetime.datetime(2015, 9, 8, 5, 10, 0),
+            until_dt=datetime.datetime(2015, 9, 8, 8, 10, 0),
+            vj_start_dt=datetime.datetime(2015, 9, 8, 5, 10, 0),
         )
         trip_update.vj = vj
         trip_update.status = "add"
