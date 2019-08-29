@@ -52,7 +52,7 @@ def test_get_contributor_end_point(test_client):
 def with_contributors():
     db.session.add_all(
         [
-            model.Contributor("realtime.sherbrook", "ca", "gtfs-rt", "my_token", "http://feed.url"),
+            model.Contributor("realtime.sherbrooke", "ca", "gtfs-rt", "my_token", "http://feed.url"),
             model.Contributor("realtime.paris", "idf", "gtfs-rt", "my_other_token", "http://otherfeed.url"),
         ]
     )
@@ -69,7 +69,7 @@ def test_get_contributors(test_client, with_contributors):
     ids = [c["id"] for c in contribs]
     ids.sort()
 
-    assert ids == ["realtime.paris", "realtime.sherbrook"]
+    assert ids == ["realtime.paris", "realtime.sherbrooke"]
 
 
 def test_get_contributors_with_specific_id(test_client, with_contributors):
