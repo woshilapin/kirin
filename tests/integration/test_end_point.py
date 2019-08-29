@@ -42,6 +42,7 @@ def test_end_point():
     resp = api_get("/")
     assert "status" in resp
     assert "cots" in resp
+    assert "contributors" in resp
 
 
 def test_status(setup_database):
