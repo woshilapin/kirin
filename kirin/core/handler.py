@@ -174,7 +174,7 @@ def handle(real_time_update, trip_updates, contributor, is_new_complete=False):
     """
     if not real_time_update:
         raise TypeError()
-    id_timestamp_tuples = [(tu.vj.navitia_trip_id, tu.vj.get_start_timestamp()) for tu in trip_updates]
+    id_timestamp_tuples = [(tu.vj.navitia_trip_id, tu.vj.start_timestamp) for tu in trip_updates]
     old_trip_updates = TripUpdate.find_by_dated_vjs(id_timestamp_tuples)
     for trip_update in trip_updates:
         # find if there is already a row in db
@@ -183,7 +183,7 @@ def handle(real_time_update, trip_updates, contributor, is_new_complete=False):
                 tu
                 for tu in old_trip_updates
                 if tu.vj.navitia_trip_id == trip_update.vj.navitia_trip_id
-                and tu.vj.get_start_timestamp() == trip_update.vj.get_start_timestamp()
+                and tu.vj.start_timestamp == trip_update.vj.start_timestamp
             ),
             None,
         )

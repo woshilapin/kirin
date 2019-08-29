@@ -89,9 +89,8 @@ class VehicleJourney(db.Model):  # type: ignore
     id = db.Column(postgresql.UUID, default=gen_uuid, primary_key=True)
     navitia_trip_id = db.Column(db.Text, nullable=False)
 
-    # ! DO NOT USE attribute directly !
-    # timestamp of VJ's start (stored in UTC to be safe with db without timezone)
-    start_timestamp = db.Column(db.DateTime, nullable=False)  # ! USE get_start_timestamp() !
+    # timestamp of base VJ's start (stored in UTC to be safe with db without timezone)
+    start_timestamp = db.Column(db.DateTime, nullable=False)
     db.Index("start_timestamp_idx", start_timestamp)
 
     db.UniqueConstraint(
@@ -159,11 +158,8 @@ class VehicleJourney(db.Model):  # type: ignore
 
         self.navitia_vj = navitia_vj  # Not persisted
 
-    def get_start_timestamp(self):
-        return self.start_timestamp
-
     def get_circulation_date(self):
-        return self.get_start_timestamp().date()
+        return self.start_timestamp.date()
 
 
 class StopTimeUpdate(db.Model, TimestampMixin):  # type: ignore
