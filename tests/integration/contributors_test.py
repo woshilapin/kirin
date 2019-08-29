@@ -54,6 +54,7 @@ def with_contributors():
         [
             model.Contributor("realtime.sherbrooke", "ca", "gtfs-rt", "my_token", "http://feed.url"),
             model.Contributor("realtime.paris", "idf", "gtfs-rt", "my_other_token", "http://otherfeed.url"),
+            model.Contributor("realtime.london", "gb", "cots"),
         ]
     )
     db.session.commit()
@@ -64,12 +65,12 @@ def test_get_contributors(test_client, with_contributors):
     assert resp.status_code == 200
 
     data = json.loads(resp.data)
-    assert len(data["contributors"]) == 2
+    assert len(data["contributors"]) == 3
 
     ids = [c["id"] for c in data["contributors"]]
     ids.sort()
 
-    assert ids == ["realtime.paris", "realtime.sherbrooke"]
+    assert ids == ["realtime.london", "realtime.paris", "realtime.sherbrooke"]
 
 
 def test_get_contributors_with_specific_id(test_client, with_contributors):
@@ -84,6 +85,17 @@ def test_get_contributors_with_specific_id(test_client, with_contributors):
     assert contrib[0]["connector_type"] == "gtfs-rt"
     assert contrib[0]["navitia_token"] == "my_other_token"
     assert contrib[0]["feed_url"] == "http://otherfeed.url"
+
+
+def test_get_partial_contributor_with_empty_fields(test_client, with_contributors):
+    resp = test_client.get("/contributors/realtime.london")
+    assert resp.status_code == 200
+
+    data = json.loads(resp.data)
+    contrib = data["contributors"]
+    assert len(contrib) == 1
+    assert contrib[0]["navitia_token"] == None
+    assert contrib[0]["feed_url"] == None
 
 
 def test_get_contributors_with_wrong_id(test_client, with_contributors):
