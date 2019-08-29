@@ -63,10 +63,10 @@ def test_get_contributors(test_client, with_contributors):
     resp = test_client.get("/contributors")
     assert resp.status_code == 200
 
-    contribs = json.loads(resp.data)
-    assert len(contribs) == 2
+    data = json.loads(resp.data)
+    assert len(data["contributors"]) == 2
 
-    ids = [c["id"] for c in contribs]
+    ids = [c["id"] for c in data["contributors"]]
     ids.sort()
 
     assert ids == ["realtime.paris", "realtime.sherbrooke"]
@@ -76,7 +76,8 @@ def test_get_contributors_with_specific_id(test_client, with_contributors):
     resp = test_client.get("/contributors/realtime.paris")
     assert resp.status_code == 200
 
-    contrib = json.loads(resp.data)
+    data = json.loads(resp.data)
+    contrib = data["contributors"]
     assert len(contrib) == 1
     assert contrib[0]["id"] == "realtime.paris"
     assert contrib[0]["navitia_coverage"] == "idf"
@@ -89,8 +90,8 @@ def test_get_contributors_with_wrong_id(test_client, with_contributors):
     resp = test_client.get("/contributors/this_id_doesnt_exist")
     assert resp.status_code == 200
 
-    contrib = json.loads(resp.data)
-    assert len(contrib) == 0
+    data = json.loads(resp.data)
+    assert len(data["contributors"]) == 0
 
 
 def test_post_schema_distributor_is_valid():

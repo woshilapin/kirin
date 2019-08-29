@@ -35,6 +35,7 @@ import jsonschema
 from flask_restful import Resource, marshal_with_field, marshal_with, fields, abort
 from kirin.core import model
 
+
 contributor_fields = {
     "id": fields.String,
     "navitia_coverage": fields.String,
@@ -42,6 +43,9 @@ contributor_fields = {
     "feed_url": fields.String,
     "connector_type": fields.String,
 }
+
+contributors_list_fields = {"contributors": fields.List(fields.Nested(contributor_fields))}
+contributor_nested_fields = {"contributor": fields.Nested(contributor_fields)}
 
 
 class Contributors(Resource):
@@ -58,16 +62,16 @@ class Contributors(Resource):
         "required": ["navitia_coverage", "connector_type"],
     }
 
-    @marshal_with_field(fields.List(fields.Nested(contributor_fields)))
+    @marshal_with(contributors_list_fields)
     def get(self, id=None):
         q = model.db.session.query(model.Contributor)
 
         if id is not None:
             q = q.filter(model.Contributor.id == id)
 
-        return q.all()
+        return {"contributors": q.all()}
 
-    @marshal_with(contributor_fields)
+    @marshal_with(contributor_nested_fields)
     def post(self, id=None):
         data = flask.request.get_json()
 
@@ -89,7 +93,7 @@ class Contributors(Resource):
             )
             model.db.session.add(new_contrib)
             model.db.session.commit()
-            return new_contrib, 201
+            return {"contributor": new_contrib}, 201
         except KeyError as e:
             err_msg = "Missing attribute '{}' in input data to construct a contributor".format(e)
             abort(400, message=err_msg)
