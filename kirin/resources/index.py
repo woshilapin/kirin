@@ -31,10 +31,6 @@
 
 from __future__ import absolute_import, print_function, unicode_literals, division
 from flask_restful import Resource, url_for
-import kirin
-from kirin.version import version
-from flask import current_app
-from kirin.core import model
 
 
 class Index(Resource):
@@ -42,16 +38,6 @@ class Index(Resource):
         response = {
             "status": {"href": url_for("status", _external=True)},
             "cots": {"href": url_for("cots", _external=True)},
+            "contributors": {"href": url_for("contributors", _external=True)},
         }
         return response, 200
-
-
-class Status(Resource):
-    def get(self):
-        res = model.RealTimeUpdate.get_probes_by_contributor()
-        res["version"] = version
-        res["db_pool_status"] = kirin.db.engine.pool.status()
-        res["db_version"] = kirin.db.engine.scalar("select version_num from alembic_version;")
-        res["navitia_url"] = current_app.config[str("NAVITIA_URL")]
-        res["rabbitmq_info"] = kirin.rabbitmq_handler.info()
-        return res, 200
