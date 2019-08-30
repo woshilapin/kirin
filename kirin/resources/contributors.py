@@ -62,6 +62,16 @@ class Contributors(Resource):
         "required": ["navitia_coverage", "connector_type"],
     }
 
+    put_data_schema = {
+        "type": "object",
+        "properties": {
+            "navitia_coverage": {"type": "string"},
+            "navitia_token": {"type": "string"},
+            "feed_url": {"type": "string", "format": "uri"},
+            "connector_type": {"type": "string", "enum": ["cots", "gtfs-rt"]},
+        },
+    }
+
     @marshal_with(contributors_list_fields)
     def get(self, id=None):
         q = model.db.session.query(model.Contributor)
@@ -85,7 +95,7 @@ class Contributors(Resource):
         except jsonschema.exceptions.ValidationError as e:
             abort(400, message="Failed to validate posted Json data. Error: {}".format(e))
 
-        id = id or data.get("id", None)
+        id = id or data.get("id")
         token = data.get("navitia_token", None)
         feed_url = data.get("feed_url", None)
 
@@ -114,7 +124,37 @@ class Contributors(Resource):
                 raise ObjectNotFound("Contributor '{}' could not be found".format(id))
 
             contributor.delete()
+            model.db.session.commit()
             return None, 204
+        except ObjectNotFound as e:
+            raise e
+        except Exception as e:
+            abort(400, message=e)
+
+    @marshal_with(contributor_nested_fields)
+    def put(self, id=None):
+        if id is None:
+            abort(400, message="Contributor's id is missing")
+
+        data = flask.request.get_json()
+
+        if data is None:
+            abort(400, message="No Json data found to update a contributor")
+
+        try:
+            jsonschema.validate(data, self.put_data_schema)
+        except jsonschema.exceptions.ValidationError as e:
+            abort(400, message="Failed to validate posted Json data. Error: {}".format(e))
+
+        try:
+            contributor = model.db.session.query(model.Contributor).filter(model.Contributor.id == id)
+
+            if contributor.count() < 1:
+                raise ObjectNotFound("Contributor '{}' could not be found".format(id))
+
+            contributor.update(data)
+            model.db.session.commit()
+            return {"contributor": contributor.first()}, 200
         except ObjectNotFound as e:
             raise e
         except Exception as e:
