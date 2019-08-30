@@ -34,7 +34,7 @@ import flask
 import jsonschema
 from flask_restful import Resource, marshal_with_field, marshal_with, fields, abort
 from kirin.core import model
-
+from kirin.exceptions import ObjectNotFound
 
 contributor_fields = {
     "id": fields.String,
@@ -68,6 +68,8 @@ class Contributors(Resource):
 
         if id is not None:
             q = q.filter(model.Contributor.id == id)
+            if q.count() < 1:
+                raise ObjectNotFound("Contributor '{}' could not be found".format(id))
 
         return {"contributors": q.all()}
 
@@ -99,3 +101,21 @@ class Contributors(Resource):
             abort(400, message=err_msg)
         except Exception as e:
             abort(400, message="Error while creating contributor - {}".format(e))
+
+    def delete(self, id=None):
+
+        if id is None:
+            abort(400, message="Contributor's id is missing")
+
+        try:
+            contributor = model.db.session.query(model.Contributor).filter(model.Contributor.id == id)
+
+            if contributor.count() < 1:
+                raise ObjectNotFound("Contributor '{}' could not be found".format(id))
+
+            contributor.delete()
+            return None, 204
+        except ObjectNotFound as e:
+            raise e
+        except Exception as e:
+            abort(400, message=e)

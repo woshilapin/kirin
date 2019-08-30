@@ -35,6 +35,7 @@ from kirin.core import model
 from flask import json
 import pytest
 import jsonschema
+import sqlalchemy
 
 
 @pytest.yield_fixture
@@ -100,10 +101,7 @@ def test_get_partial_contributor_with_empty_fields(test_client, with_contributor
 
 def test_get_contributors_with_wrong_id(test_client, with_contributors):
     resp = test_client.get("/contributors/this_id_doesnt_exist")
-    assert resp.status_code == 200
-
-    data = json.loads(resp.data)
-    assert len(data["contributors"]) == 0
+    assert resp.status_code == 404
 
 
 def test_post_schema_distributor_is_valid():
@@ -203,3 +201,23 @@ def test_post_new_valid_contributor_with_unknown_parameter_should_work(test_clie
         },
     )
     assert resp.status_code == 201
+
+
+def test_delete_contributor(test_client, with_contributors):
+    sherbrook_contrib = db.session.query(model.Contributor).filter(model.Contributor.id == "realtime.sherbrooke")
+    assert sherbrook_contrib.count() == 1
+
+    resp = test_client.delete("/contributors/realtime.sherbrooke")
+    assert resp.status_code == 204
+
+    assert sherbrook_contrib.count() == 0
+
+
+def test_delete_unknown_contributor(test_client, with_contributors):
+    resp = test_client.delete("/contributors/UNKNOWN_ID")
+    assert resp.status_code == 404
+
+
+def test_delete_contributor_with_no_id(test_client, with_contributors):
+    resp = test_client.delete("/contributors")
+    assert resp.status_code == 400
