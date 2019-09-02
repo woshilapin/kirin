@@ -19,8 +19,9 @@ Especially as the database does not store/provide timezone-aware datetimes.
 _Where?_  
 Everywhere.  
 So a naive-UTC-datetime is produced right after it's read,
-and timezone info is added as late as possible when needed (ex: when requesting navitia).
-
+and timezone info is added as late as possible when needed (ex: when requesting external service).  
+When absolutely needed, datetimes that are not UTC **must** be timezone-aware to avoid
+being able to mix them with naive-UTC-datetimes (it's also the easiest and safest way to handle timezones).
 
 
 ### Python formatting
