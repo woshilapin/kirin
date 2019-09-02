@@ -36,7 +36,6 @@ from aniso8601 import parse_date
 from pythonjsonlogger import jsonlogger
 from flask.globals import current_app
 import navitia_wrapper
-from pytz import utc
 
 from kirin import new_relic
 from redis.exceptions import ConnectionError
@@ -93,7 +92,7 @@ def to_navitia_utc_str(naive_utc_dt):
     """
     if naive_utc_dt.tzinfo is not None:
         raise InternalException("Invalid datetime provided: must be naive (and UTC)")
-    return utc.localize(naive_utc_dt).strftime("%Y%m%dT%H%M%S%z")
+    return naive_utc_dt.strftime("%Y%m%dT%H%M%SZ")
 
 
 def make_rt_update(data, connector, contributor, status="OK"):

@@ -35,7 +35,7 @@ from tests.mock_navitia import navitia_response
 response = navitia_response.NavitiaResponse()
 
 response.queries = [
-    "vehicle_journeys/?filter=vehicle_journey.has_code(source, Code-pass-midnight-UTC)&depth=2&since=20120615T220000+0000&until=20120616T050000+0000"
+    "vehicle_journeys/?filter=vehicle_journey.has_code(source, Code-pass-midnight-UTC)&depth=2&since=20120615T220000Z&until=20120616T050000Z"
     # resquest time is UTC -> 18:00 to 01:00 local
 ]
 
