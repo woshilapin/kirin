@@ -108,6 +108,10 @@ def test_post_schema_distributor_is_valid():
     jsonschema.Draft4Validator.check_schema(resources.Contributors.post_data_schema)
 
 
+def test_put_schema_distributor_is_valid():
+    jsonschema.Draft4Validator.check_schema(resources.Contributors.put_data_schema)
+
+
 def test_post_new_contributor(test_client):
     new_contrib = {
         "id": "realtime.tokyo",

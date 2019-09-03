@@ -32,6 +32,7 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 import flask
 import jsonschema
+import sqlalchemy
 from flask_restful import Resource, marshal_with_field, marshal_with, fields, abort
 from kirin.core import model
 from kirin.core.types import ConnectorType
@@ -75,14 +76,11 @@ class Contributors(Resource):
 
     @marshal_with(contributors_list_fields)
     def get(self, id=None):
-        q = model.db.session.query(model.Contributor)
-
         if id is not None:
-            q = q.filter(model.Contributor.id == id)
-            if q.count() < 1:
-                raise ObjectNotFound("Contributor '{}' could not be found".format(id))
+            contrib = model.Contributor.query.get_or_404(id)
+            return {"contributors": [contrib]}
 
-        return {"contributors": q.all()}
+        return {"contributors": model.Contributor.query.all()}
 
     @marshal_with(contributor_nested_fields)
     def post(self, id=None):
@@ -110,7 +108,7 @@ class Contributors(Resource):
         except KeyError as e:
             err_msg = "Missing attribute '{}' in input data to construct a contributor".format(e)
             abort(400, message=err_msg)
-        except Exception as e:
+        except sqlalchemy.exc.SQLAlchemyError as e:
             abort(400, message="Error while creating contributor - {}".format(e))
 
     def delete(self, id=None):
@@ -119,17 +117,11 @@ class Contributors(Resource):
             abort(400, message="Contributor's id is missing")
 
         try:
-            contributor = model.db.session.query(model.Contributor).filter(model.Contributor.id == id)
-
-            if contributor.count() < 1:
-                raise ObjectNotFound("Contributor '{}' could not be found".format(id))
-
-            contributor.delete()
+            contributor = model.Contributor.query.get_or_404(id)
+            contributor.query.delete()
             model.db.session.commit()
             return None, 204
-        except ObjectNotFound as e:
-            raise e
-        except Exception as e:
+        except sqlalchemy.exc.SQLAlchemyError as e:
             abort(400, message=e)
 
     @marshal_with(contributor_nested_fields)
@@ -148,15 +140,9 @@ class Contributors(Resource):
             abort(400, message="Failed to validate posted Json data. Error: {}".format(e))
 
         try:
-            contributor = model.db.session.query(model.Contributor).filter(model.Contributor.id == id)
-
-            if contributor.count() < 1:
-                raise ObjectNotFound("Contributor '{}' could not be found".format(id))
-
-            contributor.update(data)
+            contributor = model.Contributor.query.get_or_404(id)
+            contributor.query.update(data)
             model.db.session.commit()
-            return {"contributor": contributor.first()}, 200
-        except ObjectNotFound as e:
-            raise e
-        except Exception as e:
+            return {"contributor": contributor}, 200
+        except sqlalchemy.exc.SQLAlchemyError as e:
             abort(400, message=e)
