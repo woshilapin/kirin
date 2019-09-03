@@ -34,6 +34,7 @@ import flask
 import jsonschema
 from flask_restful import Resource, marshal_with_field, marshal_with, fields, abort
 from kirin.core import model
+from kirin.core.types import ConnectorType
 from kirin.exceptions import ObjectNotFound
 
 contributor_fields = {
@@ -57,7 +58,7 @@ class Contributors(Resource):
             "navitia_coverage": {"type": "string"},
             "navitia_token": {"type": "string"},
             "feed_url": {"type": "string", "format": "uri"},
-            "connector_type": {"type": "string", "enum": ["cots", "gtfs-rt"]},
+            "connector_type": {"type": "string", "enum": ConnectorType.values()},
         },
         "required": ["navitia_coverage", "connector_type"],
     }
@@ -68,7 +69,7 @@ class Contributors(Resource):
             "navitia_coverage": {"type": "string"},
             "navitia_token": {"type": "string"},
             "feed_url": {"type": "string", "format": "uri"},
-            "connector_type": {"type": "string", "enum": ["cots", "gtfs-rt"]},
+            "connector_type": {"type": "string", "enum": ConnectorType.values()},
         },
     }
 
