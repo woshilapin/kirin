@@ -55,7 +55,7 @@ To generate a new database revision script (after an upgrade of the model.py fil
 ```
 honcho run ./manage.py db migrate
 ```
-This will generate a new migration file, that you can amend to your will.
+This will generate a new migration file, that you can amend at your will.
 
 :warning: To ensure safe db migrations for both upgrade (deploy) and downgrade (rollback), please make sure that:  
 Kirin version `n` is able to read/write in db version `n+1` FILLED by Kirin `n+1` (it's the case on rollback)
@@ -105,7 +105,9 @@ There is only one of these on each platform.
 Its role is to poll an external location and check if new information was published.
 In that case, the worker processes it, stores the result in db and sends the corresponding info to Kraken.
 
-There can be several of these if the load is important. At least one per polled provider is recommended.
+There must be at least one worker if any feed is polled.
+There can be several of these if the load is important.
+At least one per polled provider is recommended.
 
 
 ## Tests
