@@ -448,7 +448,7 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         db.Index("realtime_update_contributor_id_and_created_at", "created_at", "contributor_id"),
     )
 
-    def __init__(self, raw_data, connector, contributor=None, status="OK", error=None, received_at=None):
+    def __init__(self, raw_data, connector, contributor, status="OK", error=None, received_at=None):
         self.id = gen_uuid()
         self.raw_data = raw_data
         self.connector = connector
