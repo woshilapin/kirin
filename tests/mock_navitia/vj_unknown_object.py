@@ -35,7 +35,7 @@ from tests.mock_navitia import navitia_response
 response = navitia_response.NavitiaResponse()
 
 response.queries = [
-    "vehicle_journeys/?depth=2&since=20121120T100000+0000&headsign=151515&show_codes=true&until=20121120T170000+0000"
+    "vehicle_journeys/?depth=2&since=20121120T100000Z&headsign=151515&show_codes=true&until=20121120T170000Z"
 ]
 
 response.response_code = 404

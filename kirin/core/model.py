@@ -89,16 +89,15 @@ class VehicleJourney(db.Model):  # type: ignore
     id = db.Column(postgresql.UUID, default=gen_uuid, primary_key=True)
     navitia_trip_id = db.Column(db.Text, nullable=False)
 
-    # ! DO NOT USE attribute directly !
-    # timestamp of VJ's start (stored in UTC to be safe with db without timezone)
-    start_timestamp = db.Column(db.DateTime, nullable=False)  # ! USE get_start_timestamp() !
+    # timestamp of base VJ's start (stored in UTC to be safe with db without timezone)
+    start_timestamp = db.Column(db.DateTime, nullable=False)
     db.Index("start_timestamp_idx", start_timestamp)
 
     db.UniqueConstraint(
         navitia_trip_id, start_timestamp, name="vehicle_journey_navitia_trip_id_start_timestamp_idx"
     )
 
-    def __init__(self, navitia_vj, naive_utc_since_dt, naive_utc_until_dt, naive_vj_start_dt=None):
+    def __init__(self, navitia_vj, since_dt, until_dt, vj_start_dt=None):
         """
         Create a circulation (VJ on a given day) from:
             * the navitia VJ (circulation times without a specific day)
@@ -106,7 +105,7 @@ class VehicleJourney(db.Model):  # type: ignore
 
         As Navitia doesn't return the start-timestamp that matches the search period (only a time, no date),
         Kirin needs to re-process it here:
-        This processes start-timestamp of the circulation to be the closest one after utc_since_dt.
+        This processes start-timestamp of the circulation to be the closest one after since_dt.
 
                                  day:       01               02               03               04
                                 hour:      00:00            00:00            00:00            00:00
@@ -116,16 +115,16 @@ class VehicleJourney(db.Model):  # type: ignore
               actual start-timestamp:        |                |                | 03T02:00       |
 
         :param navitia_vj: json dict of navitia's response when looking for a VJ.
-        :param naive_utc_since_dt: naive UTC datetime BEFORE start of considered circulation,
+        :param since_dt: naive UTC datetime BEFORE start of considered circulation,
             typically the "since" parameter of the search in navitia.
-        :param naive_utc_until_dt: naive UTC datetime AFTER start of considered circulation,
+        :param until_dt: naive UTC datetime AFTER start of considered circulation,
             typically the "until" parameter of the search in navitia.
-        :param naive_vj_start_dt: naive UTC datetime of the first stop_time of vj.
+        :param vj_start_dt: naive UTC datetime of the first stop_time of vj.
         """
         if (
-            naive_utc_since_dt.tzinfo is not None
-            or naive_utc_until_dt.tzinfo is not None
-            or (naive_vj_start_dt is not None and naive_vj_start_dt.tzinfo is not None)
+            since_dt.tzinfo is not None
+            or until_dt.tzinfo is not None
+            or (vj_start_dt is not None and vj_start_dt.tzinfo is not None)
         ):
             raise InternalException("Invalid datetime provided: must be naive (and UTC)")
 
@@ -134,9 +133,9 @@ class VehicleJourney(db.Model):  # type: ignore
             self.navitia_trip_id = navitia_vj["trip"]["id"]
 
         # For an added trip, we use vj_start_dt as in flux cots where as for existing one
-        # compute start_timestamp (in UTC) from first stop_time, to be the closest AFTER provided utc_since_dt.
-        if not navitia_vj.get("stop_times", None) and naive_vj_start_dt:
-            self.start_timestamp = naive_vj_start_dt
+        # compute start_timestamp (in UTC) from first stop_time, to be the closest AFTER provided since_dt.
+        if not navitia_vj.get("stop_times", None) and vj_start_dt:
+            self.start_timestamp = vj_start_dt
         else:
             first_stop_time = navitia_vj.get("stop_times", [{}])[0]
             start_time = first_stop_time["utc_arrival_time"]  # converted in datetime.time() in python wrapper
@@ -144,26 +143,23 @@ class VehicleJourney(db.Model):  # type: ignore
                 start_time = first_stop_time[
                     "utc_departure_time"
                 ]  # converted in datetime.time() in python wrapper
-            self.start_timestamp = datetime.datetime.combine(naive_utc_since_dt.date(), start_time)
+            self.start_timestamp = datetime.datetime.combine(since_dt.date(), start_time)
 
             # if since = 20010102T2300 and start_time = 0200, actual start_timestamp = 20010103T0200.
-            # So adding one day to start_timestamp obtained (20010102T0200) if it's before since.
-            if self.start_timestamp < naive_utc_since_dt:
+            # So adding one day to start_timestamp obtained (20010102T0200) if it's before since_dt.
+            if self.start_timestamp < since_dt:
                 self.start_timestamp += timedelta(days=1)
-            # simple consistency check (for now): the start timestamp must also be BEFORE utc_until_dt
-            if naive_utc_until_dt < self.start_timestamp:
+            # simple consistency check (for now): the start timestamp must also be BEFORE until_dt
+            if until_dt < self.start_timestamp:
                 msg = "impossible to calculate the circulation date of vj: {} on period [{}, {}]".format(
-                    navitia_vj.get("id"), naive_utc_since_dt, naive_utc_until_dt
+                    navitia_vj.get("id"), since_dt, until_dt
                 )
                 raise ObjectNotFound(msg)
 
         self.navitia_vj = navitia_vj  # Not persisted
 
-    def get_start_timestamp(self):
-        return self.start_timestamp
-
-    def get_utc_circulation_date(self):
-        return self.get_start_timestamp().date()
+    def get_circulation_date(self):
+        return self.start_timestamp.date()
 
 
 class StopTimeUpdate(db.Model, TimestampMixin):  # type: ignore

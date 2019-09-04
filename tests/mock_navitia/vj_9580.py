@@ -35,7 +35,7 @@ from tests.mock_navitia import navitia_response
 response = navitia_response.NavitiaResponse()
 
 response.queries = [
-    "vehicle_journeys/?depth=2&since=20121120T120100+0000&headsign=9580&show_codes=true&until=20121120T214600+0000"
+    "vehicle_journeys/?depth=2&since=20121120T120100Z&headsign=9580&show_codes=true&until=20121120T214600Z"
 ]
 
 response.response_code = 200

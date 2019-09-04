@@ -142,9 +142,9 @@ def fill_trip_update(pb_trip_update, trip_update):
     vj = trip_update.vj
     if vj:
         pb_trip.trip_id = vj.navitia_trip_id
-        # WARNING: here trip.start_date is considered UTC, not local
+        # WARNING: here trip.start_date is UTC, not local
         # (this date differs if vj starts during the period between midnight UTC and local midnight)
-        pb_trip.start_date = date_to_str(vj.get_utc_circulation_date())
+        pb_trip.start_date = date_to_str(vj.get_circulation_date())
         # TODO fill the right schedule_relationship
         if trip_update.status == "delete":
             pb_trip.schedule_relationship = gtfs_realtime_pb2.TripDescriptor.CANCELED

@@ -115,31 +115,29 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
         self.navitia = nav
         self.contributor = contributor
 
-    def _get_navitia_vjs(
-        self, headsign_str, naive_utc_since_dt, naive_utc_until_dt, action_on_trip=ActionOnTrip.NOT_ADDED.name
-    ):
+    def _get_navitia_vjs(self, headsign_str, since_dt, until_dt, action_on_trip=ActionOnTrip.NOT_ADDED.name):
         """
         Search for navitia's vehicle journeys with given headsigns, in the period provided
         :param headsign_str: the headsigns to search for (can be multiple expressed in one string, like "2512/3")
-        :param naive_utc_since_dt: naive UTC datetime that starts the search period.
+        :param since_dt: naive UTC datetime that starts the search period.
             Typically the supposed datetime of first base-schedule stop_time.
-        :param naive_utc_until_dt: naive UTC datetime that ends the search period.
+        :param until_dt: naive UTC datetime that ends the search period.
             Typically the supposed datetime of last base-schedule stop_time.
         :param action_on_trip: action to be performed on trip. This param is used to do consistency check
         """
         log = logging.getLogger(__name__)
 
-        if (naive_utc_since_dt is None) or (naive_utc_until_dt is None):
+        if (since_dt is None) or (until_dt is None):
             return []
 
-        if naive_utc_since_dt.tzinfo is not None or naive_utc_until_dt.tzinfo is not None:
+        if since_dt.tzinfo is not None or until_dt.tzinfo is not None:
             raise InternalException("Invalid datetime provided: must be naive (and UTC)")
 
         vjs = {}
         # to get the date of the vj we use the start/end of the vj + some tolerance
         # since the SNCF data and navitia data might not be synchronized
-        extended_since_dt = naive_utc_since_dt - SNCF_SEARCH_MARGIN
-        extended_until_dt = naive_utc_until_dt + SNCF_SEARCH_MARGIN
+        extended_since_dt = since_dt - SNCF_SEARCH_MARGIN
+        extended_until_dt = until_dt + SNCF_SEARCH_MARGIN
 
         # using a set to deduplicate
         # one headsign_str (ex: "96320/1") can lead to multiple headsigns (ex: ["96320", "96321"])
@@ -185,9 +183,7 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
             for nav_vj in navitia_vjs:
 
                 try:
-                    vj = model.VehicleJourney(
-                        nav_vj, extended_since_dt, extended_until_dt, naive_vj_start_dt=naive_utc_since_dt
-                    )
+                    vj = model.VehicleJourney(nav_vj, extended_since_dt, extended_until_dt, vj_start_dt=since_dt)
                     vjs[nav_vj["id"]] = vj
                 except Exception as e:
                     logging.getLogger(__name__).exception(
