@@ -123,7 +123,9 @@ def test_cots_train_trip_removal(mock_navitia_fixture):
     input_train_trip_removed = get_fixture_data("cots_train_6113_trip_removal.json")
 
     with app.app_context():
-        rt_update = model.RealTimeUpdate(input_train_trip_removed, connector="cots", contributor=COTS_CONTRIBUTOR)
+        rt_update = model.RealTimeUpdate(
+            input_train_trip_removed, connector="cots", contributor=COTS_CONTRIBUTOR
+        )
         trip_updates = KirinModelBuilder(dumb_nav_wrapper(), contributor=COTS_CONTRIBUTOR).build(rt_update)
         rt_update.trip_updates = trip_updates
         db.session.add(rt_update)
@@ -176,7 +178,6 @@ def test_get_action_on_trip_add(mock_navitia_fixture):
 
         # Clean database for further test
         clean_db()
-
 
         # Delete the recently added trip followed by add: should be FIRST_TIME_ADDED
         rt_update = model.RealTimeUpdate(input_trip_add, connector="cots", contributor=COTS_CONTRIBUTOR)

@@ -45,6 +45,7 @@ from tests.integration.conftest import GTFS_CONTRIBUTOR
 import time
 from sqlalchemy import desc
 
+
 @pytest.fixture(scope="function", autouse=True)
 def navitia(monkeypatch):
     """
