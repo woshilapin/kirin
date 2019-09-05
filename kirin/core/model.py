@@ -316,14 +316,7 @@ class TripUpdate(db.Model, TimestampMixin):  # type: ignore
     db.Index("contributor_id_idx", contributor_id)
 
     def __init__(
-        self,
-        vj=None,
-        status="none",
-        contributor=None,
-        company_id=None,
-        effect=None,
-        physical_mode_id=None,
-        headsign=None,
+        self, vj, contributor, status="none", company_id=None, effect=None, physical_mode_id=None, headsign=None
     ):
         self.created_at = datetime.datetime.utcnow()
         self.vj = vj

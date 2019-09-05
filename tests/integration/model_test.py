@@ -41,7 +41,6 @@ import sqlalchemy
 
 
 def create_trip_update(vj_id, trip_id, circulation_date, contributor=COTS_CONTRIBUTOR):
-    trip_update = TripUpdate()
     vj = VehicleJourney(
         {
             "trip": {"id": trip_id},
@@ -53,8 +52,7 @@ def create_trip_update(vj_id, trip_id, circulation_date, contributor=COTS_CONTRI
         datetime.datetime.combine(circulation_date, datetime.time(9, 0)),
     )
     vj.id = vj_id
-    trip_update.vj = vj
-    trip_update.contributor_id = contributor
+    trip_update = TripUpdate(vj=vj, contributor=contributor)
 
     db.session.add(vj)
     db.session.add(trip_update)

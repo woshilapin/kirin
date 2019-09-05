@@ -53,8 +53,8 @@ def create_trip_update(id, trip_id, circulation_date, stops, status="update", co
             datetime.datetime.combine(circulation_date, datetime.time(7, 10)),
             datetime.datetime.combine(circulation_date, datetime.time(9, 10)),
         ),
-        status,
         contributor,
+        status,
     )
     trip_update.id = id
     for stop in stops:
@@ -200,7 +200,7 @@ def test_handle_new_vj():
         ],
     }
     with app.app_context():
-        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor=COTS_CONTRIBUTOR)
+        trip_update = TripUpdate(_create_db_vj(navitia_vj), contributor=COTS_CONTRIBUTOR, status="update")
         st = StopTimeUpdate({"id": "sa:1"}, departure_delay=timedelta(minutes=5), dep_status="update")
         real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         trip_update.stop_time_updates.append(st)

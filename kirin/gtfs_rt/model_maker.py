@@ -84,7 +84,6 @@ class KirinModelBuilder(object):
         self.period_filter_tolerance = datetime.timedelta(hours=3)
         self.stop_code_key = "source"  # TODO conf
         self.instance_data_pub_date = self.navitia.get_publication_date()
-        self.contributor_id = contributor
 
     def build(self, rt_update, data):
         """
@@ -130,9 +129,7 @@ class KirinModelBuilder(object):
         vjs = self._get_navitia_vjs(input_trip_update.trip, input_data_time=input_data_time)
         trip_updates = []
         for vj in vjs:
-            trip_update = model.TripUpdate(vj=vj)
-            trip_update.contributor = self.contributor
-            trip_update.contributor_id = self.contributor_id
+            trip_update = model.TripUpdate(vj=vj, contributor=self.contributor)
             highest_st_status = ModificationType.none.name
 
             is_tu_valid = True

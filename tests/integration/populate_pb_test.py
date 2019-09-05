@@ -64,11 +64,10 @@ def test_populate_pb_with_one_stop_time():
     }
 
     with app.app_context():
-        trip_update = TripUpdate(contributor=COTS_CONTRIBUTOR)
         vj = VehicleJourney(
             navitia_vj, datetime.datetime(2015, 9, 8, 5, 10, 0), datetime.datetime(2015, 9, 8, 8, 10, 0)
         )
-        trip_update.vj = vj
+        trip_update = TripUpdate(vj=vj, contributor=COTS_CONTRIBUTOR)
         st = StopTimeUpdate({"id": "sa:1"}, departure=_dt("8:15"), arrival=None)
         real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         real_time_update.trip_updates.append(trip_update)
@@ -117,11 +116,10 @@ def test_populate_pb_with_two_stop_time():
     }
 
     with app.app_context():
-        trip_update = TripUpdate(contributor=COTS_CONTRIBUTOR)
         vj = VehicleJourney(
             navitia_vj, datetime.datetime(2015, 9, 8, 5, 10, 0), datetime.datetime(2015, 9, 8, 8, 10, 0)
         )
-        trip_update.vj = vj
+        trip_update = TripUpdate(vj=vj, contributor=COTS_CONTRIBUTOR)
         real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         real_time_update.trip_updates.append(trip_update)
         st = StopTimeUpdate(
@@ -221,11 +219,10 @@ def test_populate_pb_with_deleted_stop_time():
     }
 
     with app.app_context():
-        trip_update = TripUpdate(contributor=COTS_CONTRIBUTOR)
         vj = VehicleJourney(
             navitia_vj, datetime.datetime(2015, 9, 8, 5, 11, 0), datetime.datetime(2015, 9, 8, 10, 10, 0)
         )
-        trip_update.vj = vj
+        trip_update = TripUpdate(vj=vj, contributor=COTS_CONTRIBUTOR)
         real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         real_time_update.trip_updates.append(trip_update)
         st = StopTimeUpdate(
@@ -353,18 +350,16 @@ def test_populate_pb_with_cancelation():
     }
 
     with app.app_context():
-        trip_update = TripUpdate()
         vj = VehicleJourney(
             navitia_vj, datetime.datetime(2015, 9, 8, 7, 10, 0), datetime.datetime(2015, 9, 8, 11, 5, 0)
         )
+        trip_update = TripUpdate(vj=vj, contributor=COTS_CONTRIBUTOR)
         trip_update.vj = vj
         trip_update.status = "delete"
         trip_update.message = "Message Test"
         real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
-        trip_update.contributor = COTS_CONTRIBUTOR
         trip_update.company_id = "sncf"
         trip_update.effect = "REDUCED_SERVICE"
-        trip_update.contributor_id = COTS_CONTRIBUTOR
         real_time_update.trip_updates.append(trip_update)
 
         db.session.add(real_time_update)
@@ -399,15 +394,13 @@ def test_populate_pb_with_full_dataset():
     }
 
     with app.app_context():
-        trip_update = TripUpdate()
         vj = VehicleJourney(
             navitia_vj, datetime.datetime(2015, 9, 8, 7, 10, 0), datetime.datetime(2015, 9, 8, 9, 10, 0)
         )
-        trip_update.vj = vj
+        trip_update = TripUpdate(vj=vj, contributor=COTS_CONTRIBUTOR)
         trip_update.status = "delete"
         trip_update.message = "Message Test"
         real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
-        trip_update.contributor_id = COTS_CONTRIBUTOR
         trip_update.company_id = "keolis"
         trip_update.effect = "DETOUR"
         real_time_update.trip_updates.append(trip_update)
@@ -495,13 +488,13 @@ def test_populate_pb_for_added_trip():
     navitia_vj = make_navitia_empty_vj("vehicle_journey:1")
 
     with app.app_context():
-        trip_update = TripUpdate()
         vj = VehicleJourney(
             navitia_vj,
             since_dt=datetime.datetime(2015, 9, 8, 5, 10, 0),
             until_dt=datetime.datetime(2015, 9, 8, 8, 10, 0),
             vj_start_dt=datetime.datetime(2015, 9, 8, 5, 10, 0),
         )
+        trip_update = TripUpdate(vj=vj, contributor=COTS_CONTRIBUTOR)
         trip_update.vj = vj
         trip_update.status = "add"
         trip_update.effect = "ADDITIONAL_SERVICE"
@@ -529,7 +522,6 @@ def test_populate_pb_for_added_trip():
             dep_status="none",
         )
         trip_update.stop_time_updates.append(st)
-        trip_update.contributor_id = COTS_CONTRIBUTOR
 
         db.session.add(real_time_update)
         db.session.commit()

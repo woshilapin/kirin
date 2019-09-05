@@ -167,7 +167,7 @@ def test_cots_delayed_simple_post(mock_rabbitmq):
             "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21)
         )
         assert db_trip_delayed.stop_time_updates[4].message is None
-    db_trip_delayed = check_db_96231_delayed()
+    db_trip_delayed = check_db_96231_delayed(contributor=COTS_CONTRIBUTOR)
     assert db_trip_delayed.effect == "SIGNIFICANT_DELAYS"
     assert len(db_trip_delayed.stop_time_updates) == 6
     assert mock_rabbitmq.call_count == 1
@@ -186,7 +186,7 @@ def test_cots_delayed_then_ok(mock_rabbitmq):
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 6
         assert RealTimeUpdate.query.first().status == "OK"
-    db_trip_delayed = check_db_96231_delayed()
+    db_trip_delayed = check_db_96231_delayed(contributor=COTS_CONTRIBUTOR)
     assert db_trip_delayed.effect == "SIGNIFICANT_DELAYS"
     assert len(db_trip_delayed.stop_time_updates) == 6
     assert mock_rabbitmq.call_count == 1
@@ -276,7 +276,7 @@ def test_cots_delayed_post_twice(mock_rabbitmq):
         assert len(RealTimeUpdate.query.all()) == 2
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 6
-    db_trip_delayed = check_db_96231_delayed()
+    db_trip_delayed = check_db_96231_delayed(contributor=COTS_CONTRIBUTOR)
     assert db_trip_delayed.effect == "SIGNIFICANT_DELAYS"
     assert len(db_trip_delayed.stop_time_updates) == 6
     # the rabbit mq has to have been called twice
@@ -412,7 +412,7 @@ def test_cots_delayed_and_trip_removal_post(mock_rabbitmq):
         assert len(RealTimeUpdate.query.all()) == 2
         assert len(TripUpdate.query.all()) == 2
         assert len(StopTimeUpdate.query.all()) == 6
-    db_trip_delayed = check_db_96231_delayed()
+    db_trip_delayed = check_db_96231_delayed(contributor=COTS_CONTRIBUTOR)
     assert db_trip_delayed.effect == "SIGNIFICANT_DELAYS"
     assert len(db_trip_delayed.stop_time_updates) == 6
     check_db_6113_trip_removal()
@@ -684,7 +684,7 @@ def test_cots_added_and_deleted_stop_time():
         assert StopTimeUpdate.query.all()[3].departure_status == "delete"
         # It has already been deleted, but it's allowed to send deleted once again.
         assert StopTimeUpdate.query.all()[3].created_at > created_at_for_delete
-        db_trip_delayed = check_db_96231_delayed()
+        db_trip_delayed = check_db_96231_delayed(contributor=COTS_CONTRIBUTOR)
         # when delete and delays exist, effect=REDUCED_SERVICE, because REDUCED_SERVICE > SIGNIFICANT_DELAYS
         assert db_trip_delayed.effect == "REDUCED_SERVICE"
         assert len(db_trip_delayed.stop_time_updates) == 7
