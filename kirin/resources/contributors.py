@@ -135,6 +135,10 @@ class Contributors(Resource):
             abort(400, message="Contributor's id is missing")
 
         try:
+            # As we should not update id, delete it from data if exists
+            if "id" in data:
+                del data["id"]
+
             contributor = model.Contributor.query.get_or_404(id)
             contributor.query.update(data)
             model.db.session.commit()
