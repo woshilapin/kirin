@@ -52,27 +52,21 @@ contributor_nested_fields = {"contributor": fields.Nested(contributor_fields)}
 
 class Contributors(Resource):
 
+    schema_properties = {
+        "id": {"type": "string"},
+        "navitia_coverage": {"type": "string"},
+        "navitia_token": {"type": "string"},
+        "feed_url": {"type": "string", "format": "uri"},
+        "connector_type": {"type": "string", "enum": ConnectorType.values()},
+    }
+
     post_data_schema = {
         "type": "object",
-        "properties": {
-            "id": {"type": "string"},
-            "navitia_coverage": {"type": "string"},
-            "navitia_token": {"type": "string"},
-            "feed_url": {"type": "string", "format": "uri"},
-            "connector_type": {"type": "string", "enum": ConnectorType.values()},
-        },
+        "properties": schema_properties,
         "required": ["navitia_coverage", "connector_type"],
     }
 
-    put_data_schema = {
-        "type": "object",
-        "properties": {
-            "navitia_coverage": {"type": "string"},
-            "navitia_token": {"type": "string"},
-            "feed_url": {"type": "string", "format": "uri"},
-            "connector_type": {"type": "string", "enum": ConnectorType.values()},
-        },
-    }
+    put_data_schema = {"type": "object", "properties": schema_properties}
 
     @marshal_with(contributors_list_fields)
     def get(self, id=None):
@@ -126,9 +120,6 @@ class Contributors(Resource):
 
     @marshal_with(contributor_nested_fields)
     def put(self, id=None):
-        if id is None:
-            abort(400, message="Contributor's id is missing")
-
         data = flask.request.get_json()
 
         if data is None:
@@ -138,6 +129,10 @@ class Contributors(Resource):
             jsonschema.validate(data, self.put_data_schema)
         except jsonschema.exceptions.ValidationError as e:
             abort(400, message="Failed to validate posted Json data. Error: {}".format(e))
+
+        id = id or data.get("id")
+        if id is None:
+            abort(400, message="Contributor's id is missing")
 
         try:
             contributor = model.Contributor.query.get_or_404(id)

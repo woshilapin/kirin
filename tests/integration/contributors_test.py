@@ -309,3 +309,22 @@ def test_put_unknown_contributor(test_client, with_contributors):
 def test_put_contributor_with_malformed_data(test_client, with_contributors):
     resp = test_client.put("/contributors/realtime.paris", json={"feed_url": 42})
     assert resp.status_code == 400
+
+
+def test_post_get_put_to_ensure_API_consitency(test_client):
+    new_contrib = {
+        "id": "realtime.tokyo",
+        "navitia_coverage": "jp",
+        "navitia_token": "blablablabla",
+        "feed_url": "http://nihongo.jp",
+        "connector_type": "gtfs-rt",
+    }
+    test_client.post("/contributors", json=new_contrib)
+
+    get_resp = test_client.get("/contributors/realtime.tokyo")
+    get_contrib = json.loads(get_resp.data)["contributors"][0]
+
+    put_resp = test_client.put("/contributors", json=get_contrib)
+    put_data = json.loads(put_resp.data)
+
+    assert put_data["contributor"] == new_contrib
