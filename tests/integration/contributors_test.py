@@ -35,6 +35,7 @@ from kirin.core import model
 from flask import json
 import pytest
 import jsonschema
+import sqlalchemy
 
 
 @pytest.yield_fixture
@@ -100,14 +101,15 @@ def test_get_partial_contributor_with_empty_fields(test_client, with_contributor
 
 def test_get_contributors_with_wrong_id(test_client, with_contributors):
     resp = test_client.get("/contributors/this_id_doesnt_exist")
-    assert resp.status_code == 200
-
-    data = json.loads(resp.data)
-    assert len(data["contributors"]) == 0
+    assert resp.status_code == 404
 
 
 def test_post_schema_distributor_is_valid():
     jsonschema.Draft4Validator.check_schema(resources.Contributors.post_data_schema)
+
+
+def test_put_schema_distributor_is_valid():
+    jsonschema.Draft4Validator.check_schema(resources.Contributors.put_data_schema)
 
 
 def test_post_new_contributor(test_client):
@@ -203,3 +205,126 @@ def test_post_new_valid_contributor_with_unknown_parameter_should_work(test_clie
         },
     )
     assert resp.status_code == 201
+
+
+def test_delete_contributor(test_client, with_contributors):
+    sherbrook_contrib = db.session.query(model.Contributor).filter(model.Contributor.id == "realtime.sherbrooke")
+    assert sherbrook_contrib.count() == 1
+
+    resp = test_client.delete("/contributors/realtime.sherbrooke")
+    assert resp.status_code == 204
+
+    assert sherbrook_contrib.count() == 0
+
+
+def test_delete_unknown_contributor(test_client, with_contributors):
+    resp = test_client.delete("/contributors/UNKNOWN_ID")
+    assert resp.status_code == 404
+
+
+def test_delete_contributor_with_no_id(test_client, with_contributors):
+    resp = test_client.delete("/contributors")
+    assert resp.status_code == 400
+
+
+def test_put_contributor_with_id(test_client):
+    db.session.add(
+        model.Contributor(
+            id="SaintMeuMeu",
+            navitia_coverage="ca",
+            connector_type="cots",
+            navitia_token="this_is_a_token",
+            feed_url="http://feed.url",
+        )
+    )
+    db.session.commit()
+
+    resp = test_client.put(
+        "/contributors/SaintMeuMeu",
+        json={
+            "navitia_coverage": "qb",
+            "connector_type": "gtfs-rt",
+            "navitia_token": "new_token",
+            "feed_url": "http://new.feed",
+        },
+    )
+
+    assert resp.status_code == 200
+
+    contrib = db.session.query(model.Contributor).filter(model.Contributor.id == "SaintMeuMeu").first()
+    assert contrib.navitia_coverage == "qb"
+    assert contrib.connector_type == "gtfs-rt"
+    assert contrib.navitia_token == "new_token"
+    assert contrib.feed_url == "http://new.feed"
+
+
+def test_put_partial_contributor(test_client):
+    db.session.add(
+        model.Contributor(
+            id="SaintMeuMeu",
+            navitia_coverage="ca",
+            connector_type="cots",
+            navitia_token="this_is_a_token",
+            feed_url="http://feed.url",
+        )
+    )
+    db.session.commit()
+
+    put_resp = test_client.put("/contributors/SaintMeuMeu", json={"navitia_coverage": "qb"})
+    assert put_resp.status_code == 200
+
+    get_resp = test_client.get("/contributors/SaintMeuMeu")
+
+    put_data = json.loads(put_resp.data)
+    get_data = json.loads(get_resp.data)
+    assert put_data["contributor"] == get_data["contributors"][0]
+
+
+def test_put_contributor_with_no_data(test_client):
+    db.session.add(
+        model.Contributor(
+            id="SaintMeuMeu",
+            navitia_coverage="ca",
+            connector_type="cots",
+            navitia_token="this_is_a_token",
+            feed_url="http://feed.url",
+        )
+    )
+    db.session.commit()
+
+    resp = test_client.put("/contributors/SaintMeuMeu")
+    assert resp.status_code == 400
+
+
+def test_put_contributor_without_id(test_client, with_contributors):
+    resp = test_client.put("/contributors")
+    assert resp.status_code == 400
+
+
+def test_put_unknown_contributor(test_client, with_contributors):
+    resp = test_client.put("/contributors/SaintMeuMeu", json={"navitia_coverage": "qb"})
+    assert resp.status_code == 404
+
+
+def test_put_contributor_with_malformed_data(test_client, with_contributors):
+    resp = test_client.put("/contributors/realtime.paris", json={"feed_url": 42})
+    assert resp.status_code == 400
+
+
+def test_post_get_put_to_ensure_API_consitency(test_client):
+    new_contrib = {
+        "id": "realtime.tokyo",
+        "navitia_coverage": "jp",
+        "navitia_token": "blablablabla",
+        "feed_url": "http://nihongo.jp",
+        "connector_type": "gtfs-rt",
+    }
+    test_client.post("/contributors", json=new_contrib)
+
+    get_resp = test_client.get("/contributors/realtime.tokyo")
+    get_contrib = json.loads(get_resp.data)["contributors"][0]
+
+    put_resp = test_client.put("/contributors", json=get_contrib)
+    put_data = json.loads(put_resp.data)
+
+    assert put_data["contributor"] == new_contrib

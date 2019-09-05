@@ -81,6 +81,10 @@ class ConnectorType(Enum):
     cots = "cots"
     gtfs_rt = "gtfs-rt"
 
+    @staticmethod
+    def values():
+        return [c.value for c in ConnectorType]
+
 
 def get_higher_status(st1, st2):
     return max([st1, st2], key=get_modification_type_order)
