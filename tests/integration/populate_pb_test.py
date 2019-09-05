@@ -38,6 +38,7 @@ from kirin import app, db
 from kirin import gtfs_realtime_pb2, kirin_pb2
 from tests.check_utils import _dt
 from kirin.abstract_sncf_model_maker import make_navitia_empty_vj
+from tests.integration.conftest import COTS_CONTRIBUTOR
 
 
 def test_populate_pb_with_one_stop_time():
@@ -63,13 +64,13 @@ def test_populate_pb_with_one_stop_time():
     }
 
     with app.app_context():
-        trip_update = TripUpdate(contributor="realtime.cots")
+        trip_update = TripUpdate(contributor=COTS_CONTRIBUTOR)
         vj = VehicleJourney(
             navitia_vj, datetime.datetime(2015, 9, 8, 5, 10, 0), datetime.datetime(2015, 9, 8, 8, 10, 0)
         )
         trip_update.vj = vj
         st = StopTimeUpdate({"id": "sa:1"}, departure=_dt("8:15"), arrival=None)
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         real_time_update.trip_updates.append(trip_update)
         trip_update.stop_time_updates.append(st)
 
@@ -116,12 +117,12 @@ def test_populate_pb_with_two_stop_time():
     }
 
     with app.app_context():
-        trip_update = TripUpdate(contributor="realtime.cots")
+        trip_update = TripUpdate(contributor=COTS_CONTRIBUTOR)
         vj = VehicleJourney(
             navitia_vj, datetime.datetime(2015, 9, 8, 5, 10, 0), datetime.datetime(2015, 9, 8, 8, 10, 0)
         )
         trip_update.vj = vj
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         real_time_update.trip_updates.append(trip_update)
         st = StopTimeUpdate(
             {"id": "sa:1"}, departure=_dt("8:15"), departure_delay=timedelta(minutes=5), arrival=None
@@ -220,12 +221,12 @@ def test_populate_pb_with_deleted_stop_time():
     }
 
     with app.app_context():
-        trip_update = TripUpdate(contributor="realtime.cots")
+        trip_update = TripUpdate(contributor=COTS_CONTRIBUTOR)
         vj = VehicleJourney(
             navitia_vj, datetime.datetime(2015, 9, 8, 5, 11, 0), datetime.datetime(2015, 9, 8, 10, 10, 0)
         )
         trip_update.vj = vj
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         real_time_update.trip_updates.append(trip_update)
         st = StopTimeUpdate(
             {"id": "sa:1"}, departure=_dt("8:15"), departure_delay=timedelta(minutes=5), arrival=None
@@ -359,11 +360,11 @@ def test_populate_pb_with_cancelation():
         trip_update.vj = vj
         trip_update.status = "delete"
         trip_update.message = "Message Test"
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
-        trip_update.contributor = "realtime.cots"
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
+        trip_update.contributor = COTS_CONTRIBUTOR
         trip_update.company_id = "sncf"
         trip_update.effect = "REDUCED_SERVICE"
-        trip_update.contributor_id = "realtime.cots"
+        trip_update.contributor_id = COTS_CONTRIBUTOR
         real_time_update.trip_updates.append(trip_update)
 
         db.session.add(real_time_update)
@@ -381,7 +382,7 @@ def test_populate_pb_with_cancelation():
         assert pb_trip_update.trip.schedule_relationship == gtfs_realtime_pb2.TripDescriptor.CANCELED
 
         assert pb_trip_update.trip.HasExtension(kirin_pb2.contributor) is True
-        assert pb_trip_update.trip.Extensions[kirin_pb2.contributor] == "realtime.cots"
+        assert pb_trip_update.trip.Extensions[kirin_pb2.contributor] == COTS_CONTRIBUTOR
         assert pb_trip_update.trip.Extensions[kirin_pb2.company_id] == "sncf"
         assert pb_trip_update.Extensions[kirin_pb2.effect] == gtfs_realtime_pb2.Alert.REDUCED_SERVICE
 
@@ -405,8 +406,8 @@ def test_populate_pb_with_full_dataset():
         trip_update.vj = vj
         trip_update.status = "delete"
         trip_update.message = "Message Test"
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
-        trip_update.contributor_id = "realtime.cots"
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
+        trip_update.contributor_id = COTS_CONTRIBUTOR
         trip_update.company_id = "keolis"
         trip_update.effect = "DETOUR"
         real_time_update.trip_updates.append(trip_update)
@@ -426,7 +427,7 @@ def test_populate_pb_with_full_dataset():
         assert pb_trip_update.trip.schedule_relationship == gtfs_realtime_pb2.TripDescriptor.CANCELED
 
         assert pb_trip_update.trip.HasExtension(kirin_pb2.contributor) is True
-        assert pb_trip_update.trip.Extensions[kirin_pb2.contributor] == "realtime.cots"
+        assert pb_trip_update.trip.Extensions[kirin_pb2.contributor] == COTS_CONTRIBUTOR
         assert pb_trip_update.trip.Extensions[kirin_pb2.company_id] == "keolis"
         assert pb_trip_update.Extensions[kirin_pb2.effect] == gtfs_realtime_pb2.Alert.DETOUR
 
@@ -505,7 +506,7 @@ def test_populate_pb_for_added_trip():
         trip_update.status = "add"
         trip_update.effect = "ADDITIONAL_SERVICE"
         trip_update.physical_mode_id = "physical_mode:LongDistanceTrain"
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         real_time_update.trip_updates.append(trip_update)
         st = StopTimeUpdate(
             {"id": "sa:1"},
@@ -528,7 +529,7 @@ def test_populate_pb_for_added_trip():
             dep_status="none",
         )
         trip_update.stop_time_updates.append(st)
-        trip_update.contributor_id = "realtime.cots"
+        trip_update.contributor_id = COTS_CONTRIBUTOR
 
         db.session.add(real_time_update)
         db.session.commit()

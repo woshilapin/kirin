@@ -32,6 +32,7 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 from kirin import app
 from kirin.core.model import RealTimeUpdate, TripUpdate, StopTimeUpdate
+from tests.integration.conftest import COTS_CONTRIBUTOR
 from datetime import timedelta, datetime
 
 
@@ -104,7 +105,7 @@ def check_db_96231_delayed(motif_externe_is_null=False):
             assert second_st.message == "Affluence exceptionnelle de voyageurs"
 
         assert db_trip_delayed.contributor is not None
-        assert db_trip_delayed.contributor_id == "realtime.cots"
+        assert db_trip_delayed.contributor_id == COTS_CONTRIBUTOR
 
         return db_trip_delayed  # for additional testing if needed
 

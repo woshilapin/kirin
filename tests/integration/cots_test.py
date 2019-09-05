@@ -39,6 +39,7 @@ from tests import mock_navitia
 from tests.check_utils import get_fixture_data
 from kirin.core.model import RealTimeUpdate, TripUpdate, StopTimeUpdate
 from tests.integration.utils_cots_test import requests_mock_cause_message
+from tests.integration.conftest import COTS_CONTRIBUTOR
 from tests.integration.utils_sncf_test import (
     check_db_96231_delayed,
     check_db_john_trip_removal,
@@ -126,7 +127,7 @@ def test_cots_simple_post(mock_rabbitmq):
         assert rtu.received_at
         assert rtu.status == "OK"
         assert rtu.error is None
-        assert rtu.contributor_id == "realtime.cots"
+        assert rtu.contributor_id == COTS_CONTRIBUTOR
         assert rtu.connector == "cots"
         assert "listePointDeParcours" in rtu.raw_data
     assert mock_rabbitmq.call_count == 1
@@ -198,7 +199,7 @@ def test_cots_delayed_then_ok(mock_rabbitmq):
         assert len(RealTimeUpdate.query.all()) == 2
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 6
-    check_db_96231_normal(contributor="realtime.cots")
+    check_db_96231_normal(contributor=COTS_CONTRIBUTOR)
     assert mock_rabbitmq.call_count == 2
 
 
@@ -228,7 +229,7 @@ def test_cots_paris_tz(mock_rabbitmq):
         assert len(RealTimeUpdate.query.all()) == 1
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 6
-    check_db_96231_normal(contributor="realtime.cots")
+    check_db_96231_normal(contributor=COTS_CONTRIBUTOR)
     assert mock_rabbitmq.call_count == 1
 
 
@@ -246,7 +247,7 @@ def test_cots_partial_removal_delayed_then_partial_removal_ok(mock_rabbitmq):
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().status == "OK"
-    check_db_870154_partial_removal(contributor="realtime.cots")
+    check_db_870154_partial_removal(contributor=COTS_CONTRIBUTOR)
     check_db_870154_delay()
     assert mock_rabbitmq.call_count == 1
 
@@ -256,7 +257,7 @@ def test_cots_partial_removal_delayed_then_partial_removal_ok(mock_rabbitmq):
 
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) == 2
-    check_db_870154_partial_removal(contributor="realtime.cots")
+    check_db_870154_partial_removal(contributor=COTS_CONTRIBUTOR)
     check_db_870154_normal()
     assert mock_rabbitmq.call_count == 2
 
@@ -297,7 +298,7 @@ def test_cots_mixed_statuses_inside_stop_times(mock_rabbitmq):
         assert len(RealTimeUpdate.query.all()) == 1
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 6
-    check_db_96231_mixed_statuses_inside_stops(contributor="realtime.cots")
+    check_db_96231_mixed_statuses_inside_stops(contributor=COTS_CONTRIBUTOR)
 
     assert mock_rabbitmq.call_count == 1
 
@@ -317,7 +318,7 @@ def test_cots_mixed_statuses_delay_removal_delay(mock_rabbitmq):
         assert len(RealTimeUpdate.query.all()) == 1
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 6
-    check_db_96231_mixed_statuses_delay_removal_delay(contributor="realtime.cots")
+    check_db_96231_mixed_statuses_delay_removal_delay(contributor=COTS_CONTRIBUTOR)
     # the rabbit mq has to have been called twice
     assert mock_rabbitmq.call_count == 1
 
@@ -358,7 +359,7 @@ def test_cots_trip_delayed_then_partial_removal(mock_rabbitmq):
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 6
         assert RealTimeUpdate.query.first().status == "OK"
-    check_db_96231_partial_removal(contributor="realtime.cots")
+    check_db_96231_partial_removal(contributor=COTS_CONTRIBUTOR)
     # the rabbit mq has to have been called twice
     assert mock_rabbitmq.call_count == 2
 
@@ -503,9 +504,9 @@ def test_cots_trip_unknown_vj(mock_rabbitmq):
         assert RealTimeUpdate.query.first().raw_data == cots_6112
 
     status = api_get("/status")
-    assert "-" in status["last_update"]["realtime.cots"]  # only check it's a date
+    assert "-" in status["last_update"][COTS_CONTRIBUTOR]  # only check it's a date
     assert status["last_valid_update"] == {}
-    assert status["last_update_error"]["realtime.cots"] == "no train found for headsign(s) 006112"
+    assert status["last_update_error"][COTS_CONTRIBUTOR] == "no train found for headsign(s) 006112"
 
     assert mock_rabbitmq.call_count == 0
 
@@ -562,7 +563,7 @@ def test_cots_partial_removal(mock_rabbitmq):
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 7
         assert RealTimeUpdate.query.first().status == "OK"
-    check_db_840427_partial_removal(contributor="realtime.cots")
+    check_db_840427_partial_removal(contributor=COTS_CONTRIBUTOR)
     assert mock_rabbitmq.call_count == 1
 
 

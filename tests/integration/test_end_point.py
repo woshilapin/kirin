@@ -34,6 +34,7 @@ from tests.check_utils import api_get
 from kirin.core import model
 from kirin import app
 from datetime import datetime, time
+from tests.integration.conftest import COTS_CONTRIBUTOR, GTFS_CONTRIBUTOR
 import pytest
 
 
@@ -52,15 +53,15 @@ def test_status(setup_database):
     assert "db_version" in resp
     assert "navitia_url" in resp
     assert "last_update" in resp
-    assert "realtime.cots" in resp["last_update"]
-    assert "realtime.sherbrooke" in resp["last_update"]
+    assert COTS_CONTRIBUTOR in resp["last_update"]
+    assert GTFS_CONTRIBUTOR in resp["last_update"]
 
-    assert "2015-11-04T07:32:00Z" in resp["last_update"]["realtime.cots"]
-    assert "2015-11-04T07:52:00Z" in resp["last_update"]["realtime.sherbrooke"]
+    assert "2015-11-04T07:32:00Z" in resp["last_update"][COTS_CONTRIBUTOR]
+    assert "2015-11-04T07:52:00Z" in resp["last_update"][GTFS_CONTRIBUTOR]
 
-    assert "realtime.sherbrooke" in resp["last_update_error"]
-    assert "2015-11-04T07:32:00Z" in resp["last_valid_update"]["realtime.cots"]
-    assert "2015-11-04T07:42:00Z" in resp["last_valid_update"]["realtime.sherbrooke"]
+    assert GTFS_CONTRIBUTOR in resp["last_update_error"]
+    assert "2015-11-04T07:32:00Z" in resp["last_valid_update"][COTS_CONTRIBUTOR]
+    assert "2015-11-04T07:42:00Z" in resp["last_valid_update"][GTFS_CONTRIBUTOR]
 
 
 @pytest.fixture()
@@ -100,19 +101,19 @@ def setup_database():
             datetime(2015, 11, 4, 8, 0, 0),
             datetime(2015, 11, 4, 10, 0, 0),
         )
-        tu1 = model.TripUpdate(vj1, contributor="realtime.cots")
-        tu2 = model.TripUpdate(vj2, contributor="realtime.cots")
-        tu3 = model.TripUpdate(vj3, contributor="realtime.sherbrooke")
-        rtu1 = model.RealTimeUpdate(None, "cots", "realtime.cots")
+        tu1 = model.TripUpdate(vj1, contributor=COTS_CONTRIBUTOR)
+        tu2 = model.TripUpdate(vj2, contributor=COTS_CONTRIBUTOR)
+        tu3 = model.TripUpdate(vj3, contributor=GTFS_CONTRIBUTOR)
+        rtu1 = model.RealTimeUpdate(None, "cots", COTS_CONTRIBUTOR)
         rtu1.created_at = datetime(2015, 11, 4, 6, 32)
         rtu1.trip_updates.append(tu1)
         model.db.session.add(rtu1)
-        rtu2 = model.RealTimeUpdate(None, "cots", contributor="realtime.cots")
+        rtu2 = model.RealTimeUpdate(None, "cots", contributor=COTS_CONTRIBUTOR)
         rtu2.created_at = datetime(2015, 11, 4, 7, 32)
         rtu2.trip_updates.append(tu2)
         model.db.session.add(rtu2)
 
-        rtu3 = model.RealTimeUpdate(None, "gtfs-rt", contributor="realtime.sherbrooke")
+        rtu3 = model.RealTimeUpdate(None, "gtfs-rt", contributor=GTFS_CONTRIBUTOR)
         rtu3.created_at = datetime(2015, 11, 4, 7, 42)
         rtu3.trip_updates.append(tu3)
         model.db.session.add(rtu3)
@@ -120,7 +121,7 @@ def setup_database():
         rtu4 = model.RealTimeUpdate(
             None,
             connector="gtfs-rt",
-            contributor="realtime.sherbrooke",
+            contributor=GTFS_CONTRIBUTOR,
             status="KO",
             error="No new information destinated to navitia for this gtfs-rt",
         )

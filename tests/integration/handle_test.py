@@ -35,12 +35,13 @@ import pytest
 
 from kirin.core.handler import handle
 from kirin.core.model import RealTimeUpdate, TripUpdate, VehicleJourney, StopTimeUpdate
+from tests.integration.conftest import COTS_CONTRIBUTOR
 import datetime
 from kirin import app, db
 from tests.check_utils import _dt
 
 
-def create_trip_update(id, trip_id, circulation_date, stops, status="update", contributor="realtime.cots"):
+def create_trip_update(id, trip_id, circulation_date, stops, status="update", contributor=COTS_CONTRIBUTOR):
     trip_update = TripUpdate(
         VehicleJourney(
             {
@@ -101,7 +102,7 @@ def setup_database():
                 },
             ],
         )
-        rtu = RealTimeUpdate(None, "cots", contributor="realtime.cots")
+        rtu = RealTimeUpdate(None, "cots", contributor=COTS_CONTRIBUTOR)
         rtu.id = "10866ce8-0638-4fa1-8556-1ddfa22d09d3"
         rtu.trip_updates.append(vju)
         db.session.add(rtu)
@@ -133,7 +134,7 @@ def setup_database():
                 },
             ],
         )
-        rtu = RealTimeUpdate(None, "cots", contributor="realtime.cots")
+        rtu = RealTimeUpdate(None, "cots", contributor=COTS_CONTRIBUTOR)
         rtu.id = "20866ce8-0638-4fa1-8556-1ddfa22d09d3"
         rtu.trip_updates.append(vju)
         db.session.add(rtu)
@@ -176,8 +177,8 @@ def test_handle_basic():
 
     # a RealTimeUpdate without any TripUpdate doesn't do anything
     with app.app_context():
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
-        res, _ = handle(real_time_update, [], contributor="realtime.cots")
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
+        res, _ = handle(real_time_update, [], contributor=COTS_CONTRIBUTOR)
         assert res == real_time_update
 
 
@@ -199,11 +200,11 @@ def test_handle_new_vj():
         ],
     }
     with app.app_context():
-        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor="realtime.cots")
+        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor=COTS_CONTRIBUTOR)
         st = StopTimeUpdate({"id": "sa:1"}, departure_delay=timedelta(minutes=5), dep_status="update")
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         trip_update.stop_time_updates.append(st)
-        res, _ = handle(real_time_update, [trip_update], contributor="realtime.cots")
+        res, _ = handle(real_time_update, [trip_update], contributor=COTS_CONTRIBUTOR)
 
         assert len(res.trip_updates) == 1
         trip_update = res.trip_updates[0]
@@ -265,11 +266,11 @@ def test_past_midnight():
         vj = VehicleJourney(
             navitia_vj, datetime.datetime(2015, 9, 8, 21, 15, 0), datetime.datetime(2015, 9, 9, 4, 20, 0)
         )
-        trip_update = TripUpdate(vj, status="update", contributor="realtime.cots")
+        trip_update = TripUpdate(vj, status="update", contributor=COTS_CONTRIBUTOR)
         st = StopTimeUpdate({"id": "sa:2"}, departure_delay=timedelta(minutes=31), dep_status="update", order=1)
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         trip_update.stop_time_updates.append(st)
-        res, _ = handle(real_time_update, [trip_update], contributor="realtime.cots")
+        res, _ = handle(real_time_update, [trip_update], contributor=COTS_CONTRIBUTOR)
 
         assert len(res.trip_updates) == 1
         trip_update = res.trip_updates[0]
@@ -299,7 +300,7 @@ def test_handle_new_trip_out_of_order(navitia_vj):
     so we have to reorder the stop times in the resulting trip_update
     """
     with app.app_context():
-        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor="realtime.cots")
+        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor=COTS_CONTRIBUTOR)
         st = StopTimeUpdate(
             {"id": "sa:2"},
             departure_delay=timedelta(minutes=40),
@@ -308,9 +309,9 @@ def test_handle_new_trip_out_of_order(navitia_vj):
             arr_status="update",
             order=1,
         )
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         trip_update.stop_time_updates.append(st)
-        res, _ = handle(real_time_update, [trip_update], contributor="realtime.cots")
+        res, _ = handle(real_time_update, [trip_update], contributor=COTS_CONTRIBUTOR)
 
         assert len(res.trip_updates) == 1
         trip_update = res.trip_updates[0]
@@ -339,7 +340,7 @@ def test_manage_consistency(navitia_vj):
     expected result   08:10-08:10     10:15-10:15     11:10-11:10
     """
     with app.app_context():
-        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor="realtime.cots")
+        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor=COTS_CONTRIBUTOR)
         st = StopTimeUpdate(
             {"id": "sa:2"},
             arrival_delay=timedelta(minutes=70),
@@ -349,10 +350,10 @@ def test_manage_consistency(navitia_vj):
             order=1,
         )
         st.arrival_status = st.departure_status = "update"
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         real_time_update.id = "30866ce8-0638-4fa1-8556-1ddfa22d09d3"
         trip_update.stop_time_updates.append(st)
-        res, _ = handle(real_time_update, [trip_update], contributor="realtime.cots")
+        res, _ = handle(real_time_update, [trip_update], contributor=COTS_CONTRIBUTOR)
 
         assert len(res.trip_updates) == 1
         trip_update = res.trip_updates[0]
@@ -385,7 +386,7 @@ def test_handle_update_vj(setup_database, navitia_vj):
     update kirin       -      *9:15-9:20*      -
     """
     with app.app_context():
-        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor="realtime.cots")
+        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor=COTS_CONTRIBUTOR)
         st = StopTimeUpdate(
             {"id": "sa:2"},
             arrival_delay=timedelta(minutes=10),
@@ -395,10 +396,10 @@ def test_handle_update_vj(setup_database, navitia_vj):
             order=1,
         )
         st.arrival_status = st.departure_status = "update"
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         real_time_update.id = "30866ce8-0638-4fa1-8556-1ddfa22d09d3"
         trip_update.stop_time_updates.append(st)
-        res, _ = handle(real_time_update, [trip_update], contributor="realtime.cots")
+        res, _ = handle(real_time_update, [trip_update], contributor=COTS_CONTRIBUTOR)
 
         assert len(res.trip_updates) == 1
         trip_update = res.trip_updates[0]
@@ -463,7 +464,7 @@ def test_handle_update_vj(setup_database, navitia_vj):
 def test_simple_delay(navitia_vj):
     """Test on delay when there is nothing in the db"""
     with app.app_context():
-        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor="realtime.cots")
+        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor=COTS_CONTRIBUTOR)
         st = StopTimeUpdate(
             {"id": "sa:1"},
             departure_delay=timedelta(minutes=10),
@@ -472,9 +473,9 @@ def test_simple_delay(navitia_vj):
             arr_status="update",
             order=0,
         )
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         trip_update.stop_time_updates.append(st)
-        res, _ = handle(real_time_update, [trip_update], contributor="realtime.cots")
+        res, _ = handle(real_time_update, [trip_update], contributor=COTS_CONTRIBUTOR)
         assert len(res.trip_updates) == 1
         trip_update = res.trip_updates[0]
         assert trip_update.status == "update"
@@ -559,14 +560,14 @@ def test_multiple_delays(setup_database, navitia_vj):
     update kirin      8:20*   *9:07-9:10     10:05
     """
     with app.app_context():
-        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor="realtime.cots")
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
+        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor=COTS_CONTRIBUTOR)
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         trip_update.stop_time_updates = [
             # Note: the delay is based of the navitia's vj
             StopTimeUpdate({"id": "sa:1"}, departure_delay=timedelta(minutes=10), dep_status="update"),
             StopTimeUpdate({"id": "sa:2"}, arrival_delay=timedelta(minutes=2), arr_status="update"),
         ]
-        res, _ = handle(real_time_update, [trip_update], contributor="realtime.cots")
+        res, _ = handle(real_time_update, [trip_update], contributor=COTS_CONTRIBUTOR)
 
         _check_multiples_delay(res)
 
@@ -584,20 +585,20 @@ def test_multiple_delays_in_2_updates(navitia_vj):
     same test as test_multiple_delays, but with nothing in the db and with 2 trip updates
     """
     with app.app_context():
-        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor="realtime.cots")
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
+        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor=COTS_CONTRIBUTOR)
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         trip_update.stop_time_updates = [
             StopTimeUpdate({"id": "sa:1"}, departure_delay=timedelta(minutes=5), dep_status="update")
         ]
-        handle(real_time_update, [trip_update], contributor="realtime.cots")
+        handle(real_time_update, [trip_update], contributor=COTS_CONTRIBUTOR)
 
-        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor="realtime.cots")
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
+        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor=COTS_CONTRIBUTOR)
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         trip_update.stop_time_updates = [
             StopTimeUpdate({"id": "sa:1"}, departure_delay=timedelta(minutes=10), dep_status="update"),
             StopTimeUpdate({"id": "sa:2"}, arrival_delay=timedelta(minutes=2), arr_status="update"),
         ]
-        res, _ = handle(real_time_update, [trip_update], contributor="realtime.cots")
+        res, _ = handle(real_time_update, [trip_update], contributor=COTS_CONTRIBUTOR)
 
         _check_multiples_delay(res)
         # we also check that there is what we want in the db
@@ -619,9 +620,9 @@ def test_delays_then_cancellation(setup_database, navitia_vj):
     update kirin                   -
     """
     with app.app_context():
-        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="delete", contributor="realtime.cots")
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
-        res, _ = handle(real_time_update, [trip_update], contributor="realtime.cots")
+        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="delete", contributor=COTS_CONTRIBUTOR)
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
+        res, _ = handle(real_time_update, [trip_update], contributor=COTS_CONTRIBUTOR)
 
         assert len(res.trip_updates) == 1
         trip_update = res.trip_updates[0]
@@ -635,16 +636,16 @@ def test_delays_then_cancellation_in_2_updates(navitia_vj):
     Same test as above, but with nothing in the db, and with 2 updates
     """
     with app.app_context():
-        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor="realtime.cots")
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
+        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor=COTS_CONTRIBUTOR)
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         trip_update.stop_time_updates = [
             StopTimeUpdate({"id": "sa:1"}, departure_delay=timedelta(minutes=5), dep_status="update")
         ]
-        handle(real_time_update, [trip_update], contributor="realtime.cots")
+        handle(real_time_update, [trip_update], contributor=COTS_CONTRIBUTOR)
 
-        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="delete", contributor="realtime.cots")
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
-        res, _ = handle(real_time_update, [trip_update], contributor="realtime.cots")
+        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="delete", contributor=COTS_CONTRIBUTOR)
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
+        res, _ = handle(real_time_update, [trip_update], contributor=COTS_CONTRIBUTOR)
 
         assert len(res.trip_updates) == 1
         trip_update = res.trip_updates[0]
@@ -708,19 +709,19 @@ def test_cancellation_then_delay(navitia_vj):
             [],
             status="delete",
         )
-        rtu = RealTimeUpdate(None, "cots", contributor="realtime.cots")
+        rtu = RealTimeUpdate(None, "cots", contributor=COTS_CONTRIBUTOR)
         rtu.id = "10866ce8-0638-4fa1-8556-1ddfa22d09d3"
         rtu.trip_updates.append(vju)
         db.session.add(rtu)
         db.session.commit()
 
     with app.app_context():
-        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor="realtime.cots")
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
+        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor=COTS_CONTRIBUTOR)
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         trip_update.stop_time_updates = [
             StopTimeUpdate({"id": "sa:3"}, arrival_delay=timedelta(minutes=40), arr_status="update", order=2)
         ]
-        res, _ = handle(real_time_update, [trip_update], "realtime.cots")
+        res, _ = handle(real_time_update, [trip_update], COTS_CONTRIBUTOR)
 
         _check_cancellation_then_delay(res)
 
@@ -730,16 +731,16 @@ def test_cancellation_then_delay_in_2_updates(navitia_vj):
     same as test_cancellation_then_delay, but with a clear db and in 2 updates
     """
     with app.app_context():
-        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="delete", contributor="realtime.cots")
+        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="delete", contributor=COTS_CONTRIBUTOR)
         trip_update.stop_time_updates = []
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
-        handle(real_time_update, [trip_update], contributor="realtime.cots")
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
+        handle(real_time_update, [trip_update], contributor=COTS_CONTRIBUTOR)
 
-        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor="realtime.cots")
-        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor="realtime.cots")
+        trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor=COTS_CONTRIBUTOR)
+        real_time_update = RealTimeUpdate(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
         trip_update.stop_time_updates = [
             StopTimeUpdate({"id": "sa:3"}, arrival_delay=timedelta(minutes=40), arr_status="update", order=2)
         ]
-        res, _ = handle(real_time_update, [trip_update], "realtime.cots")
+        res, _ = handle(real_time_update, [trip_update], COTS_CONTRIBUTOR)
 
         _check_cancellation_then_delay(res)

@@ -114,8 +114,8 @@ from kirin.gtfs_rt.tasks import gtfs_poller
 @celery.task(bind=True)
 def poller(self):
     # TODO:
-    #  For the future multi-gtfs_rt with configurations in the table contributor
-    #  parameters values should be updated by parameters of config file if present.
+    #  read configurations from base ONLY if there is no configuration
+    #  available in config file (config file will prevail for transition).
     config = {
         "contributor": app.config.get(str("GTFS_RT_CONTRIBUTOR")),
         "navitia_url": app.config.get(str("NAVITIA_URL")),

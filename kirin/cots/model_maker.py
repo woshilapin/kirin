@@ -295,7 +295,7 @@ def _get_action_on_trip(train_numbers, dict_version, pdps):
 
 
 class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
-    def __init__(self, nav, contributor="realtime.cots"):
+    def __init__(self, nav, contributor):
         super(KirinModelBuilder, self).__init__(nav, contributor)
         self.message_handler = MessageHandler(
             api_key=current_app.config[str("COTS_PAR_IV_API_KEY")],
@@ -379,8 +379,6 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
         Following the COTS spec: https://github.com/CanalTP/kirin/blob/master/documentation/cots_connector.md
         """
         trip_update = model.TripUpdate(vj=vj, contributor=self.contributor)
-        trip_update.contributor = self.contributor
-        trip_update.contributor_id = self.contributor
         trip_message_id = get_value(json_train, "idMotifInterneReference", nullable=True)
         if trip_message_id:
             trip_update.message = self.message_handler.get_message(index=trip_message_id)

@@ -38,6 +38,9 @@ from kirin.core import model
 import pytest
 import flask_migrate
 
+COTS_CONTRIBUTOR = "rt.tchoutchou"
+GTFS_CONTRIBUTOR = "rt.vroumvroum"
+
 
 @pytest.yield_fixture(scope="module", autouse=True)
 def bdd(init_flask_db):
@@ -65,7 +68,6 @@ def clean_db():
     before all tests the database is cleared
     """
     with app.app_context():
-        # The table contributor should never be emptied as referenced in real_time_update and trip_update
         tables = [six.text_type(table) for table in db.metadata.sorted_tables]
         db.session.execute("TRUNCATE {} CASCADE;".format(", ".join(tables)))
         db.session.commit()
@@ -74,14 +76,14 @@ def clean_db():
         db.session.add_all(
             [
                 model.Contributor(
-                    "realtime.cots", "sncf", "cots", "token_to_be_modified", "feed_url_to_be_modified"
+                    COTS_CONTRIBUTOR, "sncf", "cots", "cots_token", "cots_feed_url"
                 ),
                 model.Contributor(
-                    "realtime.sherbrooke",
+                    GTFS_CONTRIBUTOR,
                     "sherbrooke",
                     "gtfs-rt",
-                    "token_to_be_modified",
-                    "feed_url_to_be_modified",
+                    "gtfs-rt_token",
+                    "gtfs-rt_feed_url",
                 ),
             ]
         )

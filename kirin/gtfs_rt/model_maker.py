@@ -76,7 +76,7 @@ def handle(proto, navitia_wrapper, contributor):
 
 
 class KirinModelBuilder(object):
-    def __init__(self, nav, contributor=None):
+    def __init__(self, nav, contributor):
         self.navitia = nav
         self.contributor = contributor
         self.log = logging.getLogger(__name__)
