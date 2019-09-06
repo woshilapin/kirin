@@ -31,6 +31,9 @@
 
 from __future__ import absolute_import, print_function, unicode_literals, division
 import os
+
+import pybreaker
+
 from kirin import exceptions
 from kirin.rabbitmq_handler import RabbitMQHandler
 
@@ -88,6 +91,11 @@ redis = Redis(
     port=app.config[str("REDIS_PORT")],
     db=app.config[str("REDIS_DB")],
     password=app.config[str("REDIS_PASSWORD")],
+)
+
+cots_message_breaker = pybreaker.CircuitBreaker(
+    fail_max=app.config[str("COTS_PAR_IV_CIRCUIT_BREAKER_MAX_FAIL")],
+    reset_timeout=app.config[str("COTS_PAR_IV_CIRCUIT_BREAKER_TIMEOUT_S")],
 )
 
 # activate a command

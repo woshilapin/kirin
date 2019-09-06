@@ -34,8 +34,7 @@ import pybreaker
 import requests as requests
 import six
 
-from kirin import app
-from flask.globals import current_app
+from kirin import app, cots_message_breaker
 
 from kirin.exceptions import ObjectNotFound, UnauthorizedOnSubService, SubServiceError
 
@@ -72,10 +71,6 @@ class MessageHandler:
         self.client_secret = client_secret
         self.grant_type = grant_type
         self.timeout = timeout
-        self.breaker = pybreaker.CircuitBreaker(
-            fail_max=current_app.config[str("COTS_PAR_IV_CIRCUIT_BREAKER_MAX_FAIL")],
-            reset_timeout=current_app.config[str("COTS_PAR_IV_CIRCUIT_BREAKER_TIMEOUT_S")],
-        )
 
     def __repr__(self):
         """
@@ -154,7 +149,7 @@ class MessageHandler:
     def get_message(self, index):
         if self.token_server and self.resource_server:
             try:
-                return self.breaker.call(self._call_webservice_safer).get(index)
+                return cots_message_breaker.call(self._call_webservice_safer).get(index)
             except pybreaker.CircuitBreakerError as e:
                 logging.getLogger(__name__).error(
                     "COTS cause message sub-service handling error : "
