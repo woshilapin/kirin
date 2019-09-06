@@ -99,8 +99,8 @@ def test_get_partial_contributor_with_empty_fields(test_client, with_custom_cont
     data = json.loads(resp.data)
     contrib = data["contributors"]
     assert len(contrib) == 1
-    assert contrib[0]["navitia_token"] == None
-    assert contrib[0]["feed_url"] == None
+    assert contrib[0]["navitia_token"] is None
+    assert contrib[0]["feed_url"] is None
 
 
 def test_get_contributors_with_wrong_id(test_client, with_custom_contributors):
@@ -144,8 +144,8 @@ def test_post_new_partial_contributor(test_client):
     assert contrib.id == "realtime.tokyo"
     assert contrib.navitia_coverage == "jp"
     assert contrib.connector_type == "gtfs-rt"
-    assert contrib.navitia_token == None
-    assert contrib.feed_url == None
+    assert contrib.navitia_token is None
+    assert contrib.feed_url is None
 
 
 def test_post_empty_contributor_should_fail(test_client):
@@ -209,26 +209,6 @@ def test_post_new_valid_contributor_with_unknown_parameter_should_work(test_clie
         },
     )
     assert resp.status_code == 201
-
-
-def test_delete_contributor(test_client, with_custom_contributors):
-    sherbrook_contrib = db.session.query(model.Contributor).filter(model.Contributor.id == "realtime.sherbrooke")
-    assert sherbrook_contrib.count() == 1
-
-    resp = test_client.delete("/contributors/realtime.sherbrooke")
-    assert resp.status_code == 204
-
-    assert sherbrook_contrib.count() == 0
-
-
-def test_delete_unknown_contributor(test_client, with_custom_contributors):
-    resp = test_client.delete("/contributors/UNKNOWN_ID")
-    assert resp.status_code == 404
-
-
-def test_delete_contributor_with_no_id(test_client, with_custom_contributors):
-    resp = test_client.delete("/contributors")
-    assert resp.status_code == 400
 
 
 def test_put_contributor_with_id(test_client):
@@ -322,6 +302,7 @@ def test_post_get_put_to_ensure_API_consitency(test_client):
         "navitia_token": "blablablabla",
         "feed_url": "http://nihongo.jp",
         "connector_type": "gtfs-rt",
+        "is_active": True,
     }
     test_client.post("/contributors", json=new_contrib)
 
@@ -332,3 +313,60 @@ def test_post_get_put_to_ensure_API_consitency(test_client):
     put_data = json.loads(put_resp.data)
 
     assert put_data["contributor"] == new_contrib
+
+
+def test_existing_contributors_after_put(test_client):
+    # get existing contributor "rt.tchoutchou"
+    get_contrib = test_client.get("/contributors/rt.tchoutchou")
+    original_contrib_chou = json.loads(get_contrib.data)["contributors"][0]
+
+    # Get and modify another contributor "rt.vroumvroum" and verify that it
+    get_contrib = test_client.get("/contributors/rt.vroumvroum")
+    contrib_vroumvroum = json.loads(get_contrib.data)["contributors"][0]
+    contrib_vroumvroum["navitia_coverage"] = "tokyo"
+    contrib_vroumvroum["navitia_token"] = "tokyo_token"
+    put_resp = test_client.put("/contributors", json=contrib_vroumvroum)
+    put_data = json.loads(put_resp.data)
+    assert put_data["contributor"] == contrib_vroumvroum
+
+    # Verify that  the contributor "rt.tchoutchou" is not modified
+    get_contib = test_client.get("/contributors/rt.tchoutchou")
+    contrib_chou = json.loads(get_contib.data)["contributors"][0]
+    assert contrib_chou == original_contrib_chou
+
+
+def test_deactivate_contributor(test_client):
+    # get existing contributor "rt.tchoutchou" which is active
+    get_contrib = test_client.get("/contributors/rt.tchoutchou")
+    contrib_chou = json.loads(get_contrib.data)["contributors"][0]
+    assert contrib_chou["is_active"] is True
+
+    # Modify attribute is_active to false and test after put
+    contrib_chou["is_active"] = False
+    put_resp = test_client.put("/contributors", json=contrib_chou)
+    put_data = json.loads(put_resp.data)
+    assert put_data["contributor"]["id"] == "rt.tchoutchou"
+    assert put_data["contributor"]["is_active"] is False
+
+
+def test_activate_contributor(test_client):
+    new_contrib = {
+        "id": "realtime.tokyo",
+        "navitia_coverage": "jp",
+        "navitia_token": "blablablabla",
+        "feed_url": "http://nihongo.jp",
+        "connector_type": "gtfs-rt",
+        "is_active": False,
+    }
+    test_client.post("/contributors", json=new_contrib)
+
+    get_resp = test_client.get("/contributors/realtime.tokyo")
+    get_contrib = json.loads(get_resp.data)["contributors"][0]
+    assert get_contrib["is_active"] is False
+
+    # Modify attribute is_active to false and test after put
+    get_contrib["is_active"] = True
+    put_resp = test_client.put("/contributors", json=get_contrib)
+    put_data = json.loads(put_resp.data)
+    assert put_data["contributor"]["id"] == "realtime.tokyo"
+    assert put_data["contributor"]["is_active"] is True
