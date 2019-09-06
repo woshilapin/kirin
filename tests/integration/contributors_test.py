@@ -50,7 +50,11 @@ def test_get_contributor_end_point(test_client):
 
 
 @pytest.fixture
-def with_contributors():
+def with_custom_contributors():
+    # Clean table contributor before adding any elements as we fill two contributors in the function clean_db
+    db.session.execute("TRUNCATE table contributor CASCADE;")
+    db.session.commit()
+
     db.session.add_all(
         [
             model.Contributor("realtime.sherbrooke", "ca", "gtfs-rt", "my_token", "http://feed.url"),
@@ -61,7 +65,7 @@ def with_contributors():
     db.session.commit()
 
 
-def test_get_contributors(test_client, with_contributors):
+def test_get_contributors(test_client, with_custom_contributors):
     resp = test_client.get("/contributors")
     assert resp.status_code == 200
 
@@ -74,7 +78,7 @@ def test_get_contributors(test_client, with_contributors):
     assert ids == ["realtime.london", "realtime.paris", "realtime.sherbrooke"]
 
 
-def test_get_contributors_with_specific_id(test_client, with_contributors):
+def test_get_contributors_with_specific_id(test_client, with_custom_contributors):
     resp = test_client.get("/contributors/realtime.paris")
     assert resp.status_code == 200
 
@@ -88,7 +92,7 @@ def test_get_contributors_with_specific_id(test_client, with_contributors):
     assert contrib[0]["feed_url"] == "http://otherfeed.url"
 
 
-def test_get_partial_contributor_with_empty_fields(test_client, with_contributors):
+def test_get_partial_contributor_with_empty_fields(test_client, with_custom_contributors):
     resp = test_client.get("/contributors/realtime.london")
     assert resp.status_code == 200
 
@@ -99,7 +103,7 @@ def test_get_partial_contributor_with_empty_fields(test_client, with_contributor
     assert contrib[0]["feed_url"] == None
 
 
-def test_get_contributors_with_wrong_id(test_client, with_contributors):
+def test_get_contributors_with_wrong_id(test_client, with_custom_contributors):
     resp = test_client.get("/contributors/this_id_doesnt_exist")
     assert resp.status_code == 404
 
@@ -207,7 +211,7 @@ def test_post_new_valid_contributor_with_unknown_parameter_should_work(test_clie
     assert resp.status_code == 201
 
 
-def test_delete_contributor(test_client, with_contributors):
+def test_delete_contributor(test_client, with_custom_contributors):
     sherbrook_contrib = db.session.query(model.Contributor).filter(model.Contributor.id == "realtime.sherbrooke")
     assert sherbrook_contrib.count() == 1
 
@@ -217,12 +221,12 @@ def test_delete_contributor(test_client, with_contributors):
     assert sherbrook_contrib.count() == 0
 
 
-def test_delete_unknown_contributor(test_client, with_contributors):
+def test_delete_unknown_contributor(test_client, with_custom_contributors):
     resp = test_client.delete("/contributors/UNKNOWN_ID")
     assert resp.status_code == 404
 
 
-def test_delete_contributor_with_no_id(test_client, with_contributors):
+def test_delete_contributor_with_no_id(test_client, with_custom_contributors):
     resp = test_client.delete("/contributors")
     assert resp.status_code == 400
 
@@ -296,17 +300,17 @@ def test_put_contributor_with_no_data(test_client):
     assert resp.status_code == 400
 
 
-def test_put_contributor_without_id(test_client, with_contributors):
+def test_put_contributor_without_id(test_client, with_custom_contributors):
     resp = test_client.put("/contributors")
     assert resp.status_code == 400
 
 
-def test_put_unknown_contributor(test_client, with_contributors):
+def test_put_unknown_contributor(test_client, with_custom_contributors):
     resp = test_client.put("/contributors/SaintMeuMeu", json={"navitia_coverage": "qb"})
     assert resp.status_code == 404
 
 
-def test_put_contributor_with_malformed_data(test_client, with_contributors):
+def test_put_contributor_with_malformed_data(test_client, with_custom_contributors):
     resp = test_client.put("/contributors/realtime.paris", json={"feed_url": 42})
     assert resp.status_code == 400
 

@@ -37,6 +37,7 @@ from kirin.core import model, handle
 from kirin.cots import KirinModelBuilder, model_maker
 from tests.check_utils import get_fixture_data, dumb_nav_wrapper
 from tests.integration.utils_cots_test import requests_mock_cause_message
+from tests.integration.conftest import clean_db, COTS_CONTRIBUTOR
 from kirin.abstract_sncf_model_maker import ActionOnTrip
 import json
 
@@ -57,8 +58,8 @@ def test_cots_train_delayed(mock_navitia_fixture):
     input_train_delayed = get_fixture_data("cots_train_96231_delayed.json")
 
     with app.app_context():
-        rt_update = model.RealTimeUpdate(input_train_delayed, connector="cots", contributor="realtime.cots")
-        trip_updates = KirinModelBuilder(dumb_nav_wrapper()).build(rt_update)
+        rt_update = model.RealTimeUpdate(input_train_delayed, connector="cots", contributor=COTS_CONTRIBUTOR)
+        trip_updates = KirinModelBuilder(dumb_nav_wrapper(), contributor=COTS_CONTRIBUTOR).build(rt_update)
 
         # we associate the trip_update manually for sqlalchemy to make the links
         rt_update.trip_updates = trip_updates
@@ -122,8 +123,10 @@ def test_cots_train_trip_removal(mock_navitia_fixture):
     input_train_trip_removed = get_fixture_data("cots_train_6113_trip_removal.json")
 
     with app.app_context():
-        rt_update = model.RealTimeUpdate(input_train_trip_removed, connector="cots", contributor="realtime.cots")
-        trip_updates = KirinModelBuilder(dumb_nav_wrapper()).build(rt_update)
+        rt_update = model.RealTimeUpdate(
+            input_train_trip_removed, connector="cots", contributor=COTS_CONTRIBUTOR
+        )
+        trip_updates = KirinModelBuilder(dumb_nav_wrapper(), contributor=COTS_CONTRIBUTOR).build(rt_update)
         rt_update.trip_updates = trip_updates
         db.session.add(rt_update)
         db.session.commit()
@@ -160,9 +163,9 @@ def test_get_action_on_trip_add(mock_navitia_fixture):
         assert action_on_trip == ActionOnTrip.FIRST_TIME_ADDED.name
 
         # Test for add followed by update should be PREVIOUSLY_ADDED
-        rt_update = model.RealTimeUpdate(input_trip_add, connector="cots", contributor="realtime.cots")
-        trip_updates = KirinModelBuilder(dumb_nav_wrapper()).build(rt_update)
-        _, log_dict = handle(rt_update, trip_updates, "realtime.cots", is_new_complete=True)
+        rt_update = model.RealTimeUpdate(input_trip_add, connector="cots", contributor=COTS_CONTRIBUTOR)
+        trip_updates = KirinModelBuilder(dumb_nav_wrapper(), contributor=COTS_CONTRIBUTOR).build(rt_update)
+        _, log_dict = handle(rt_update, trip_updates, COTS_CONTRIBUTOR, is_new_complete=True)
 
         input_update_added_trip = get_fixture_data("cots_train_151515_added_trip_with_delay.json")
         json_data = json.loads(input_update_added_trip)
@@ -174,20 +177,18 @@ def test_get_action_on_trip_add(mock_navitia_fixture):
         assert action_on_trip == ActionOnTrip.PREVIOUSLY_ADDED.name
 
         # Clean database for further test
-        tables = [six.text_type(table) for table in db.metadata.sorted_tables]
-        db.session.execute("TRUNCATE {} CASCADE;".format(", ".join(tables)))
-        db.session.commit()
+        clean_db()
 
         # Delete the recently added trip followed by add: should be FIRST_TIME_ADDED
-        rt_update = model.RealTimeUpdate(input_trip_add, connector="cots", contributor="realtime.cots")
-        trip_updates = KirinModelBuilder(dumb_nav_wrapper()).build(rt_update)
-        _, log_dict = handle(rt_update, trip_updates, "realtime.cots", is_new_complete=True)
+        rt_update = model.RealTimeUpdate(input_trip_add, connector="cots", contributor=COTS_CONTRIBUTOR)
+        trip_updates = KirinModelBuilder(dumb_nav_wrapper(), contributor=COTS_CONTRIBUTOR).build(rt_update)
+        _, log_dict = handle(rt_update, trip_updates, COTS_CONTRIBUTOR, is_new_complete=True)
         input_trip_delete = get_fixture_data(
             "cots_train_151515_deleted_trip_with_delay_and_stop_time_added.json"
         )
-        rt_update = model.RealTimeUpdate(input_trip_delete, connector="cots", contributor="realtime.cots")
-        trip_updates = KirinModelBuilder(dumb_nav_wrapper()).build(rt_update)
-        _, log_dict = handle(rt_update, trip_updates, "realtime.cots", is_new_complete=True)
+        rt_update = model.RealTimeUpdate(input_trip_delete, connector="cots", contributor=COTS_CONTRIBUTOR)
+        trip_updates = KirinModelBuilder(dumb_nav_wrapper(), contributor=COTS_CONTRIBUTOR).build(rt_update)
+        _, log_dict = handle(rt_update, trip_updates, COTS_CONTRIBUTOR, is_new_complete=True)
 
         input_added_trip = get_fixture_data("cots_train_151515_added_trip.json")
         json_data = json.loads(input_added_trip)

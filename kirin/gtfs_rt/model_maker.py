@@ -76,7 +76,7 @@ def handle(proto, navitia_wrapper, contributor):
 
 
 class KirinModelBuilder(object):
-    def __init__(self, nav, contributor=None):
+    def __init__(self, nav, contributor):
         self.navitia = nav
         self.contributor = contributor
         self.log = logging.getLogger(__name__)
@@ -129,8 +129,7 @@ class KirinModelBuilder(object):
         vjs = self._get_navitia_vjs(input_trip_update.trip, input_data_time=input_data_time)
         trip_updates = []
         for vj in vjs:
-            trip_update = model.TripUpdate(vj=vj)
-            trip_update.contributor = self.contributor
+            trip_update = model.TripUpdate(vj=vj, contributor=self.contributor)
             highest_st_status = ModificationType.none.name
 
             is_tu_valid = True

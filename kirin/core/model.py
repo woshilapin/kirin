@@ -312,16 +312,11 @@ class TripUpdate(db.Model, TimestampMixin):  # type: ignore
     effect = db.Column(Db_TripEffect, nullable=True)
     physical_mode_id = db.Column(db.Text, nullable=True)
     headsign = db.Column(db.Text, nullable=True)
+    contributor_id = db.Column(db.Text, db.ForeignKey("contributor.id"), nullable=False)
+    db.Index("contributor_id_idx", contributor_id)
 
     def __init__(
-        self,
-        vj=None,
-        status="none",
-        contributor=None,
-        company_id=None,
-        effect=None,
-        physical_mode_id=None,
-        headsign=None,
+        self, vj, contributor, status="none", company_id=None, effect=None, physical_mode_id=None, headsign=None
     ):
         self.created_at = datetime.datetime.utcnow()
         self.vj = vj
@@ -331,6 +326,7 @@ class TripUpdate(db.Model, TimestampMixin):  # type: ignore
         self.effect = effect
         self.physical_mode_id = physical_mode_id
         self.headsign = headsign
+        self.contributor_id = contributor
 
     def __repr__(self):
         return "<TripUpdate %r>" % self.vj_id
@@ -373,7 +369,7 @@ class TripUpdate(db.Model, TimestampMixin):  # type: ignore
 
     @classmethod
     def find_by_contributor_period(cls, contributors, start_date=None, end_date=None):
-        query = cls.query.filter(cls.contributor.in_(contributors))
+        query = cls.query.filter(cls.contributor_id.in_(contributors))
         if start_date:
             start_dt = datetime.datetime.combine(start_date, datetime.time(0, 0))
             query = query.filter(
@@ -429,6 +425,7 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
     error = db.Column(db.Text, nullable=True)
     raw_data = deferred(db.Column(db.Text, nullable=True))
     contributor = db.Column(db.Text, nullable=True)
+    contributor_id = db.Column(db.Text, db.ForeignKey("contributor.id"), nullable=False)
 
     trip_updates = db.relationship(
         "TripUpdate",
@@ -441,6 +438,7 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
     __table_args__ = (
         db.Index("realtime_update_created_at", "created_at"),
         db.Index("realtime_update_contributor_and_created_at", "created_at", "contributor"),
+        db.Index("realtime_update_contributor_id_and_created_at", "created_at", "contributor_id"),
     )
 
     def __init__(self, raw_data, connector, contributor, status="OK", error=None, received_at=None):
@@ -448,9 +446,10 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         self.raw_data = raw_data
         self.connector = connector
         self.status = status
-        self.error = error
         self.contributor = contributor
+        self.error = error
         self.received_at = received_at if received_at else datetime.datetime.utcnow()
+        self.contributor_id = contributor
 
     @classmethod
     def get_probes_by_contributor(cls):
@@ -460,10 +459,14 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         from kirin import app
 
         result = {"last_update": {}, "last_valid_update": {}, "last_update_error": {}}
-        contributor = [app.config[str("COTS_CONTRIBUTOR")], app.config[str("GTFS_RT_CONTRIBUTOR")]]
-        for c in contributor:
+
+        # TODO:
+        #  read configurations from base ONLY if there is no configuration
+        #  available in config file (config file will prevail for transition).
+        contributors = [app.config[str("COTS_CONTRIBUTOR")], app.config[str("GTFS_RT_CONTRIBUTOR")]]
+        for c in contributors:
             sql = db.session.query(cls.created_at, cls.status, cls.updated_at, cls.error)
-            sql = sql.filter(cls.contributor == c)
+            sql = sql.filter(cls.contributor_id == c)
             sql = sql.order_by(desc(cls.created_at))
             row = sql.first()
             if row:
@@ -496,7 +499,7 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
 
     @classmethod
     def get_last_rtu(cls, connector, contributor):
-        q = cls.query.filter_by(connector=connector, contributor=contributor)
+        q = cls.query.filter_by(connector=connector, contributor_id=contributor)
         q = q.order_by(desc(cls.created_at))
         return q.first()
 

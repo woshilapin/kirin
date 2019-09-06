@@ -32,10 +32,11 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 from kirin import app
 from kirin.core.model import RealTimeUpdate, TripUpdate, StopTimeUpdate
+from tests.integration.conftest import COTS_CONTRIBUTOR
 from datetime import timedelta, datetime
 
 
-def check_db_96231_delayed(motif_externe_is_null=False):
+def check_db_96231_delayed(contributor=None, motif_externe_is_null=False):
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) >= 1
         assert len(TripUpdate.query.all()) >= 1
@@ -103,7 +104,8 @@ def check_db_96231_delayed(motif_externe_is_null=False):
         else:
             assert second_st.message == "Affluence exceptionnelle de voyageurs"
 
-        assert db_trip_delayed.contributor == "realtime.cots"
+        assert db_trip_delayed.contributor == contributor
+        assert db_trip_delayed.contributor_id == contributor
 
         return db_trip_delayed  # for additional testing if needed
 
@@ -151,6 +153,7 @@ def check_db_870154_partial_removal(contributor=None):
         assert fourth_st.message is None
 
         assert db_trip.contributor == contributor
+        assert db_trip.contributor_id == contributor
 
 
 def check_db_870154_delay():
@@ -412,6 +415,7 @@ def check_db_96231_mixed_statuses_inside_stops(contributor=None):
         assert sixth_st.departure_delay == timedelta(0)
 
         assert db_trip_delayed.contributor == contributor
+        assert db_trip_delayed.contributor_id == contributor
 
 
 def check_db_96231_mixed_statuses_delay_removal_delay(contributor=None):
@@ -485,6 +489,7 @@ def check_db_96231_mixed_statuses_delay_removal_delay(contributor=None):
         assert sixth_st.departure_delay == timedelta(0)
 
         assert db_trip_delayed.contributor == contributor
+        assert db_trip_delayed.contributor_id == contributor
 
 
 def check_db_96231_normal(contributor=None):
@@ -548,6 +553,7 @@ def check_db_96231_normal(contributor=None):
             pass  # xfail: we don't change back the departure :(
 
         assert db_trip_delayed.contributor == contributor
+        assert db_trip_delayed.contributor_id == contributor
 
 
 def check_db_john_trip_removal():
@@ -736,6 +742,7 @@ def check_db_96231_partial_removal(contributor=None):
         assert last_st.departure_status == "none"
 
         assert db_trip_partial_removed.contributor == contributor
+        assert db_trip_partial_removed.contributor_id == contributor
 
 
 def check_db_840427_partial_removal(contributor=None):
@@ -791,3 +798,4 @@ def check_db_840427_partial_removal(contributor=None):
         assert tro_st.message == "Défaut d'alimentation électrique"
 
         assert db_trip_partial_removed.contributor == contributor
+        assert db_trip_partial_removed.contributor_id == contributor

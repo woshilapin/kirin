@@ -34,8 +34,12 @@ import os
 import six
 
 from kirin import app, db
+from kirin.core import model
 import pytest
 import flask_migrate
+
+COTS_CONTRIBUTOR = "rt.tchoutchou"
+GTFS_CONTRIBUTOR = "rt.vroumvroum"
 
 
 @pytest.yield_fixture(scope="module", autouse=True)
@@ -66,6 +70,17 @@ def clean_db():
     with app.app_context():
         tables = [six.text_type(table) for table in db.metadata.sorted_tables]
         db.session.execute("TRUNCATE {} CASCADE;".format(", ".join(tables)))
+        db.session.commit()
+
+        # Add two contributors in the table
+        db.session.add_all(
+            [
+                model.Contributor(COTS_CONTRIBUTOR, "sncf", "cots", "cots_token", "cots_feed_url"),
+                model.Contributor(
+                    GTFS_CONTRIBUTOR, "sherbrooke", "gtfs-rt", "gtfs-rt_token", "gtfs-rt_feed_url"
+                ),
+            ]
+        )
         db.session.commit()
 
 

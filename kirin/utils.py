@@ -78,6 +78,9 @@ def make_navitia_wrapper():
     """
     return a navitia wrapper to call the navitia API
     """
+    # TODO:
+    #  read configurations from base ONLY if there is no configuration
+    #  available in config file (config file will prevail for transition).
     url = current_app.config[str("NAVITIA_URL")]
     token = current_app.config.get(str("NAVITIA_TOKEN"))
     instance = current_app.config[str("NAVITIA_INSTANCE")]
