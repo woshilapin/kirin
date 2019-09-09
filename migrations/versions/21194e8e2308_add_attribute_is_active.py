@@ -16,10 +16,8 @@ import sqlalchemy as sa
 
 
 def upgrade():
-    # Add column is_active in contributor
     op.add_column("contributor", sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()))
 
 
 def downgrade():
-    # Drop column is_visible
     op.drop_column("contributor", "is_active")

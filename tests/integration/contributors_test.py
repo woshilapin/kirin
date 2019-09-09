@@ -318,9 +318,10 @@ def test_post_get_put_to_ensure_API_consitency(test_client):
 def test_existing_contributors_after_put(test_client):
     # get existing contributor "rt.tchoutchou"
     get_contrib = test_client.get("/contributors/rt.tchoutchou")
-    original_contrib_chou = json.loads(get_contrib.data)["contributors"][0]
+    original_contrib_tchou = json.loads(get_contrib.data)["contributors"][0]
 
-    # Get and modify another contributor "rt.vroumvroum" and verify that it
+    # Get and modify another contributor "rt.vroumvroum" and verify that
+    # modification of this contributor doesn't affect another.
     get_contrib = test_client.get("/contributors/rt.vroumvroum")
     contrib_vroumvroum = json.loads(get_contrib.data)["contributors"][0]
     contrib_vroumvroum["navitia_coverage"] = "tokyo"
@@ -330,9 +331,9 @@ def test_existing_contributors_after_put(test_client):
     assert put_data["contributor"] == contrib_vroumvroum
 
     # Verify that  the contributor "rt.tchoutchou" is not modified
-    get_contib = test_client.get("/contributors/rt.tchoutchou")
-    contrib_chou = json.loads(get_contib.data)["contributors"][0]
-    assert contrib_chou == original_contrib_chou
+    get_contrib = test_client.get("/contributors/rt.tchoutchou")
+    contrib_chou = json.loads(get_contrib.data)["contributors"][0]
+    assert contrib_chou == original_contrib_tchou
 
 
 def test_deactivate_contributor(test_client):
@@ -347,6 +348,11 @@ def test_deactivate_contributor(test_client):
     put_data = json.loads(put_resp.data)
     assert put_data["contributor"]["id"] == "rt.tchoutchou"
     assert put_data["contributor"]["is_active"] is False
+
+    # Verify the same contributor with a /get
+    get_contrib = test_client.get("/contributors/rt.tchoutchou")
+    contrib_chou = json.loads(get_contrib.data)["contributors"][0]
+    assert contrib_chou["is_active"] is False
 
 
 def test_activate_contributor(test_client):
@@ -370,3 +376,7 @@ def test_activate_contributor(test_client):
     put_data = json.loads(put_resp.data)
     assert put_data["contributor"]["id"] == "realtime.tokyo"
     assert put_data["contributor"]["is_active"] is True
+
+    get_resp = test_client.get("/contributors/realtime.tokyo")
+    get_contrib = json.loads(get_resp.data)["contributors"][0]
+    assert get_contrib["is_active"] is True
