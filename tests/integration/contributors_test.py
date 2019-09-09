@@ -332,27 +332,27 @@ def test_existing_contributors_after_put(test_client):
 
     # Verify that  the contributor "rt.tchoutchou" is not modified
     get_contrib = test_client.get("/contributors/rt.tchoutchou")
-    contrib_chou = json.loads(get_contrib.data)["contributors"][0]
-    assert contrib_chou == original_contrib_tchou
+    contrib_tchou = json.loads(get_contrib.data)["contributors"][0]
+    assert contrib_tchou == original_contrib_tchou
 
 
 def test_deactivate_contributor(test_client):
     # get existing contributor "rt.tchoutchou" which is active
     get_contrib = test_client.get("/contributors/rt.tchoutchou")
-    contrib_chou = json.loads(get_contrib.data)["contributors"][0]
-    assert contrib_chou["is_active"] is True
+    contrib_tchou = json.loads(get_contrib.data)["contributors"][0]
+    assert contrib_tchou["is_active"] is True
 
     # Modify attribute is_active to false and test after put
-    contrib_chou["is_active"] = False
-    put_resp = test_client.put("/contributors", json=contrib_chou)
+    contrib_tchou["is_active"] = False
+    put_resp = test_client.put("/contributors", json=contrib_tchou)
     put_data = json.loads(put_resp.data)
     assert put_data["contributor"]["id"] == "rt.tchoutchou"
     assert put_data["contributor"]["is_active"] is False
 
     # Verify the same contributor with a /get
     get_contrib = test_client.get("/contributors/rt.tchoutchou")
-    contrib_chou = json.loads(get_contrib.data)["contributors"][0]
-    assert contrib_chou["is_active"] is False
+    contrib_tchou = json.loads(get_contrib.data)["contributors"][0]
+    assert contrib_tchou["is_active"] is False
 
 
 def test_activate_contributor(test_client):
