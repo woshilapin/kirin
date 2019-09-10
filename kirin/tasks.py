@@ -113,17 +113,28 @@ from kirin.gtfs_rt.tasks import gtfs_poller
 
 @celery.task(bind=True)
 def poller(self):
-    # TODO:
-    #  read configurations from base ONLY if there is no configuration
-    #  available in config file (config file will prevail for transition).
-    config = {
-        "contributor": app.config.get(str("GTFS_RT_CONTRIBUTOR")),
-        "navitia_url": app.config.get(str("NAVITIA_URL")),
-        "token": app.config.get(str("NAVITIA_GTFS_RT_TOKEN")),
-        "coverage": app.config.get(str("NAVITIA_GTFS_RT_INSTANCE")),
-        "feed_url": app.config.get(str("GTFS_RT_FEED_URL")),
-    }
-    gtfs_poller.delay(config)
+    # TODO :
+    #  remove config from file
+    if "GTFS_RT_CONTRIBUTOR" in app.config and app.config[str("GTFS_RT_CONTRIBUTOR")]:
+        config = {
+            "contributor": app.config.get(str("GTFS_RT_CONTRIBUTOR")),
+            "navitia_url": app.config.get(str("NAVITIA_URL")),
+            "token": app.config.get(str("NAVITIA_GTFS_RT_TOKEN")),
+            "coverage": app.config.get(str("NAVITIA_GTFS_RT_INSTANCE")),
+            "feed_url": app.config.get(str("GTFS_RT_FEED_URL")),
+        }
+        gtfs_poller.delay(config)
+    else:
+        contributors = model.Contributor.query.all()
+        for contributor in contributors:
+            config = {
+                "contributor": contributor.id,
+                "navitia_url": app.config.get(str("NAVITIA_URL")),
+                "token": contributor.navitia_token,
+                "coverage": contributor.navitia_coverage,
+                "feed_url": contributor.feed_url,
+            }
+            gtfs_poller.delay(config)
 
 
 @celery.task(bind=True)

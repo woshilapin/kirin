@@ -28,6 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+
 from __future__ import absolute_import, print_function, unicode_literals, division
 import logging
 
@@ -78,12 +79,17 @@ def make_navitia_wrapper():
     """
     return a navitia wrapper to call the navitia API
     """
-    # TODO:
-    #  read configurations from base ONLY if there is no configuration
-    #  available in config file (config file will prevail for transition).
+    # TODO :
+    #  remove config from file
     url = current_app.config[str("NAVITIA_URL")]
-    token = current_app.config.get(str("NAVITIA_TOKEN"))
-    instance = current_app.config[str("NAVITIA_INSTANCE")]
+
+    if "NAVITIA_INSTANCE" in current_app.config and current_app.config[str("NAVITIA_INSTANCE")]:
+        instance = current_app.config[str("NAVITIA_INSTANCE")]
+        token = current_app.config[str("NAVITIA_TOKEN")]
+    else:
+        contributor = model.Contributor.find_by_id(current_app.config[str("COTS_CONTRIBUTOR")])
+        token = contributor.navitia_token
+        instance = contributor.navitia_coverage
     return navitia_wrapper.Navitia(url=url, token=token).instance(instance)
 
 

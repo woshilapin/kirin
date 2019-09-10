@@ -54,7 +54,7 @@ COTS_PAR_IV_REQUEST_TIMEOUT = int(
 )
 
 
-# TODO better conf for multi GTFS-RT
+# TODO : Remove when conf from db is ready
 NAVITIA_GTFS_RT_INSTANCE = os.getenv("KIRIN_NAVITIA_GTFS_RT_INSTANCE", "sherbrooke")
 NAVITIA_GTFS_RT_TOKEN = os.getenv("KIRIN_NAVITIA_GTFS_RT_TOKEN", None)
 GTFS_RT_CONTRIBUTOR = os.getenv("KIRIN_GTFS_RT_CONTRIBUTOR", "realtime.sherbrooke")

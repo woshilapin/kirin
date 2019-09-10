@@ -28,6 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+
 from __future__ import absolute_import, print_function, unicode_literals, division
 from datetime import timedelta
 from sqlalchemy.dialects import postgresql
@@ -459,11 +460,13 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         from kirin import app
 
         result = {"last_update": {}, "last_valid_update": {}, "last_update_error": {}}
-
-        # TODO:
-        #  read configurations from base ONLY if there is no configuration
-        #  available in config file (config file will prevail for transition).
-        contributors = [app.config[str("COTS_CONTRIBUTOR")], app.config[str("GTFS_RT_CONTRIBUTOR")]]
+        # TODO :
+        #  remove config from file
+        if "GTFS_RT_CONTRIBUTOR" in app.config and app.config[str("GTFS_RT_CONTRIBUTOR")]:
+            gtfs_contributors = [app.config[str("GTFS_RT_CONTRIBUTOR")]]
+        else:
+            gtfs_contributors = [x.id for x in db.session.query(Contributor).all()]
+        contributors = [app.config[str("COTS_CONTRIBUTOR")]] + gtfs_contributors
         for c in contributors:
             sql = db.session.query(cls.created_at, cls.status, cls.updated_at, cls.error)
             sql = sql.filter(cls.contributor_id == c)
@@ -522,3 +525,7 @@ class Contributor(db.Model):  # type: ignore
         self.connector_type = connector_type
         self.navitia_token = navitia_token
         self.feed_url = feed_url
+
+    @classmethod
+    def find_by_id(cls, id):
+        return cls.query.filter_by(id=id).one()

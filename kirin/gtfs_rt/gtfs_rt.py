@@ -50,8 +50,7 @@ def _get_gtfs_rt(req):
 class GtfsRT(Resource):
     def __init__(self):
         # TODO:
-        #  read configurations from base ONLY if there is no configuration
-        #  available in config file (config file will prevail for transition).
+        #  Refine a way to handle several contributors
         url = current_app.config[str("NAVITIA_URL")]
         token = current_app.config.get(str("NAVITIA_GTFS_RT_TOKEN"))
         timeout = current_app.config.get(str("NAVITIA_TIMEOUT"), 5)
