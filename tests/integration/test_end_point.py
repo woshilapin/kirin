@@ -34,7 +34,12 @@ from tests.check_utils import api_get
 from kirin.core import model
 from kirin import app
 from datetime import datetime, time
-from tests.integration.conftest import COTS_CONTRIBUTOR, GTFS_CONTRIBUTOR, GTFS_CONTRIBUTOR_DB
+from tests.integration.conftest import (
+    COTS_CONTRIBUTOR,
+    COTS_CONTRIBUTOR_DB,
+    GTFS_CONTRIBUTOR,
+    GTFS_CONTRIBUTOR_DB,
+)
 import pytest
 
 
@@ -78,6 +83,19 @@ def test_status_from_db(setup_database):
     assert "last_update" in resp
     assert GTFS_CONTRIBUTOR_DB in resp["last_update"]
     assert "2015-11-04T08:02:00Z" in resp["last_update"][GTFS_CONTRIBUTOR_DB]
+    assert COTS_CONTRIBUTOR_DB not in resp["last_update"]
+
+    # Set "GTFS_RT_CONTRIBUTOR" to "rt.vroumvroum" to read contributor from file
+    app.config["GTFS_RT_CONTRIBUTOR"] = "rt.vroumvroum"
+    # Set "COTS_CONTRIBUTOR" to None to read contributor from db
+    app.config["COTS_CONTRIBUTOR"] = None
+    resp = api_get("/status")
+    assert "last_update" in resp
+    assert COTS_CONTRIBUTOR_DB in resp["last_update"]
+    assert "2015-11-04T08:12:00Z" in resp["last_update"][COTS_CONTRIBUTOR_DB]
+    assert GTFS_CONTRIBUTOR_DB not in resp["last_update"]
+    assert GTFS_CONTRIBUTOR in resp["last_update"]
+    assert "2015-11-04T07:52:00Z" in resp["last_update"][GTFS_CONTRIBUTOR]
 
 
 @pytest.fixture()
@@ -146,6 +164,10 @@ def setup_database():
 
         rtu5 = model.RealTimeUpdate(None, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR_DB)
         rtu5.created_at = datetime(2015, 11, 4, 8, 2)
+        model.db.session.add(rtu5)
+
+        rtu5 = model.RealTimeUpdate(None, connector="cots", contributor=COTS_CONTRIBUTOR_DB)
+        rtu5.created_at = datetime(2015, 11, 4, 8, 12)
         model.db.session.add(rtu5)
 
         model.db.session.commit()

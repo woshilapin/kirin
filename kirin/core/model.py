@@ -463,10 +463,26 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         # TODO :
         #  remove config from file
         if "GTFS_RT_CONTRIBUTOR" in app.config and app.config[str("GTFS_RT_CONTRIBUTOR")]:
-            gtfs_contributors = [app.config[str("GTFS_RT_CONTRIBUTOR")]]
+            gtfsrt_contributors = [app.config[str("GTFS_RT_CONTRIBUTOR")]]
         else:
-            gtfs_contributors = [x.id for x in db.session.query(Contributor).all()]
-        contributors = [app.config[str("COTS_CONTRIBUTOR")]] + gtfs_contributors
+            gtfsrt_contributors = [
+                x.id
+                for x in db.session.query(Contributor)
+                .filter(Contributor.connector_type == ConnectorType.gtfs_rt.value)
+                .all()
+            ]
+
+        if "COTS_CONTRIBUTOR" in app.config and app.config[str("COTS_CONTRIBUTOR")]:
+            cots_contributors = [app.config[str("COTS_CONTRIBUTOR")]]
+        else:
+            cots_contributors = [
+                x.id
+                for x in db.session.query(Contributor)
+                .filter(Contributor.connector_type == ConnectorType.cots.value)
+                .all()
+            ]
+
+        contributors = cots_contributors + gtfsrt_contributors
         for c in contributors:
             sql = db.session.query(cls.created_at, cls.status, cls.updated_at, cls.error)
             sql = sql.filter(cls.contributor_id == c)
@@ -527,5 +543,5 @@ class Contributor(db.Model):  # type: ignore
         self.feed_url = feed_url
 
     @classmethod
-    def find_by_id(cls, id):
-        return cls.query.filter_by(id=id).one()
+    def find_by_connector_type(cls, type):
+        return cls.query.filter_by(connector_type=type).all()

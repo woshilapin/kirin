@@ -42,6 +42,7 @@ from kirin import new_relic
 from redis.exceptions import ConnectionError
 from contextlib import contextmanager
 from kirin.core import model
+from kirin.core.types import ConnectorType
 from kirin.exceptions import InternalException
 
 
@@ -87,9 +88,15 @@ def make_navitia_wrapper():
         instance = current_app.config[str("NAVITIA_INSTANCE")]
         token = current_app.config[str("NAVITIA_TOKEN")]
     else:
-        contributor = model.Contributor.find_by_id(current_app.config[str("COTS_CONTRIBUTOR")])
-        token = contributor.navitia_token
-        instance = contributor.navitia_coverage
+        contributor = model.Contributor.find_by_connector_type(ConnectorType.cots.value)
+        if len(contributor) > 1:
+            logging.getLogger(__name__).warning(
+                "{n} COTS contributors found in db - {id} taken into account ".format(
+                    n=len(contributor), id=contributor[0].id
+                )
+            )
+        instance = contributor[0].navitia_coverage
+        token = contributor[0].navitia_token
     return navitia_wrapper.Navitia(url=url, token=token).instance(instance)
 
 

@@ -41,6 +41,7 @@ from retrying import retry
 from kirin import app
 import datetime
 from kirin.core.model import TripUpdate, RealTimeUpdate
+from kirin.core.types import ConnectorType
 from kirin.utils import should_retry_exception, make_kirin_lock_name, get_lock
 
 TASK_STOP_MAX_DELAY = app.config[str("TASK_STOP_MAX_DELAY")]
@@ -125,7 +126,7 @@ def poller(self):
         }
         gtfs_poller.delay(config)
     else:
-        contributors = model.Contributor.query.all()
+        contributors = model.Contributor.find_by_connector_type(ConnectorType.gtfs_rt.value)
         for contributor in contributors:
             config = {
                 "contributor": contributor.id,
