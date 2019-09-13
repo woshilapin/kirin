@@ -44,6 +44,7 @@ contributor_fields = {
     "navitia_token": fields.String,
     "feed_url": fields.String,
     "connector_type": fields.String,
+    "is_active": fields.Boolean,
 }
 
 contributors_list_fields = {"contributors": fields.List(fields.Nested(contributor_fields))}
@@ -58,6 +59,7 @@ class Contributors(Resource):
         "navitia_token": {"type": "string"},
         "feed_url": {"type": "string", "format": "uri"},
         "connector_type": {"type": "string", "enum": ConnectorType.values()},
+        "is_active": {"type": "boolean"},
     }
 
     post_data_schema = {
@@ -91,10 +93,11 @@ class Contributors(Resource):
         id = id or data.get("id")
         token = data.get("navitia_token", None)
         feed_url = data.get("feed_url", None)
+        is_active = data.get("is_active", True)
 
         try:
             new_contrib = model.Contributor(
-                id, data["navitia_coverage"], data["connector_type"], token, feed_url
+                id, data["navitia_coverage"], data["connector_type"], token, feed_url, is_active
             )
             model.db.session.add(new_contrib)
             model.db.session.commit()
@@ -104,19 +107,6 @@ class Contributors(Resource):
             abort(400, message=err_msg)
         except sqlalchemy.exc.SQLAlchemyError as e:
             abort(400, message="Error while creating contributor - {}".format(e))
-
-    def delete(self, id=None):
-
-        if id is None:
-            abort(400, message="Contributor's id is missing")
-
-        try:
-            contributor = model.Contributor.query.get_or_404(id)
-            contributor.query.delete()
-            model.db.session.commit()
-            return None, 204
-        except sqlalchemy.exc.SQLAlchemyError as e:
-            abort(400, message=e)
 
     @marshal_with(contributor_nested_fields)
     def put(self, id=None):
@@ -139,9 +129,9 @@ class Contributors(Resource):
             if "id" in data:
                 del data["id"]
 
-            contributor = model.Contributor.query.get_or_404(id)
-            contributor.query.update(data)
+            model.Contributor.query.filter(model.Contributor.id == id).update(data)
             model.db.session.commit()
+            contributor = model.Contributor.query.get_or_404(id)
             return {"contributor": contributor}, 200
         except sqlalchemy.exc.SQLAlchemyError as e:
             abort(400, message=e)
