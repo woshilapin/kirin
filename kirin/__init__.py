@@ -93,11 +93,6 @@ redis = Redis(
     password=app.config[str("REDIS_PASSWORD")],
 )
 
-cots_message_breaker = pybreaker.CircuitBreaker(
-    fail_max=app.config[str("COTS_PAR_IV_CIRCUIT_BREAKER_MAX_FAIL")],
-    reset_timeout=app.config[str("COTS_PAR_IV_CIRCUIT_BREAKER_TIMEOUT_S")],
-)
-
 # activate a command
 import kirin.command.load_realtime
 
