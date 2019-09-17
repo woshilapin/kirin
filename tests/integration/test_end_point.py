@@ -86,6 +86,7 @@ def test_status_from_db(setup_database):
     assert COTS_CONTRIBUTOR_DB not in resp["last_update"]
 
     # Set "GTFS_RT_CONTRIBUTOR" to "rt.vroumvroum" to read contributor from file
+    # Contributor GTFS_CONTRIBUTOR_DB should also be present
     app.config["GTFS_RT_CONTRIBUTOR"] = "rt.vroumvroum"
     # Set "COTS_CONTRIBUTOR" to None to read contributor from db
     app.config["COTS_CONTRIBUTOR"] = None
@@ -93,7 +94,8 @@ def test_status_from_db(setup_database):
     assert "last_update" in resp
     assert COTS_CONTRIBUTOR_DB in resp["last_update"]
     assert "2015-11-04T08:12:00Z" in resp["last_update"][COTS_CONTRIBUTOR_DB]
-    assert GTFS_CONTRIBUTOR_DB not in resp["last_update"]
+    assert GTFS_CONTRIBUTOR_DB in resp["last_update"]
+    assert "2015-11-04T08:02:00Z" in resp["last_update"][GTFS_CONTRIBUTOR_DB]
     assert GTFS_CONTRIBUTOR in resp["last_update"]
     assert "2015-11-04T07:52:00Z" in resp["last_update"][GTFS_CONTRIBUTOR]
 
@@ -166,8 +168,8 @@ def setup_database():
         rtu5.created_at = datetime(2015, 11, 4, 8, 2)
         model.db.session.add(rtu5)
 
-        rtu5 = model.RealTimeUpdate(None, connector="cots", contributor=COTS_CONTRIBUTOR_DB)
-        rtu5.created_at = datetime(2015, 11, 4, 8, 12)
-        model.db.session.add(rtu5)
+        rtu6 = model.RealTimeUpdate(None, connector="cots", contributor=COTS_CONTRIBUTOR_DB)
+        rtu6.created_at = datetime(2015, 11, 4, 8, 12)
+        model.db.session.add(rtu6)
 
         model.db.session.commit()

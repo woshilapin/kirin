@@ -116,18 +116,22 @@ from kirin.gtfs_rt.tasks import gtfs_poller
 def poller(self):
     # TODO :
     #  remove config from file
+    contributor_legacy = None
     if "GTFS_RT_CONTRIBUTOR" in app.config and app.config[str("GTFS_RT_CONTRIBUTOR")]:
+        contributor_legacy = app.config.get(str("GTFS_RT_CONTRIBUTOR"))
         config = {
-            "contributor": app.config.get(str("GTFS_RT_CONTRIBUTOR")),
+            "contributor": contributor_legacy,
             "navitia_url": app.config.get(str("NAVITIA_URL")),
             "token": app.config.get(str("NAVITIA_GTFS_RT_TOKEN")),
             "coverage": app.config.get(str("NAVITIA_GTFS_RT_INSTANCE")),
             "feed_url": app.config.get(str("GTFS_RT_FEED_URL")),
         }
         gtfs_poller.delay(config)
-    else:
-        contributors = model.Contributor.find_by_connector_type(ConnectorType.gtfs_rt.value)
-        for contributor in contributors:
+
+    # Get contributors from db (config file still has priority)
+    contributors = model.Contributor.find_by_connector_type(ConnectorType.gtfs_rt.value)
+    for contributor in contributors:
+        if contributor.id != contributor_legacy:
             config = {
                 "contributor": contributor.id,
                 "navitia_url": app.config.get(str("NAVITIA_URL")),

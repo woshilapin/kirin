@@ -462,15 +462,22 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         result = {"last_update": {}, "last_valid_update": {}, "last_update_error": {}}
         # TODO :
         #  remove config from file
+        # Get contributors from both file and db (config file has priority)
+        gtfsrt_contributors = []
+        contributor_legacy = None
         if "GTFS_RT_CONTRIBUTOR" in app.config and app.config[str("GTFS_RT_CONTRIBUTOR")]:
-            gtfsrt_contributors = [app.config[str("GTFS_RT_CONTRIBUTOR")]]
-        else:
-            gtfsrt_contributors = [
+            contributor_legacy = app.config[str("GTFS_RT_CONTRIBUTOR")]
+            gtfsrt_contributors.append(contributor_legacy)
+
+        gtfsrt_contributors.extend(
+            [
                 x.id
                 for x in db.session.query(Contributor)
                 .filter(Contributor.connector_type == ConnectorType.gtfs_rt.value)
                 .all()
+                if x.id != contributor_legacy
             ]
+        )
 
         if "COTS_CONTRIBUTOR" in app.config and app.config[str("COTS_CONTRIBUTOR")]:
             cots_contributors = [app.config[str("COTS_CONTRIBUTOR")]]

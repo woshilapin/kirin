@@ -32,11 +32,14 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 import flask
 from flask.globals import current_app
+import navitia_wrapper
+import logging
 
 from kirin.abstract_sncf_resource import AbstractSNCFResource
 from kirin.cots import KirinModelBuilder
 from kirin.exceptions import InvalidArguments
-from kirin.utils import make_navitia_wrapper
+from kirin.core import model
+from kirin.core.types import ConnectorType
 
 
 def get_cots(req):
@@ -50,10 +53,31 @@ def get_cots(req):
 
 class Cots(AbstractSNCFResource):
     def __init__(self):
+
+        url = current_app.config[str("NAVITIA_URL")]
+
+        # TODO :
+        #  remove config from file
+        if "NAVITIA_INSTANCE" in current_app.config and current_app.config[str("NAVITIA_INSTANCE")]:
+            instance = current_app.config[str("NAVITIA_INSTANCE")]
+            token = current_app.config[str("NAVITIA_TOKEN")]
+            contributor_id = current_app.config[str("COTS_CONTRIBUTOR")]
+        else:
+            contributor = model.Contributor.find_by_connector_type(ConnectorType.cots.value)
+            if len(contributor) > 1:
+                logging.getLogger(__name__).warning(
+                    "{n} COTS contributors found in db - {id} taken into account ".format(
+                        n=len(contributor), id=contributor[0].id
+                    )
+                )
+            instance = contributor[0].navitia_coverage
+            token = contributor[0].navitia_token
+            contributor_id = contributor[0].id
+
         super(Cots, self).__init__(
-            make_navitia_wrapper(),
+            navitia_wrapper.Navitia(url=url, token=token).instance(instance),
             current_app.config.get(str("NAVITIA_TIMEOUT"), 5),
-            current_app.config[str("COTS_CONTRIBUTOR")],
+            contributor_id,
             KirinModelBuilder,
         )
 

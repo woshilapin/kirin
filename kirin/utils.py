@@ -36,13 +36,11 @@ import six
 from aniso8601 import parse_date
 from pythonjsonlogger import jsonlogger
 from flask.globals import current_app
-import navitia_wrapper
 
 from kirin import new_relic
 from redis.exceptions import ConnectionError
 from contextlib import contextmanager
 from kirin.core import model
-from kirin.core.types import ConnectorType
 from kirin.exceptions import InternalException
 
 
@@ -74,30 +72,6 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
     def process_log_record(self, log_record):
         log_record.update(self.extras)
         return log_record
-
-
-def make_navitia_wrapper():
-    """
-    return a navitia wrapper to call the navitia API
-    """
-    # TODO :
-    #  remove config from file
-    url = current_app.config[str("NAVITIA_URL")]
-
-    if "NAVITIA_INSTANCE" in current_app.config and current_app.config[str("NAVITIA_INSTANCE")]:
-        instance = current_app.config[str("NAVITIA_INSTANCE")]
-        token = current_app.config[str("NAVITIA_TOKEN")]
-    else:
-        contributor = model.Contributor.find_by_connector_type(ConnectorType.cots.value)
-        if len(contributor) > 1:
-            logging.getLogger(__name__).warning(
-                "{n} COTS contributors found in db - {id} taken into account ".format(
-                    n=len(contributor), id=contributor[0].id
-                )
-            )
-        instance = contributor[0].navitia_coverage
-        token = contributor[0].navitia_token
-    return navitia_wrapper.Navitia(url=url, token=token).instance(instance)
 
 
 def to_navitia_utc_str(naive_utc_dt):
