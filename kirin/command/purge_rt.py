@@ -53,7 +53,7 @@ def purge_rt(nb_day_to_keep, connector):
 @manager.command
 def purge_contributor(contributor_id):
     """
-    This task will delete a contributor with is_active = false and without any data in real_time_update
+    This task will delete a contributor if is_active = false and if it does not have any data in real_time_update
     and trip_update
     :param contributor_id:
     """
@@ -71,7 +71,7 @@ def purge_contributor(contributor_id):
                 logger.info("Contributor %s deleted", contributor_id)
             except IntegrityError:
                 logger.info(
-                    "Presence of data in real_time_update and/or trip_update for contributor: %s", contributor_id
+                    "Presence of data in real_time_update and/or trip_update for contributor %s", contributor_id
                 )
             except Exception:
                 logger.info("Error while deleting contributor %s", contributor_id)
