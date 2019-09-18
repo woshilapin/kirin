@@ -70,8 +70,9 @@ def purge_contributor(contributor_id):
                 db.session.commit()
                 logger.info("Contributor %s deleted", contributor_id)
             except IntegrityError:
-                logger.info("Presence of data in real_time_update and/or trip_update for contributor: %s",
-                            contributor_id)
+                logger.info(
+                    "Presence of data in real_time_update and/or trip_update for contributor: %s", contributor_id
+                )
             except Exception:
                 logger.info("Error while deleting contributor %s", contributor_id)
         else:
