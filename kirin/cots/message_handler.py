@@ -35,9 +35,14 @@ import requests as requests
 import six
 
 from kirin import app
-from flask.globals import current_app
 
 from kirin.exceptions import ObjectNotFound, UnauthorizedOnSubService, SubServiceError
+
+
+cots_message_breaker = pybreaker.CircuitBreaker(
+    fail_max=app.config[str("COTS_PAR_IV_CIRCUIT_BREAKER_MAX_FAIL")],
+    reset_timeout=app.config[str("COTS_PAR_IV_CIRCUIT_BREAKER_TIMEOUT_S")],
+)
 
 
 class MessageHandler:
@@ -72,10 +77,6 @@ class MessageHandler:
         self.client_secret = client_secret
         self.grant_type = grant_type
         self.timeout = timeout
-        self.breaker = pybreaker.CircuitBreaker(
-            fail_max=current_app.config[str("COTS_PAR_IV_CIRCUIT_BREAKER_MAX_FAIL")],
-            reset_timeout=current_app.config[str("COTS_PAR_IV_CIRCUIT_BREAKER_TIMEOUT_S")],
-        )
 
     def __repr__(self):
         """
@@ -88,7 +89,7 @@ class MessageHandler:
             kwargs = {"timeout": self.timeout, "headers": headers}
             if data:
                 kwargs.update({"data": data})
-            response = self.breaker.call(method, url, **kwargs)
+            response = method(url, **kwargs)
             if not response or response.status_code != 200:
                 logging.getLogger(__name__).error(
                     "COTS cause message sub-service, Invalid response, "
@@ -99,12 +100,9 @@ class MessageHandler:
                         "Unauthorized on COTS message sub-service {} {}".format(method, url)
                     )
                 raise ObjectNotFound(
-                    "non 200 response on COTS cause message " "sub-service {} {}".format(method, url)
+                    "non 200 response on COTS cause message sub-service {} {}".format(method, url)
                 )
             return response
-        except pybreaker.CircuitBreakerError as e:
-            logging.getLogger(__name__).error("COTS cause message sub-service dead (error: {})".format(e))
-            raise SubServiceError("COTS cause message sub-service circuit breaker open")
         except requests.Timeout as t:
             logging.getLogger(__name__).error("COTS cause message sub-service timeout (error: {})".format(t))
             raise SubServiceError("COTS cause message sub-service timeout")
@@ -157,7 +155,13 @@ class MessageHandler:
     def get_message(self, index):
         if self.token_server and self.resource_server:
             try:
-                return self._call_webservice_safer().get(index)
+                return cots_message_breaker.call(self._call_webservice_safer).get(index)
+            except pybreaker.CircuitBreakerError as e:
+                logging.getLogger(__name__).error(
+                    "COTS cause message sub-service handling error : "
+                    "circuit breaker open (error: {})".format(e)
+                )
+                return None
             except Exception as e:
                 logging.getLogger(__name__).exception(
                     "COTS cause message sub-service handling error : {}".format(six.text_type(e))
