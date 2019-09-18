@@ -31,9 +31,10 @@
 
 from __future__ import absolute_import, print_function, unicode_literals, division
 from kirin import manager
-from kirin.core.model import db, RealTimeUpdate
+from kirin.core.model import db, RealTimeUpdate, Contributor
 import datetime
 import logging
+from sqlalchemy.exc import IntegrityError
 
 
 @manager.command
@@ -47,3 +48,33 @@ def purge_rt(nb_day_to_keep, connector):
     logger.info("purge table real_time_update for %s until %s", connector, until)
     RealTimeUpdate.remove_by_connectors_until(connectors=[connector], until=until)
     db.session.commit()
+
+
+@manager.command
+def purge_contributor(contributor_id):
+    """
+    This task will delete a contributor with is_active = false and without any data in real_time_update
+    and trip_update
+    :param contributor_id:
+    """
+    logger = logging.getLogger(__name__)
+    logger.info("Preparing to delete contributor %s", contributor_id)
+    contrib = Contributor.get_by_id(contributor_id)
+    if contrib:
+        logger.info("Contributor: %s exists", contributor_id)
+        if not contrib.is_active:
+            # We try to delete the contributor
+            logger.info("Contributor %s is not active and hence deletable", contributor_id)
+            try:
+                db.session.delete(contrib)
+                db.session.commit()
+                logger.info("Contributor %s deleted", contributor_id)
+            except IntegrityError:
+                logger.info("Presence of data in real_time_update and/or trip_update for contributor: %s",
+                            contributor_id)
+            except Exception:
+                logger.info("Error while deleting contributor %s", contributor_id)
+        else:
+            logger.info("Contributor %s is active and cannot be deleted", contributor_id)
+    else:
+        logger.info("Contributor %s doesn't exist", contributor_id)
