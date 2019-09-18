@@ -127,6 +127,20 @@ When running this image, the Kirin web server is launched and an optional *port*
 Note: a Kirin database is needed on localhost for the requests to be done successfully.
 
 
+### Maintenance
+
+##### Definitely remove a contributor from configuration
+
+A command to clean inactive contributors is available, to be triggered by hand.
+```bash
+python ./manage.py purge_contributor <contributor_id>
+```
+This will check that for the given contributor, `is_active=false` and that
+no more object is linked to that contributor in Kirin database.
+
+Those objects are progressively purged by automatic jobs configured in the settings file.
+
+
 ## API
 
 Kirin API provides several endpoints (that can be requested through port 5000 by default, or
