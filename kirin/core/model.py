@@ -472,9 +472,7 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         gtfsrt_contributors.extend(
             [
                 x.id
-                for x in db.session.query(Contributor)
-                .filter(Contributor.connector_type == ConnectorType.gtfs_rt.value)
-                .all()
+                for x in Contributor.find_by_connector_type(ConnectorType.gtfs_rt.value)
                 if x.id != contributor_legacy
             ]
         )
@@ -482,12 +480,7 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         if "COTS_CONTRIBUTOR" in app.config and app.config[str("COTS_CONTRIBUTOR")]:
             cots_contributors = [app.config[str("COTS_CONTRIBUTOR")]]
         else:
-            cots_contributors = [
-                x.id
-                for x in db.session.query(Contributor)
-                .filter(Contributor.connector_type == ConnectorType.cots.value)
-                .all()
-            ]
+            cots_contributors = [x.id for x in Contributor.find_by_connector_type(ConnectorType.cots.value)]
 
         contributors = cots_contributors + gtfsrt_contributors
         for c in contributors:

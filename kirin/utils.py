@@ -42,6 +42,7 @@ from redis.exceptions import ConnectionError
 from contextlib import contextmanager
 from kirin.core import model
 from kirin.exceptions import InternalException
+from kirin.core.types import ConnectorType
 
 
 def floor_datetime(datetime):

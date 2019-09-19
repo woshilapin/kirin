@@ -39,6 +39,35 @@ import navitia_wrapper
 from kirin.gtfs_rt import model_maker
 from kirin import redis
 from kirin.utils import manage_db_error
+from kirin.core import model
+from kirin.core.types import ConnectorType
+
+
+def get_gtfsrt_contributors():
+    """
+    :return: all GTFS-RT contributors from config file + db
+    File has priority over db
+    TODO: Remove from config file
+    """
+    gtfsrt_contributors = []
+    if "GTFS_RT_CONTRIBUTOR" in current_app.config and current_app.config.get(str("GTFS_RT_CONTRIBUTOR")):
+        contributor_legacy = model.Contributor(
+            id=current_app.config.get(str("GTFS_RT_CONTRIBUTOR")),
+            navitia_coverage=current_app.config.get(str("NAVITIA_GTFS_RT_INSTANCE")),
+            connector_type=ConnectorType.gtfs_rt.value,
+            navitia_token=current_app.config.get(str("NAVITIA_GTFS_RT_TOKEN")),
+            feed_url=current_app.config.get(str("GTFS_RT_FEED_URL")),
+        )
+        gtfsrt_contributors.append(contributor_legacy)
+
+    gtfsrt_contributors.extend(
+        [
+            c
+            for c in model.Contributor.find_by_connector_type(ConnectorType.gtfs_rt.value)
+            if c.id != contributor_legacy.id
+        ]
+    )
+    return gtfsrt_contributors
 
 
 def _get_gtfs_rt(req):
