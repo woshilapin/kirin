@@ -41,7 +41,7 @@ from kirin.tasks import purge_trip_update, purge_rt_update
 from tests import mock_navitia
 from tests.check_utils import dumb_nav_wrapper, api_post
 from kirin import gtfs_realtime_pb2, app
-from kirin.utils import save_gtfs_rt_with_error, manage_db_error
+from kirin.utils import save_rt_data_with_error, manage_db_error
 from tests.integration.conftest import GTFS_CONTRIBUTOR
 import time
 from sqlalchemy import desc
@@ -1780,8 +1780,12 @@ def test_save_gtfs_rt_with_error():
     test the function "save_gtfs_rt_with_error"
     """
     with app.app_context():
-        save_gtfs_rt_with_error(
-            "toto", "gtfs-rt", contributor=GTFS_CONTRIBUTOR, status="KO", error="Decode Error"
+        save_rt_data_with_error(
+            "toto",
+            "gtfs-rt",
+            contributor=GTFS_CONTRIBUTOR,
+            error="Decode Error",
+            is_reprocess_same_data_allowed=False,
         )
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().status == "KO"
@@ -1793,7 +1797,13 @@ def test_manage_db_with_http_error_without_insert():
     test the function "manage_db_error" without any insert of a new gtfs-rt
     """
     with app.app_context():
-        manage_db_error("toto", "gtfs-rt", contributor=GTFS_CONTRIBUTOR, status="KO", error="Http Error")
+        manage_db_error(
+            "toto",
+            "gtfs-rt",
+            contributor=GTFS_CONTRIBUTOR,
+            error="Http Error",
+            is_reprocess_same_data_allowed=False,
+        )
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().raw_data == "toto"
         assert RealTimeUpdate.query.first().status == "KO"
@@ -1803,7 +1813,13 @@ def test_manage_db_with_http_error_without_insert():
         updated_at = RealTimeUpdate.query.first().updated_at
         assert updated_at > created_at
 
-        manage_db_error("toto", "gtfs-rt", contributor=GTFS_CONTRIBUTOR, status="KO", error="Http Error")
+        manage_db_error(
+            "toto",
+            "gtfs-rt",
+            contributor=GTFS_CONTRIBUTOR,
+            error="Http Error",
+            is_reprocess_same_data_allowed=False,
+        )
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().raw_data == "toto"
         assert RealTimeUpdate.query.first().status == "KO"
@@ -1815,7 +1831,13 @@ def test_manage_db_with_http_error_without_insert():
 
         time.sleep(6)
 
-        manage_db_error("toto", "gtfs-rt", contributor=GTFS_CONTRIBUTOR, status="KO", error="Http Error")
+        manage_db_error(
+            "toto",
+            "gtfs-rt",
+            contributor=GTFS_CONTRIBUTOR,
+            error="Http Error",
+            is_reprocess_same_data_allowed=False,
+        )
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().raw_data == "toto"
         assert RealTimeUpdate.query.first().status == "KO"
@@ -1830,7 +1852,13 @@ def test_manage_db_with_http_error_with_insert():
     no gtfs-rt with 'Http Error' inserted since more than 5 seconds
     """
     with app.app_context():
-        manage_db_error("toto", "gtfs-rt", contributor=GTFS_CONTRIBUTOR, status="KO", error="Http Error")
+        manage_db_error(
+            "toto",
+            "gtfs-rt",
+            contributor=GTFS_CONTRIBUTOR,
+            error="Http Error",
+            is_reprocess_same_data_allowed=False,
+        )
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().raw_data == "toto"
         assert RealTimeUpdate.query.first().status == "KO"
@@ -1838,13 +1866,25 @@ def test_manage_db_with_http_error_with_insert():
 
         created_at = RealTimeUpdate.query.first().created_at
 
-        manage_db_error("", "gtfs-rt", contributor=GTFS_CONTRIBUTOR, status="KO", error="Decode Error")
+        manage_db_error(
+            "",
+            "gtfs-rt",
+            contributor=GTFS_CONTRIBUTOR,
+            error="Decode Error",
+            is_reprocess_same_data_allowed=False,
+        )
         assert len(RealTimeUpdate.query.all()) == 2
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().status == "KO"
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().error == "Decode Error"
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().created_at > created_at
 
-        manage_db_error("toto", "gtfs-rt", contributor=GTFS_CONTRIBUTOR, status="KO", error="Http Error")
+        manage_db_error(
+            "toto",
+            "gtfs-rt",
+            contributor=GTFS_CONTRIBUTOR,
+            error="Http Error",
+            is_reprocess_same_data_allowed=False,
+        )
         assert len(RealTimeUpdate.query.all()) == 3
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().raw_data == "toto"
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().status == "KO"

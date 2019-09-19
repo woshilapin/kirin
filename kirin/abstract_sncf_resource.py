@@ -33,7 +33,7 @@ from flask_restful import Resource
 
 import logging
 from datetime import datetime
-from kirin.utils import make_rt_update, record_call
+from kirin.utils import make_rt_update, record_call, set_rtu_status_ko
 from kirin.exceptions import KirinException
 from kirin import core
 from kirin.core import model
@@ -60,15 +60,13 @@ class AbstractSNCFResource(Resource):
             _, log_dict = core.handle(rt_update, trip_updates, self.contributor, is_new_complete=is_new_complete)
             record_call("OK", contributor=self.contributor)
         except KirinException as e:
-            rt_update.status = "KO"
-            rt_update.error = e.data["error"]
+            set_rtu_status_ko(rt_update, e.data["error"], is_reprocess_same_data_allowed=True)
             model.db.session.add(rt_update)
             model.db.session.commit()
             record_call("failure", reason=six.text_type(e), contributor=self.contributor)
             raise
         except Exception as e:
-            rt_update.status = "KO"
-            rt_update.error = e.message
+            set_rtu_status_ko(rt_update, e.message, is_reprocess_same_data_allowed=True)
             model.db.session.add(rt_update)
             model.db.session.commit()
             record_call("failure", reason=six.text_type(e), contributor=self.contributor)

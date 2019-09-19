@@ -41,6 +41,7 @@ from kirin import new_relic
 from redis.exceptions import ConnectionError
 from contextlib import contextmanager
 from kirin.core import model
+from kirin.core.model import RealTimeUpdate
 from kirin.exceptions import InternalException
 
 
@@ -122,11 +123,48 @@ def make_kirin_lock_name(*args):
     return "|".join([app.config[str("TASK_LOCK_PREFIX")]] + [a for a in args])
 
 
-def save_gtfs_rt_with_error(data, connector, contributor, status, error=None):
+def build_redis_etag_key(contributor):
+    # type: (unicode) -> unicode
+    return "|".join([contributor, "polling_HEAD"])
+
+
+def allow_reprocess_same_data(contributor):
+    # type: (unicode) -> None
+    from kirin import redis_client
+
+    redis_client.delete(build_redis_etag_key(contributor))  # wipe previous' ETag memory
+
+
+def set_rtu_status_ko(rtu, error, is_reprocess_same_data_allowed):
+    # type: (RealTimeUpdate, unicode, bool) -> None
+    """
+        Set RealTimeUpdate's status to KO, handling all in one
+        except commit and logs
+        :param rtu: RealTimeUpdate object to amend
+        :param error: error message to associate to RTU
+        :param is_reprocess_same_data_allowed: If the same input is provided next time, should we
+        reprocess it (hoping a happier ending)
+        """
+    if is_reprocess_same_data_allowed:
+        allow_reprocess_same_data(rtu.contributor)
+
+    rtu.status = "KO"
+    rtu.error = error
+
+
+def save_rt_data_with_error(data, connector, contributor, error, is_reprocess_same_data_allowed):
+    """
+    Create and save RTU using given data, connector, contributor with a status KO
+    :param data: realtime input
+    :param connector: connector type
+    :param contributor: contributor id
+    :param error: error message to associate to RTU
+    :param is_reprocess_same_data_allowed: If the same input is provided next time, should we
+    reprocess it (hoping a happier ending)
+    """
     raw_data = six.binary_type(data)
-    rt_update = make_rt_update(raw_data, connector=connector, contributor=contributor, status=status)
-    rt_update.status = status
-    rt_update.error = error
+    rt_update = make_rt_update(raw_data, connector=connector, contributor=contributor)
+    set_rtu_status_ko(rt_update, error, is_reprocess_same_data_allowed)
     model.db.session.add(rt_update)
     model.db.session.commit()
 
@@ -143,20 +181,23 @@ def poke_updated_at(rtu):
         model.db.session.commit()
 
 
-def manage_db_error(data, connector, contributor, status, error=None):
+def manage_db_error(data, connector, contributor, error, is_reprocess_same_data_allowed):
     """
     If the last RTUpdate contains the same error (and data, status) we just change updated_at:
     This way, we know we had this error between created_at and updated_at, but we don't get extra rows in db
 
     Otherwise, we create a new one, as we want to track error changes
 
-    parameters: data, connector, contributor, status, error
+    :param is_reprocess_same_data_allowed: If the same input is provided next time, should we
+    reprocess it (hoping a happier ending)
     """
     last = model.RealTimeUpdate.get_last_rtu(connector, contributor)
-    if last and last.status == status and last.error == error and last.raw_data == six.binary_type(data):
+    if last and last.status == "KO" and last.error == error and last.raw_data == six.binary_type(data):
         poke_updated_at(last)
+        if is_reprocess_same_data_allowed:
+            allow_reprocess_same_data(contributor)
     else:
-        save_gtfs_rt_with_error(data, connector, contributor, status, error)
+        save_rt_data_with_error(data, connector, contributor, error, is_reprocess_same_data_allowed)
 
 
 def manage_db_no_new(connector, contributor):
