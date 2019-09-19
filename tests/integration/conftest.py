@@ -81,8 +81,10 @@ def clean_db():
                 model.Contributor(
                     GTFS_CONTRIBUTOR, "sherbrooke", "gtfs-rt", "gtfs-rt_token", "gtfs-rt_feed_url", True
                 ),
-                model.Contributor(COTS_CONTRIBUTOR_DB, "idfm", "cots", "cots_token", "cots_feed_url"),
-                model.Contributor(GTFS_CONTRIBUTOR_DB, "laval", "gtfs-rt", "gtfs-rt_token", "gtfs-rt_feed_url"),
+                model.Contributor(COTS_CONTRIBUTOR_DB, "idfm", "cots", "cots_db_token", "cots_db_feed_url"),
+                model.Contributor(
+                    GTFS_CONTRIBUTOR_DB, "laval", "gtfs-rt", "gtfs-rt_db_token", "gtfs-rt_db_feed_url"
+                ),
             ]
         )
         db.session.commit()
