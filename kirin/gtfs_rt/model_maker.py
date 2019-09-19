@@ -50,6 +50,7 @@ def handle(proto, navitia_wrapper, contributor):
     start_datetime = datetime.datetime.utcnow()
     try:
         trip_updates = KirinModelBuilder(navitia_wrapper, contributor).build(rt_update, data=proto)
+        _, log_dict = core.handle(rt_update, trip_updates, contributor)
         record_call("OK", contributor=contributor)
     except KirinException as e:
         rt_update.status = "KO"
@@ -66,7 +67,6 @@ def handle(proto, navitia_wrapper, contributor):
         record_call("failure", reason=six.text_type(e), contributor=contributor)
         raise
 
-    real_time_update, log_dict = core.handle(rt_update, trip_updates, contributor)
     duration = (datetime.datetime.utcnow() - start_datetime).total_seconds()
     log_dict.update(
         {"duration": duration, "input_timestamp": datetime.datetime.utcfromtimestamp(proto.header.timestamp)}
