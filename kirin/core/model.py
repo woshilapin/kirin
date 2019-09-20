@@ -546,4 +546,4 @@ class Contributor(db.Model):  # type: ignore
 
     @classmethod
     def find_by_connector_type(cls, type):
-        return cls.query.filter_by(connector_type=type).all()
+        return cls.query.filter_by(connector_type=type, is_active=True).all()

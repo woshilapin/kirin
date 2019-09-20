@@ -37,7 +37,7 @@ import logging
 
 from kirin.abstract_sncf_resource import AbstractSNCFResource
 from kirin.cots import KirinModelBuilder
-from kirin.exceptions import InvalidArguments
+from kirin.exceptions import InvalidArguments, SubServiceError
 from kirin.core import model
 from kirin.core.types import ConnectorType
 
@@ -57,6 +57,10 @@ def get_cots_contributor():
         )
     else:
         contributor = model.Contributor.find_by_connector_type(ConnectorType.cots.value)
+        if len(contributor) == 0:
+            logging.getLogger(__name__).error("No COTS contributor found")
+            raise SubServiceError
+
         if len(contributor) > 1:
             logging.getLogger(__name__).warning(
                 "{n} COTS contributors found in db - {id} taken into account ".format(
@@ -77,7 +81,6 @@ def get_cots(req):
 
 class Cots(AbstractSNCFResource):
     def __init__(self):
-
         url = current_app.config[str("NAVITIA_URL")]
         contributor = get_cots_contributor()
         super(Cots, self).__init__(
