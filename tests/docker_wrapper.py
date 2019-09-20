@@ -35,6 +35,7 @@ import logging
 import psycopg2
 from io import BytesIO
 
+from kirin import Redis
 from typing import List, Optional, Dict, IO
 from retrying import retry
 
@@ -245,3 +246,35 @@ def postgres_docker(db_name="kirin_test", db_user="postgres", db_password="postg
     )
     pg_wrap.test_db_cnx()  # we poll to ensure that the database is ready
     return pg_wrap
+
+
+class RedisDockerWrapper(DockerWrapper):
+    def get_redis_client(self):
+        # type: () -> Redis
+        return Redis(self.ip_addr)
+
+    @retry(stop_max_delay=10000, wait_fixed=100, retry_on_exception=lambda e: isinstance(e, Exception))
+    def test_redis_cnx(self):
+        # type: () -> None
+        """
+        Test the connection to redis.
+        """
+        redis = self.get_redis_client()
+        redis.set("test_redis_up", True)
+        redis.delete("test_redis_up")
+
+
+def redis_docker(mounts=None):
+    # type: (Optional[List[docker.types.Mount]]) -> RedisDockerWrapper
+    redis_image = "redis:5-alpine"
+
+    # The best way to get the image would be to get it from dockerhub,
+    # but with this dumb wrapper the runtime time of the unit tests is reduced by 10s
+    dockerfile_obj = BytesIO(str("FROM " + redis_image))
+
+    redis_wrap = RedisDockerWrapper(
+        image_name=redis_image, dockerfile_obj=dockerfile_obj, container_name="kirin_test_redis", mounts=mounts
+    )
+    redis_wrap.test_redis_cnx()
+
+    return redis_wrap

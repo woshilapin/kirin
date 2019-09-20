@@ -31,10 +31,11 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 from contextlib import closing
 
+import kirin
 from kirin import app, db
 import pytest
 
-from tests.docker_wrapper import postgres_docker
+from tests.docker_wrapper import postgres_docker, redis_docker
 
 
 @pytest.yield_fixture(scope="session", autouse=True)
@@ -56,3 +57,18 @@ def init_flask_db(pg_docker_fixture):
     # re-init the db by overriding the db_url
     app.config[str("SQLALCHEMY_DATABASE_URI")] = db_url
     db.init_app(app)
+
+
+@pytest.yield_fixture(scope="session", autouse=True)
+def redis_docker_fixture():
+    """
+    a docker providing a redis is started once for all tests
+    """
+    with closing(redis_docker()) as redis_db:
+        yield redis_db
+
+
+@pytest.fixture(scope="session", autouse=True)
+def init_redis_db(redis_docker_fixture):
+    # re-init the redis host by overwriting Redis client (same conf than the one tested in wrapper)
+    kirin.redis = redis_docker_fixture.get_redis_client()
