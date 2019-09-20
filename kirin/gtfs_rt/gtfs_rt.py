@@ -49,10 +49,12 @@ def get_gtfsrt_contributors():
     File has priority over db
     TODO: Remove from config file
     """
+    contributor_legacy_id = None
     gtfsrt_contributors = []
     if "GTFS_RT_CONTRIBUTOR" in current_app.config and current_app.config.get(str("GTFS_RT_CONTRIBUTOR")):
+        contributor_legacy_id = current_app.config.get(str("GTFS_RT_CONTRIBUTOR"))
         contributor_legacy = model.Contributor(
-            id=current_app.config.get(str("GTFS_RT_CONTRIBUTOR")),
+            id=contributor_legacy_id,
             navitia_coverage=current_app.config.get(str("NAVITIA_GTFS_RT_INSTANCE")),
             connector_type=ConnectorType.gtfs_rt.value,
             navitia_token=current_app.config.get(str("NAVITIA_GTFS_RT_TOKEN")),
@@ -64,9 +66,10 @@ def get_gtfsrt_contributors():
         [
             c
             for c in model.Contributor.find_by_connector_type(ConnectorType.gtfs_rt.value)
-            if c.id != contributor_legacy.id
+            if c.id != contributor_legacy_id
         ]
     )
+
     return gtfsrt_contributors
 
 
