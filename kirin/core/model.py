@@ -524,3 +524,7 @@ class Contributor(db.Model):  # type: ignore
         self.navitia_token = navitia_token
         self.feed_url = feed_url
         self.is_active = is_active
+
+    @classmethod
+    def query_existing(cls):
+        return cls.query.filter_by(is_active=True)

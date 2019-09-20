@@ -76,7 +76,7 @@ class Contributors(Resource):
             contrib = model.Contributor.query.get_or_404(id)
             return {"contributors": [contrib]}
 
-        return {"contributors": model.Contributor.query.all()}
+        return {"contributors": model.Contributor.query_existing().all()}
 
     @marshal_with(contributor_nested_fields)
     def post(self, id=None):
@@ -135,3 +135,16 @@ class Contributors(Resource):
             return {"contributor": contributor}, 200
         except sqlalchemy.exc.SQLAlchemyError as e:
             abort(400, message=e)
+
+    def delete(self, id=None):
+        if id is None:
+            abort(400, message="Contributor's id is missing")
+
+        contributor = model.Contributor.query_existing().filter_by(id=id).first_or_404()
+        try:
+            contributor.is_active = False
+            model.db.session.commit()
+        except sqlalchemy.exc.SQLAlchemyError as e:
+            abort(400, message=e)
+
+        return None, 204
