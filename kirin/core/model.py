@@ -28,6 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+
 from __future__ import absolute_import, print_function, unicode_literals, division
 from datetime import timedelta
 from sqlalchemy.dialects import postgresql
@@ -459,11 +460,29 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         from kirin import app
 
         result = {"last_update": {}, "last_valid_update": {}, "last_update_error": {}}
+        # TODO :
+        #  remove config from file
+        # Get contributors from both file and db (config file has priority)
+        gtfsrt_contributors = []
+        contributor_legacy = None
+        if "GTFS_RT_CONTRIBUTOR" in app.config and app.config[str("GTFS_RT_CONTRIBUTOR")]:
+            contributor_legacy = app.config[str("GTFS_RT_CONTRIBUTOR")]
+            gtfsrt_contributors.append(contributor_legacy)
 
-        # TODO:
-        #  read configurations from base ONLY if there is no configuration
-        #  available in config file (config file will prevail for transition).
-        contributors = [app.config[str("COTS_CONTRIBUTOR")], app.config[str("GTFS_RT_CONTRIBUTOR")]]
+        gtfsrt_contributors.extend(
+            [
+                x.id
+                for x in Contributor.find_by_connector_type(ConnectorType.gtfs_rt.value)
+                if x.id != contributor_legacy
+            ]
+        )
+
+        if "COTS_CONTRIBUTOR" in app.config and app.config[str("COTS_CONTRIBUTOR")]:
+            cots_contributors = [app.config[str("COTS_CONTRIBUTOR")]]
+        else:
+            cots_contributors = [x.id for x in Contributor.find_by_connector_type(ConnectorType.cots.value)]
+
+        contributors = cots_contributors + gtfsrt_contributors
         for c in contributors:
             sql = db.session.query(cls.created_at, cls.status, cls.updated_at, cls.error)
             sql = sql.filter(cls.contributor_id == c)
@@ -524,6 +543,10 @@ class Contributor(db.Model):  # type: ignore
         self.navitia_token = navitia_token
         self.feed_url = feed_url
         self.is_active = is_active
+
+    @classmethod
+    def find_by_connector_type(cls, type):
+        return cls.query.filter_by(connector_type=type, is_active=True).all()
 
     @classmethod
     def query_existing(cls):

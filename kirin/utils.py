@@ -28,6 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+
 from __future__ import absolute_import, print_function, unicode_literals, division
 import logging
 
@@ -35,7 +36,6 @@ import six
 from aniso8601 import parse_date
 from pythonjsonlogger import jsonlogger
 from flask.globals import current_app
-import navitia_wrapper
 
 from kirin import new_relic
 from redis.exceptions import ConnectionError
@@ -72,19 +72,6 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
     def process_log_record(self, log_record):
         log_record.update(self.extras)
         return log_record
-
-
-def make_navitia_wrapper():
-    """
-    return a navitia wrapper to call the navitia API
-    """
-    # TODO:
-    #  read configurations from base ONLY if there is no configuration
-    #  available in config file (config file will prevail for transition).
-    url = current_app.config[str("NAVITIA_URL")]
-    token = current_app.config.get(str("NAVITIA_TOKEN"))
-    instance = current_app.config[str("NAVITIA_INSTANCE")]
-    return navitia_wrapper.Navitia(url=url, token=token).instance(instance)
 
 
 def to_navitia_utc_str(naive_utc_dt):

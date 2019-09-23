@@ -42,6 +42,8 @@ from kirin import app
 import datetime
 from kirin.core.model import TripUpdate, RealTimeUpdate
 from kirin.utils import should_retry_exception, make_kirin_lock_name, get_lock
+from kirin.gtfs_rt.gtfs_rt import get_gtfsrt_contributors
+from kirin.cots.cots import get_cots_contributor
 
 TASK_STOP_MAX_DELAY = app.config[str("TASK_STOP_MAX_DELAY")]
 TASK_WAIT_FIXED = app.config[str("TASK_WAIT_FIXED")]
@@ -113,17 +115,15 @@ from kirin.gtfs_rt.tasks import gtfs_poller
 
 @celery.task(bind=True)
 def poller(self):
-    # TODO:
-    #  read configurations from base ONLY if there is no configuration
-    #  available in config file (config file will prevail for transition).
-    config = {
-        "contributor": app.config.get(str("GTFS_RT_CONTRIBUTOR")),
-        "navitia_url": app.config.get(str("NAVITIA_URL")),
-        "token": app.config.get(str("NAVITIA_GTFS_RT_TOKEN")),
-        "coverage": app.config.get(str("NAVITIA_GTFS_RT_INSTANCE")),
-        "feed_url": app.config.get(str("GTFS_RT_FEED_URL")),
-    }
-    gtfs_poller.delay(config)
+    for contributor in get_gtfsrt_contributors():
+        config = {
+            "contributor": contributor.id,
+            "navitia_url": app.config.get(str("NAVITIA_URL")),
+            "token": contributor.navitia_token,
+            "coverage": contributor.navitia_coverage,
+            "feed_url": contributor.feed_url,
+        }
+        gtfs_poller.delay(config)
 
 
 @celery.task(bind=True)
@@ -132,11 +132,12 @@ def purge_gtfs_trip_update(self):
     This task will remove ONLY TripUpdate, StoptimeUpdate and VehicleJourney that are created by gtfs-rt but the
     RealTimeUpdate are kept so that we can replay it for debug purpose. RealTimeUpdate will be remove by another task
     """
-    config = {
-        "contributor": app.config.get(str("GTFS_RT_CONTRIBUTOR")),
-        "nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_TRIP_UPDATE")),
-    }
-    purge_trip_update.delay(config)
+    for contributor in get_gtfsrt_contributors():
+        config = {
+            "contributor": contributor.id,
+            "nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_TRIP_UPDATE")),
+        }
+        purge_trip_update.delay(config)
 
 
 @celery.task(bind=True)
@@ -154,7 +155,8 @@ def purge_cots_trip_update(self):
     This task will remove ONLY TripUpdate, StopTimeUpdate and VehicleJourney that are created by COTS but the
     RealTimeUpdate are kept so that we can replay it for debug purpose. RealTimeUpdate will be remove by another task
     """
-    config = {"contributor": app.config.get(str("COTS_CONTRIBUTOR")), "nb_days_to_keep": 10}
+    contributor = get_cots_contributor()
+    config = {"contributor": contributor.id, "nb_days_to_keep": 10}
     purge_trip_update.delay(config)
 
 

@@ -40,6 +40,8 @@ import flask_migrate
 
 COTS_CONTRIBUTOR = "rt.tchoutchou"
 GTFS_CONTRIBUTOR = "rt.vroumvroum"
+COTS_CONTRIBUTOR_DB = "rt.tchoutchou_db"
+GTFS_CONTRIBUTOR_DB = "rt.vroumvroum_db"
 
 
 @pytest.yield_fixture(scope="module", autouse=True)
@@ -78,6 +80,10 @@ def clean_db():
                 model.Contributor(COTS_CONTRIBUTOR, "sncf", "cots", "cots_token", "cots_feed_url", True),
                 model.Contributor(
                     GTFS_CONTRIBUTOR, "sherbrooke", "gtfs-rt", "gtfs-rt_token", "gtfs-rt_feed_url", True
+                ),
+                model.Contributor(COTS_CONTRIBUTOR_DB, "idfm", "cots", "cots_db_token", "cots_db_feed_url"),
+                model.Contributor(
+                    GTFS_CONTRIBUTOR_DB, "laval", "gtfs-rt", "gtfs-rt_db_token", "gtfs-rt_db_feed_url"
                 ),
             ]
         )

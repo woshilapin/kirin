@@ -34,7 +34,12 @@ from tests.check_utils import api_get
 from kirin.core import model
 from kirin import app
 from datetime import datetime, time
-from tests.integration.conftest import COTS_CONTRIBUTOR, GTFS_CONTRIBUTOR
+from tests.integration.conftest import (
+    COTS_CONTRIBUTOR,
+    COTS_CONTRIBUTOR_DB,
+    GTFS_CONTRIBUTOR,
+    GTFS_CONTRIBUTOR_DB,
+)
 import pytest
 
 
@@ -62,6 +67,37 @@ def test_status(setup_database):
     assert GTFS_CONTRIBUTOR in resp["last_update_error"]
     assert "2015-11-04T07:32:00Z" in resp["last_valid_update"][COTS_CONTRIBUTOR]
     assert "2015-11-04T07:42:00Z" in resp["last_valid_update"][GTFS_CONTRIBUTOR]
+
+
+def test_status_from_db(setup_database):
+    """
+    Check that contributors are read from db and returned in /status
+    """
+    # Set "GTFS_RT_CONTRIBUTOR" to None to read contributor from db
+    app.config["GTFS_RT_CONTRIBUTOR"] = None
+    resp = api_get("/status")
+    assert "version" in resp
+    assert "db_pool_status" in resp
+    assert "db_version" in resp
+    assert "navitia_url" in resp
+    assert "last_update" in resp
+    assert GTFS_CONTRIBUTOR_DB in resp["last_update"]
+    assert "2015-11-04T08:02:00Z" in resp["last_update"][GTFS_CONTRIBUTOR_DB]
+    assert COTS_CONTRIBUTOR_DB not in resp["last_update"]
+
+    # Set "GTFS_RT_CONTRIBUTOR" to "rt.vroumvroum" to read contributor from file
+    # Contributor GTFS_CONTRIBUTOR_DB should also be present
+    app.config["GTFS_RT_CONTRIBUTOR"] = "rt.vroumvroum"
+    # Set "COTS_CONTRIBUTOR" to None to read contributor from db
+    app.config["COTS_CONTRIBUTOR"] = None
+    resp = api_get("/status")
+    assert "last_update" in resp
+    assert COTS_CONTRIBUTOR_DB in resp["last_update"]
+    assert "2015-11-04T08:12:00Z" in resp["last_update"][COTS_CONTRIBUTOR_DB]
+    assert GTFS_CONTRIBUTOR_DB in resp["last_update"]
+    assert "2015-11-04T08:02:00Z" in resp["last_update"][GTFS_CONTRIBUTOR_DB]
+    assert GTFS_CONTRIBUTOR in resp["last_update"]
+    assert "2015-11-04T07:52:00Z" in resp["last_update"][GTFS_CONTRIBUTOR]
 
 
 @pytest.fixture()
@@ -127,4 +163,13 @@ def setup_database():
         )
         rtu4.created_at = datetime(2015, 11, 4, 7, 52)
         model.db.session.add(rtu4)
+
+        rtu5 = model.RealTimeUpdate(None, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR_DB)
+        rtu5.created_at = datetime(2015, 11, 4, 8, 2)
+        model.db.session.add(rtu5)
+
+        rtu6 = model.RealTimeUpdate(None, connector="cots", contributor=COTS_CONTRIBUTOR_DB)
+        rtu6.created_at = datetime(2015, 11, 4, 8, 12)
+        model.db.session.add(rtu6)
+
         model.db.session.commit()

@@ -32,11 +32,42 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 import flask
 from flask.globals import current_app
+import navitia_wrapper
+import logging
 
 from kirin.abstract_sncf_resource import AbstractSNCFResource
 from kirin.cots import KirinModelBuilder
-from kirin.exceptions import InvalidArguments
-from kirin.utils import make_navitia_wrapper
+from kirin.exceptions import InvalidArguments, SubServiceError
+from kirin.core import model
+from kirin.core.types import ConnectorType
+
+
+def get_cots_contributor():
+    """
+    :return 1 COTS contributor from config file or db
+    File has priority over db
+    TODO: Remove from config file
+    """
+    if "NAVITIA_INSTANCE" in current_app.config and current_app.config.get(str("NAVITIA_INSTANCE")):
+        return model.Contributor(
+            id=current_app.config.get(str("COTS_CONTRIBUTOR")),
+            navitia_coverage=current_app.config.get(str("NAVITIA_INSTANCE")),
+            connector_type=ConnectorType.cots.value,
+            navitia_token=current_app.config.get(str("NAVITIA_TOKEN")),
+        )
+    else:
+        contributor = model.Contributor.find_by_connector_type(ConnectorType.cots.value)
+        if len(contributor) == 0:
+            logging.getLogger(__name__).error("No COTS contributor found")
+            raise SubServiceError
+
+        if len(contributor) > 1:
+            logging.getLogger(__name__).warning(
+                "{n} COTS contributors found in db - {id} taken into account ".format(
+                    n=len(contributor), id=contributor[0].id
+                )
+            )
+        return contributor[0]
 
 
 def get_cots(req):
@@ -50,10 +81,14 @@ def get_cots(req):
 
 class Cots(AbstractSNCFResource):
     def __init__(self):
+        url = current_app.config[str("NAVITIA_URL")]
+        contributor = get_cots_contributor()
         super(Cots, self).__init__(
-            make_navitia_wrapper(),
+            navitia_wrapper.Navitia(
+                url=current_app.config[str("NAVITIA_URL")], token=contributor.navitia_token
+            ).instance(contributor.navitia_coverage),
             current_app.config.get(str("NAVITIA_TIMEOUT"), 5),
-            current_app.config[str("COTS_CONTRIBUTOR")],
+            contributor.id,
             KirinModelBuilder,
         )
 
