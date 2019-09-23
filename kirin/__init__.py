@@ -31,6 +31,9 @@
 
 from __future__ import absolute_import, print_function, unicode_literals, division
 import os
+
+import pybreaker
+
 from kirin import exceptions
 from kirin.rabbitmq_handler import RabbitMQHandler
 

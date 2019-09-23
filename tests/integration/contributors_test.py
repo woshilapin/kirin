@@ -380,3 +380,32 @@ def test_activate_contributor(test_client):
     get_resp = test_client.get("/contributors/realtime.tokyo")
     get_contrib = json.loads(get_resp.data)["contributors"][0]
     assert get_contrib["is_active"] is True
+
+
+def test_delete_contributor(test_client, with_custom_contributors):
+    get_resp = test_client.get("/contributors")
+    get_data = json.loads(get_resp.data)
+    assert "contributors" in get_data
+    initial_nb = len(get_data["contributors"])
+    contributor_to_delete = get_data["contributors"][0]["id"]
+
+    delete_resp = test_client.delete("/contributors/{}".format(contributor_to_delete))
+    assert delete_resp._status_code == 204
+
+    # Check that the deleted contributor isn't in the list of all contributors
+    get_resp = test_client.get("/contributors")
+    get_data = json.loads(get_resp.data)
+    assert "contributors" in get_data
+    assert len(get_data["contributors"]) == initial_nb - 1
+
+    # Check that the info about the deleted contributor can be requested with its id
+    get_id_resp = test_client.get("/contributors/{}".format(contributor_to_delete))
+    get_id_data = json.loads(get_id_resp.data)
+    assert "contributors" in get_id_data
+    assert len(get_id_data["contributors"]) == 1
+    assert get_id_data["contributors"][0]["id"] == contributor_to_delete
+    assert get_id_data["contributors"][0]["is_active"] == False
+
+    # Check that a deleted contributor can't be deleted again
+    delete_resp = test_client.delete("/contributors/{}".format(contributor_to_delete))
+    assert delete_resp._status_code == 404
