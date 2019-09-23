@@ -33,7 +33,7 @@ from flask_restful import Resource
 
 import logging
 from datetime import datetime
-from kirin.utils import make_rt_update, record_call, set_rtu_status_ko
+from kirin.utils import make_rt_update, record_call, set_rtu_status_ko, allow_reprocess_same_data
 from kirin.exceptions import KirinException
 from kirin import core
 from kirin.core import model
@@ -47,10 +47,21 @@ class AbstractSNCFResource(Resource):
         self.builder = builder
 
     def process_post(self, input_raw, contributor_type, is_new_complete=False):
-
-        # create a raw rt_update obj, save the raw_input into the db
-        rt_update = make_rt_update(input_raw, contributor_type, contributor=self.contributor)
         start_datetime = datetime.utcnow()
+
+        try:
+            # create a raw rt_update obj, save the raw_input into the db
+            rt_update = make_rt_update(input_raw, contributor_type, contributor=self.contributor)
+        except Exception as e:
+            # as rt_update is probably not built, make sure reprocess is allowed
+            allow_reprocess_same_data(self.contributor)
+            # regular exception handling
+            set_rtu_status_ko(rt_update, e.message, is_reprocess_same_data_allowed=True)
+            model.db.session.add(rt_update)
+            model.db.session.commit()
+            record_call("failure", reason=six.text_type(e), contributor=self.contributor)
+            raise
+
         try:
             # assuming UTF-8 encoding for all input
             rt_update.raw_data = rt_update.raw_data.encode("utf-8")
