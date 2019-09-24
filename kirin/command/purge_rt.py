@@ -35,7 +35,6 @@ from kirin.core.model import db, RealTimeUpdate, Contributor
 import datetime
 import logging
 from sqlalchemy.exc import IntegrityError
-from werkzeug.exceptions import NotFound
 
 
 @manager.command
@@ -60,19 +59,21 @@ def purge_contributor(contributor_id):
     """
     logger = logging.getLogger(__name__)
     logger.info("Preparing to delete contributor %s", contributor_id)
-    try:
-        contrib = Contributor.query.get_or_404(contributor_id)
+    contrib = Contributor.query.filter_by(id=contributor_id).first()
+    if contrib:
         if not contrib.is_active:
-            # We try to delete the contributor
-            db.session.delete(contrib)
-            db.session.commit()
-            logger.info("Contributor %s deleted", contributor_id)
+            try:
+                db.session.delete(contrib)
+                db.session.commit()
+                logger.info("Contributor %s deleted", contributor_id)
+            except IntegrityError:
+                logger.info(
+                    "Presence of data in real_time_update and/or trip_update for contributor: %s", contributor_id
+                )
+            except Exception:
+                logger.info("Error while deleting contributor %s", contributor_id)
         else:
             logger.info("Contributor %s is active and cannot be deleted", contributor_id)
 
-    except IntegrityError:
-        logger.info("Presence of data in real_time_update and/or trip_update for contributor %s", contributor_id)
-    except NotFound:
+    else:
         logger.info("contributor %s not found", contributor_id)
-    except Exception:
-        logger.error("Error while deleting contributor %s", contributor_id)
