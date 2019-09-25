@@ -49,6 +49,12 @@ pre-commit install
 ```
 
 
+## Internal data format
+
+The format used internally to store and process realtime information is
+described [here](documentation/internal_format.md)
+
+
 ## Alembic database revisions
 
 To generate a new database revision script (after an upgrade of the model.py file):
