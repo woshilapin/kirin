@@ -34,7 +34,7 @@ from flask_restful import Resource
 import logging
 from datetime import datetime
 from kirin.utils import make_rt_update, record_call, set_rtu_status_ko, allow_reprocess_same_data
-from kirin.exceptions import KirinException
+from kirin.exceptions import KirinException, InvalidArguments
 from kirin import core
 from kirin.core import model
 
@@ -53,12 +53,13 @@ class AbstractSNCFResource(Resource):
             # create a raw rt_update obj, save the raw_input into the db
             rt_update = make_rt_update(input_raw, contributor_type, contributor=self.contributor)
         except Exception as e:
-            # as rt_update is probably not built, make sure reprocess is allowed
-            allow_reprocess_same_data(self.contributor)
-            # regular exception handling
-            set_rtu_status_ko(rt_update, e.message, is_reprocess_same_data_allowed=True)
-            model.db.session.add(rt_update)
-            model.db.session.commit()
+            if rt_update is None:
+                # rt_update is not built, make sure reprocess is allowed
+                allow_reprocess_same_data(self.contributor)
+            else:
+                set_rtu_status_ko(rt_update, e.message, is_reprocess_same_data_allowed=True)
+                model.db.session.add(rt_update)
+                model.db.session.commit()
             record_call("failure", reason=six.text_type(e), contributor=self.contributor)
             raise
 
@@ -71,7 +72,8 @@ class AbstractSNCFResource(Resource):
             _, log_dict = core.handle(rt_update, trip_updates, self.contributor, is_new_complete=is_new_complete)
             record_call("OK", contributor=self.contributor)
         except KirinException as e:
-            set_rtu_status_ko(rt_update, e.data["error"], is_reprocess_same_data_allowed=True)
+            allow_reprocess = not isinstance(e, InvalidArguments)  # reprocess is useless if input is invalid
+            set_rtu_status_ko(rt_update, e.data["error"], is_reprocess_same_data_allowed=allow_reprocess)
             model.db.session.add(rt_update)
             model.db.session.commit()
             record_call("failure", reason=six.text_type(e), contributor=self.contributor)

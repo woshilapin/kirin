@@ -57,12 +57,13 @@ def handle(proto, navitia_wrapper, contributor):
         data = six.binary_type(proto)  # temp, for the moment, we save the protobuf as text
         rt_update = make_rt_update(data, "gtfs-rt", contributor=contributor)
     except Exception as e:
-        # as rt_update is probably not built, make sure reprocess is allowed
-        allow_reprocess_same_data(contributor)
-        # regular exception handling
-        set_rtu_status_ko(rt_update, e.message, is_reprocess_same_data_allowed=True)
-        model.db.session.add(rt_update)
-        model.db.session.commit()
+        if rt_update is None:
+            # rt_update is not built, make sure reprocess is allowed
+            allow_reprocess_same_data(contributor)
+        else:
+            set_rtu_status_ko(rt_update, e.message, is_reprocess_same_data_allowed=True)
+            model.db.session.add(rt_update)
+            model.db.session.commit()
         record_call("failure", reason=six.text_type(e), contributor=contributor)
         raise
 
