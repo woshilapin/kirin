@@ -31,8 +31,7 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 from contextlib import closing
 
-import kirin
-from kirin import app, db
+from kirin import app, db, redis_client
 import pytest
 
 from tests.docker_wrapper import postgres_docker, redis_docker
@@ -70,5 +69,5 @@ def redis_docker_fixture():
 
 @pytest.fixture(scope="session", autouse=True)
 def init_redis_db(redis_docker_fixture):
-    # re-init the redis host by overwriting Redis client (same conf than the one tested in wrapper)
-    kirin.redis = redis_docker_fixture.get_redis_client()
+    # Switch global redis-client's connection to use the Redis server from docker (instead of the conf)
+    redis_client.connection_pool = redis_docker_fixture.get_redis_connection_pool()

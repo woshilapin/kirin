@@ -35,6 +35,7 @@ import logging
 import psycopg2
 from io import BytesIO
 
+from redis import ConnectionPool
 from kirin import Redis
 from typing import List, Optional, Dict, IO
 from retrying import retry
@@ -169,19 +170,6 @@ class DbParams(object):
             h=self.host, u=self.user, dbname=self.dbname, pwd=self.password
         )
 
-    def old_school_cnx_string(self):
-        # type: () -> unicode
-        """
-        The connection string for the database (old school version).
-        A string containg all the essentials data for a connection to a old school database (before Debian8). Old C++
-        component does not support the classic "postgres://...".
-
-        :return: the old school connection string
-        """
-        return "host={h} user={u} dbname={dbname} password={pwd}".format(
-            h=self.host, u=self.user, dbname=self.dbname, pwd=self.password
-        )
-
 
 class PostgresDockerWrapper(DockerWrapper):
     def __init__(
@@ -249,9 +237,9 @@ def postgres_docker(db_name="kirin_test", db_user="postgres", db_password="postg
 
 
 class RedisDockerWrapper(DockerWrapper):
-    def get_redis_client(self):
-        # type: () -> Redis
-        return Redis(self.ip_addr)
+    def get_redis_connection_pool(self):
+        # type: () -> ConnectionPool
+        return ConnectionPool(host=self.ip_addr)
 
     @retry(stop_max_delay=10000, wait_fixed=100, retry_on_exception=lambda e: isinstance(e, Exception))
     def test_redis_cnx(self):
@@ -259,9 +247,9 @@ class RedisDockerWrapper(DockerWrapper):
         """
         Test the connection to redis.
         """
-        redis = self.get_redis_client()
-        redis.set("test_redis_up", True)
-        redis.delete("test_redis_up")
+        redis_cli = Redis(connection_pool=self.get_redis_connection_pool())
+        redis_cli.set("test_redis_up", True)
+        redis_cli.delete("test_redis_up")
 
 
 def redis_docker(mounts=None):

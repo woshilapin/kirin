@@ -179,11 +179,11 @@ def manage_db_no_new(connector, contributor):
 
 @contextmanager
 def get_lock(logger, lock_name, lock_timeout):
-    from kirin import redis
+    from kirin import redis_client
 
     logger.debug("getting lock %s", lock_name)
     try:
-        lock = redis.lock(lock_name, timeout=lock_timeout)
+        lock = redis_client.lock(lock_name, timeout=lock_timeout)
         locked = lock.acquire(blocking=False)
     except ConnectionError:
         logging.exception("Exception with redis while locking")
