@@ -70,8 +70,8 @@ def purge_contributor(contributor_id):
                 logger.info(
                     "Presence of data in real_time_update and/or trip_update for contributor: %s", contributor_id
                 )
-            except Exception:
-                logger.info("Error while deleting contributor %s", contributor_id)
+            except Exception as e:
+                logger.error("Error while deleting contributor %s : %s", contributor_id, e)
         else:
             logger.info("Contributor %s is active and cannot be deleted", contributor_id)
 
