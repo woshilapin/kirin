@@ -33,7 +33,7 @@ from copy import deepcopy
 from datetime import timedelta
 import datetime
 import pytest
-from kirin.core.model import RealTimeUpdate, db, TripUpdate, StopTimeUpdate, VehicleJourney
+from kirin.core.model import RealTimeUpdate, db, TripUpdate, StopTimeUpdate, VehicleJourney, Contributor
 from kirin.core.populate_pb import to_posix_time, convert_to_gtfsrt
 from kirin import gtfs_rt
 from kirin.core.types import TripEffect
@@ -44,6 +44,7 @@ from kirin.utils import save_gtfs_rt_with_error, manage_db_error
 from tests.integration.conftest import GTFS_CONTRIBUTOR
 import time
 from sqlalchemy import desc
+from kirin.command.purge_rt import purge_contributor
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -1922,3 +1923,69 @@ def test_gtfs_pass_midnight_negative_delay_utc_model_builder(pass_midnight_negat
 
         feed = convert_to_gtfsrt(trip_updates)
         assert feed.entity[0].trip_update.trip.start_date == "20120615"  # must be UTC start date
+
+
+def test_purge_contributor(basic_gtfs_rt_data, mock_rabbitmq):
+    """
+    Test the purge with different contributors and rt data
+    """
+
+    def test_rt_data():
+        with app.app_context():
+            assert len(RealTimeUpdate.query.all()) == 1
+            assert len(TripUpdate.query.all()) == 1
+            assert len(VehicleJourney.query.all()) == 1
+            assert len(StopTimeUpdate.query.all()) == 4
+
+    def test_contributor_count(contrib_count):
+        with app.app_context():
+            assert len(Contributor.query.all()) == contrib_count
+
+    def deactivate_contributor(contributor_id):
+        with app.app_context():
+            contrib = Contributor.query.filter_by(id=contributor_id).first()
+            contrib.is_active = False
+            db.session.commit()
+
+    def has_rt_data(contributor_id):
+        with app.app_context():
+            return len(RealTimeUpdate.query.filter_by(contributor_id=contributor_id).all()) > 0
+
+    # We have 4 contributors and all are active:
+    test_contributor_count(4)
+    with app.app_context():
+        contributors = Contributor.query.all()
+        assert contributors[0].id == "rt.tchoutchou"
+        assert contributors[1].id == "rt.vroumvroum"
+        for c in contributors:
+            assert c.is_active is True
+
+    # Post a simple gtfs-rt for contributor "rt.vroumvroum" in configuration file.
+    tester = app.test_client()
+    resp = tester.post("/gtfs_rt", data=basic_gtfs_rt_data.SerializeToString())
+    assert resp.status_code == 200
+    test_rt_data()
+
+    # As all the contributors are active, purge_contributor won't do anything
+    with app.app_context():
+        purge_contributor("rt.vroumvroum")
+    test_contributor_count(4)
+    test_rt_data()
+
+    # We deactivate a contributor "rt.tchoutchou" with rt data and use purge_contributor
+    # purge_contributor won't do anything
+    deactivate_contributor("rt.vroumvroum")
+    assert has_rt_data("rt.vroumvroum") is True
+    with app.app_context():
+        purge_contributor("rt.vroumvroum")
+    test_contributor_count(4)
+    test_rt_data()
+
+    # We deactivate another contributor "rt.vroumvroum_db" without any rt data. purge_contributor will simply
+    # delete rt.vroumvroum_db from the table contributor not other tables.
+    deactivate_contributor("rt.vroumvroum_db")
+    assert has_rt_data("rt.vroumvroum_db") is False
+    with app.app_context():
+        purge_contributor("rt.vroumvroum_db")
+    test_contributor_count(3)
+    test_rt_data()
