@@ -37,7 +37,7 @@ from google.protobuf.message import DecodeError
 from kirin.exceptions import InvalidArguments
 import navitia_wrapper
 from kirin.gtfs_rt import model_maker
-from kirin import redis
+from kirin import redis_client
 from kirin.utils import manage_db_error
 from kirin.core import model
 from kirin.core.types import ConnectorType
@@ -84,7 +84,7 @@ def make_navitia_wrapper(contributor):
         url=current_app.config.get(str("NAVITIA_URL")),
         token=contributor.navitia_token,
         timeout=current_app.config.get(str("NAVITIA_TIMEOUT"), 5),
-        cache=redis,
+        cache=redis_client,
         query_timeout=current_app.config.get(str("NAVITIA_QUERY_CACHE_TIMEOUT"), 600),
         pubdate_timeout=current_app.config.get(str("NAVITIA_PUBDATE_CACHE_TIMEOUT"), 600),
     ).instance(contributor.navitia_coverage)

@@ -86,7 +86,7 @@ manager = Manager(app)
 
 from redis import Redis
 
-redis = Redis(
+redis_client = Redis(
     host=app.config[str("REDIS_HOST")],
     port=app.config[str("REDIS_PORT")],
     db=app.config[str("REDIS_DB")],

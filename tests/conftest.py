@@ -31,30 +31,43 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 from contextlib import closing
 
-from kirin import app, db
+from kirin import app, db, redis_client
 import pytest
 
-from tests.docker_wrapper import PostgresDocker
+from tests.docker_wrapper import postgres_docker, redis_docker
 
 
 @pytest.yield_fixture(scope="session", autouse=True)
-def docker():
+def pg_docker_fixture():
     """
-    a docker providing a database is started once for all tests
+    a docker providing a PostgreSQL database is started once for all tests
     """
-    with closing(PostgresDocker()) as database:
-        yield database
+    with closing(postgres_docker()) as pg_db:
+        yield pg_db
 
 
 @pytest.fixture(scope="session", autouse=True)
-def init_flask_db(docker):
+def init_flask_db(pg_docker_fixture):
     """
     when the docker is started, we init flask once for the new database
     """
-    db_url = "postgresql://{user}:{pwd}@{host}/{dbname}".format(
-        user=docker.USER, pwd=docker.PWD, host=docker.ip_addr, dbname=docker.DBNAME
-    )
+    db_url = pg_docker_fixture.get_db_params().cnx_string()
 
     # re-init the db by overriding the db_url
     app.config[str("SQLALCHEMY_DATABASE_URI")] = db_url
     db.init_app(app)
+
+
+@pytest.yield_fixture(scope="session", autouse=True)
+def redis_docker_fixture():
+    """
+    a docker providing a redis is started once for all tests
+    """
+    with closing(redis_docker()) as redis_db:
+        yield redis_db
+
+
+@pytest.fixture(scope="session", autouse=True)
+def init_redis_db(redis_docker_fixture):
+    # Switch global redis-client's connection to use the Redis server from docker (instead of the conf)
+    redis_client.connection_pool = redis_docker_fixture.get_redis_connection_pool()
