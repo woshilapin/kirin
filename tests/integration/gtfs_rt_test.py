@@ -1802,8 +1802,9 @@ def test_manage_db_with_http_error_without_insert():
             "gtfs-rt",
             contributor=GTFS_CONTRIBUTOR,
             error="Http Error",
-            is_reprocess_same_data_allowed=False,
+            is_reprocess_same_data_allowed=True,
         )
+
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().raw_data == "toto"
         assert RealTimeUpdate.query.first().status == "KO"
@@ -1818,7 +1819,7 @@ def test_manage_db_with_http_error_without_insert():
             "gtfs-rt",
             contributor=GTFS_CONTRIBUTOR,
             error="Http Error",
-            is_reprocess_same_data_allowed=False,
+            is_reprocess_same_data_allowed=True,
         )
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().raw_data == "toto"
@@ -1836,7 +1837,7 @@ def test_manage_db_with_http_error_without_insert():
             "gtfs-rt",
             contributor=GTFS_CONTRIBUTOR,
             error="Http Error",
-            is_reprocess_same_data_allowed=False,
+            is_reprocess_same_data_allowed=True,
         )
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().raw_data == "toto"
@@ -1857,7 +1858,7 @@ def test_manage_db_with_http_error_with_insert():
             "gtfs-rt",
             contributor=GTFS_CONTRIBUTOR,
             error="Http Error",
-            is_reprocess_same_data_allowed=False,
+            is_reprocess_same_data_allowed=True,
         )
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().raw_data == "toto"
@@ -1883,7 +1884,7 @@ def test_manage_db_with_http_error_with_insert():
             "gtfs-rt",
             contributor=GTFS_CONTRIBUTOR,
             error="Http Error",
-            is_reprocess_same_data_allowed=False,
+            is_reprocess_same_data_allowed=True,
         )
         assert len(RealTimeUpdate.query.all()) == 3
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().raw_data == "toto"
