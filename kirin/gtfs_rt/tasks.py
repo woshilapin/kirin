@@ -40,7 +40,7 @@ from kirin.tasks import celery
 from kirin.utils import should_retry_exception, make_kirin_lock_name, get_lock, manage_db_error, manage_db_no_new
 from kirin.gtfs_rt import model_maker
 from retrying import retry
-from kirin import app, redis
+from kirin import app, redis_client
 from kirin import new_relic
 from google.protobuf.message import DecodeError
 import navitia_wrapper
@@ -65,13 +65,13 @@ def _is_newer(config):
             return True  # unable to get a ETag, we continue the polling
 
         etag_key = "|".join([contributor, "polling_HEAD"])
-        old_etag = redis.get(etag_key)
+        old_etag = redis_client.get(etag_key)
 
         if new_etag == old_etag:
             logger.info("get the same ETag of %s, skipping the polling for %s", etag_key, contributor)
             return False
 
-        redis.set(etag_key, new_etag)
+        redis_client.set(etag_key, new_etag)
 
     except Exception as e:
         logger.debug(
@@ -119,7 +119,7 @@ def gtfs_poller(self, config):
             url=config["navitia_url"],
             token=config["token"],
             timeout=5,
-            cache=redis,
+            cache=redis_client,
             query_timeout=app.config.get(str("NAVITIA_QUERY_CACHE_TIMEOUT"), 600),
             pubdate_timeout=app.config.get(str("NAVITIA_PUBDATE_CACHE_TIMEOUT"), 600),
         ).instance(config["coverage"])

@@ -37,7 +37,7 @@ from google.protobuf.message import DecodeError
 from kirin.exceptions import InvalidArguments
 import navitia_wrapper
 from kirin.gtfs_rt import model_maker
-from kirin import redis
+from kirin import redis_client
 from kirin.utils import manage_db_error
 from kirin.core import model
 from kirin.core.types import ConnectorType
@@ -93,7 +93,7 @@ class GtfsRT(Resource):
             url=url,
             token=token,
             timeout=timeout,
-            cache=redis,
+            cache=redis_client,
             query_timeout=query_timeout,
             pubdate_timeout=pubdate_timeout,
         ).instance(instance)
