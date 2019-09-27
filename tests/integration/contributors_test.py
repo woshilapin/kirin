@@ -443,8 +443,9 @@ def test_purge_contributor(test_client, basic_gtfs_rt_data, mock_rabbitmq):
     test_contributor_count(4)
     with app.app_context():
         contributors = Contributor.query.all()
-        assert contributors[0].id == "rt.tchoutchou"
-        assert contributors[1].id == "rt.vroumvroum"
+        contributors_id = [c.id for c in contributors]
+        assert "rt.tchoutchou" in contributors_id
+        assert "rt.vroumvroum" in contributors_id
         for c in contributors:
             assert c.is_active is True
 
