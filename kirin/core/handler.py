@@ -41,6 +41,7 @@ from kirin.core.model import TripUpdate, StopTimeUpdate
 from kirin.core.populate_pb import convert_to_gtfsrt
 from kirin.exceptions import MessageNotPublished
 from kirin.core.types import ModificationType
+from kirin.utils import set_rtu_status_ko
 
 TimeDelayTuple = namedtuple("TimeDelayTuple", ["time", "delay"])
 
@@ -212,13 +213,9 @@ def handle(real_time_update, trip_updates, contributor, is_new_complete=False):
     # After merging trip_updates information of connector realtime, navitia and kirin database, if there is no new
     # information destined to navitia, update real_time_update with status = 'KO' and a proper error message.
     if not real_time_update.trip_updates and real_time_update.status == "OK":
-        real_time_update.status = "KO"
-        real_time_update.error = "No new information destinated to navitia for this {}".format(
-            real_time_update.connector
-        )
-        logging.getLogger(__name__).error(
-            "RealTimeUpdate id={}: {}".format(real_time_update.id, real_time_update.error)
-        )
+        msg = "No new information destinated to navitia for this {}".format(real_time_update.connector)
+        set_rtu_status_ko(real_time_update, msg, is_reprocess_same_data_allowed=False)
+        logging.getLogger(__name__).error("RealTimeUpdate id={}: {}".format(real_time_update.id, msg))
         model.db.session.add(real_time_update)
         model.db.session.commit()
 

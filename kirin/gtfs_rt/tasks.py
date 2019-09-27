@@ -37,7 +37,14 @@ import six
 from kirin import gtfs_realtime_pb2
 
 from kirin.tasks import celery
-from kirin.utils import should_retry_exception, make_kirin_lock_name, get_lock, manage_db_error, manage_db_no_new
+from kirin.utils import (
+    should_retry_exception,
+    make_kirin_lock_name,
+    get_lock,
+    manage_db_error,
+    manage_db_no_new,
+    build_redis_etag_key,
+)
 from kirin.gtfs_rt import model_maker
 from retrying import retry
 from kirin import app, redis_client
@@ -64,7 +71,7 @@ def _is_newer(config):
         if not new_etag:
             return True  # unable to get a ETag, we continue the polling
 
-        etag_key = "|".join([contributor, "polling_HEAD"])
+        etag_key = build_redis_etag_key(contributor)
         old_etag = redis_client.get(etag_key)
 
         if new_etag == old_etag:
@@ -110,7 +117,11 @@ def gtfs_poller(self, config):
 
         except Exception as e:
             manage_db_error(
-                data="", connector="gtfs-rt", contributor=contributor, status="KO", error="Http Error"
+                data="",
+                connector="gtfs-rt",
+                contributor=contributor,
+                error="Http Error",
+                is_reprocess_same_data_allowed=True,
             )
             logger.debug(six.text_type(e))
             return
@@ -128,7 +139,13 @@ def gtfs_poller(self, config):
         try:
             proto.ParseFromString(response.content)
         except DecodeError:
-            manage_db_error(proto, "gtfs-rt", contributor=contributor, status="KO", error="Decode Error")
+            manage_db_error(
+                proto,
+                "gtfs-rt",
+                contributor=contributor,
+                error="Decode Error",
+                is_reprocess_same_data_allowed=False,
+            )
             logger.debug("invalid protobuf")
         else:
             model_maker.handle(proto, nav, contributor)
