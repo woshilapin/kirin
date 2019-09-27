@@ -159,7 +159,7 @@ def setup_database():
             connector="gtfs-rt",
             contributor=GTFS_CONTRIBUTOR,
             status="KO",
-            error="No new information destinated to navitia for this gtfs-rt",
+            error="No new information destined to navitia for this gtfs-rt",
         )
         rtu4.created_at = datetime(2015, 11, 4, 7, 52)
         model.db.session.add(rtu4)

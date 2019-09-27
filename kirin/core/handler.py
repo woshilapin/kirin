@@ -213,7 +213,7 @@ def handle(real_time_update, trip_updates, contributor, is_new_complete=False):
     # After merging trip_updates information of connector realtime, navitia and kirin database, if there is no new
     # information destined to navitia, update real_time_update with status = 'KO' and a proper error message.
     if not real_time_update.trip_updates and real_time_update.status == "OK":
-        msg = "No new information destinated to navitia for this {}".format(real_time_update.connector)
+        msg = "No new information destined to navitia for this {}".format(real_time_update.connector)
         set_rtu_status_ko(real_time_update, msg, is_reprocess_same_data_allowed=False)
         logging.getLogger(__name__).error("RealTimeUpdate id={}: {}".format(real_time_update.id, msg))
         model.db.session.add(real_time_update)

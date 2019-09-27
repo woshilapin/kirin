@@ -1391,7 +1391,7 @@ def test_cots_on_add_trip_without_first_cots():
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().status == "KO"
-        assert RealTimeUpdate.query.first().error == "No new information destinated to navitia for this cots"
+        assert RealTimeUpdate.query.first().error == "No new information destined to navitia for this cots"
         trips = TripUpdate.query.all()
         assert len(trips) == 0
 

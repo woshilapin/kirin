@@ -40,7 +40,7 @@ def upgrade():
 def downgrade():
     # needs to be done "again"(reverse as we downgrade) in case some were created during previous downgrade
     op.execute(
-        "UPDATE vehicle_journey SET circulation_date = start_timestamp::date " "WHERE circulation_date IS NULL"
+        "UPDATE vehicle_journey SET circulation_date = start_timestamp::date WHERE circulation_date IS NULL"
     )
     # add all the constraints on circulation_date
     op.alter_column("vehicle_journey", "circulation_date", nullable=False)
