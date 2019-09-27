@@ -855,7 +855,7 @@ def test_gtfs_rt_partial_update_same_feed(partial_update_gtfs_rt_data_1):
             if nb_rt_update == 2:
                 last_real_time_update = RealTimeUpdate.query.order_by(RealTimeUpdate.created_at.desc()).first()
                 assert last_real_time_update.status == "KO"
-                assert last_real_time_update.error == "No new information destinated to navitia for this gtfs-rt"
+                assert last_real_time_update.error == "No new information destined to navitia for this gtfs-rt"
 
     check(nb_rt_update=1)
 
