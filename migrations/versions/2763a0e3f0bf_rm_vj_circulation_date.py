@@ -26,5 +26,5 @@ def downgrade():
         "vehicle_journey", sa.Column("circulation_date", sa.DATE(), autoincrement=False, nullable=True)
     )
     op.execute(
-        "UPDATE vehicle_journey SET circulation_date = start_timestamp::date " "WHERE circulation_date IS NULL"
+        "UPDATE vehicle_journey SET circulation_date = start_timestamp::date WHERE circulation_date IS NULL"
     )
