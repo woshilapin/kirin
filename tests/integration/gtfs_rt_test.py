@@ -36,13 +36,13 @@ import datetime
 import pytest
 from kirin.core.model import RealTimeUpdate, db, TripUpdate, StopTimeUpdate, VehicleJourney
 from kirin.core.populate_pb import to_posix_time, convert_to_gtfsrt
-from kirin import gtfs_rt
+from kirin import gtfs_rt, redis_client
 from kirin.core.types import TripEffect
 from kirin.tasks import purge_trip_update, purge_rt_update
 from tests import mock_navitia
 from tests.check_utils import dumb_nav_wrapper, api_post, api_get
 from kirin import gtfs_realtime_pb2, app
-from kirin.utils import save_gtfs_rt_with_error, manage_db_error
+from kirin.utils import save_rt_data_with_error, manage_db_error, build_redis_etag_key
 from tests.integration.conftest import GTFS_CONTRIBUTOR
 import time
 from sqlalchemy import desc
@@ -138,8 +138,12 @@ def test_wrong_gtfs_rt_post():
     """
     Post wrong GTFS-RT data
     """
+    redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR), "firstETag")  # set ETag key as if it was polled
     res, status = api_post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), check=False, data="bob")
 
+    assert (
+        redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR)) == "firstETag"
+    )  # error in feed: remember it's processed
     assert status == 400
     assert "invalid protobuf" in res.get("error")
 
@@ -246,8 +250,12 @@ def test_gtfs_rt_simple_delay(basic_gtfs_rt_data, mock_rabbitmq):
 
     after the merge, we should have 4 stops (and only 2 delayed)
     """
+    redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR), "firstETag")  # set ETag key as if it was polled
     tester = app.test_client()
     resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=basic_gtfs_rt_data.SerializeToString())
+    assert (
+        redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR)) == "firstETag"
+    )  # all OK: remember it's processed
     assert resp.status_code == 200
 
     with app.app_context():
@@ -881,7 +889,7 @@ def test_gtfs_rt_partial_update_same_feed(partial_update_gtfs_rt_data_1):
             if nb_rt_update == 2:
                 last_real_time_update = RealTimeUpdate.query.order_by(RealTimeUpdate.created_at.desc()).first()
                 assert last_real_time_update.status == "KO"
-                assert last_real_time_update.error == "No new information destinated to navitia for this gtfs-rt"
+                assert last_real_time_update.error == "No new information destined to navitia for this gtfs-rt"
 
     check(nb_rt_update=1)
 
@@ -1843,9 +1851,17 @@ def test_save_gtfs_rt_with_error():
     test the function "save_gtfs_rt_with_error"
     """
     with app.app_context():
-        save_gtfs_rt_with_error(
-            "toto", "gtfs-rt", contributor=GTFS_CONTRIBUTOR, status="KO", error="Decode Error"
+        redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR), "firstETag")  # set ETag key as if it was polled
+        save_rt_data_with_error(
+            "toto",
+            "gtfs-rt",
+            contributor=GTFS_CONTRIBUTOR,
+            error="Decode Error",
+            is_reprocess_same_data_allowed=False,
         )
+        assert (
+            redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR)) == "firstETag"
+        )  # error in feed: remember it's processed
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().status == "KO"
         assert RealTimeUpdate.query.first().error == "Decode Error"
@@ -1856,7 +1872,14 @@ def test_manage_db_with_http_error_without_insert():
     test the function "manage_db_error" without any insert of a new gtfs-rt
     """
     with app.app_context():
-        manage_db_error("toto", "gtfs-rt", contributor=GTFS_CONTRIBUTOR, status="KO", error="Http Error")
+        manage_db_error(
+            "toto",
+            "gtfs-rt",
+            contributor=GTFS_CONTRIBUTOR,
+            error="Http Error",
+            is_reprocess_same_data_allowed=True,
+        )
+
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().raw_data == "toto"
         assert RealTimeUpdate.query.first().status == "KO"
@@ -1866,7 +1889,13 @@ def test_manage_db_with_http_error_without_insert():
         updated_at = RealTimeUpdate.query.first().updated_at
         assert updated_at > created_at
 
-        manage_db_error("toto", "gtfs-rt", contributor=GTFS_CONTRIBUTOR, status="KO", error="Http Error")
+        manage_db_error(
+            "toto",
+            "gtfs-rt",
+            contributor=GTFS_CONTRIBUTOR,
+            error="Http Error",
+            is_reprocess_same_data_allowed=True,
+        )
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().raw_data == "toto"
         assert RealTimeUpdate.query.first().status == "KO"
@@ -1878,7 +1907,13 @@ def test_manage_db_with_http_error_without_insert():
 
         time.sleep(6)
 
-        manage_db_error("toto", "gtfs-rt", contributor=GTFS_CONTRIBUTOR, status="KO", error="Http Error")
+        manage_db_error(
+            "toto",
+            "gtfs-rt",
+            contributor=GTFS_CONTRIBUTOR,
+            error="Http Error",
+            is_reprocess_same_data_allowed=True,
+        )
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().raw_data == "toto"
         assert RealTimeUpdate.query.first().status == "KO"
@@ -1893,7 +1928,17 @@ def test_manage_db_with_http_error_with_insert():
     no gtfs-rt with 'Http Error' inserted since more than 5 seconds
     """
     with app.app_context():
-        manage_db_error("toto", "gtfs-rt", contributor=GTFS_CONTRIBUTOR, status="KO", error="Http Error")
+        redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR), "firstETag")  # set ETag key as if it was polled
+        manage_db_error(
+            "toto",
+            "gtfs-rt",
+            contributor=GTFS_CONTRIBUTOR,
+            error="Http Error",
+            is_reprocess_same_data_allowed=True,
+        )
+        assert (
+            redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR)) is None
+        )  # external error: forget it was processed and allow reprocess
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().raw_data == "toto"
         assert RealTimeUpdate.query.first().status == "KO"
@@ -1901,13 +1946,35 @@ def test_manage_db_with_http_error_with_insert():
 
         created_at = RealTimeUpdate.query.first().created_at
 
-        manage_db_error("", "gtfs-rt", contributor=GTFS_CONTRIBUTOR, status="KO", error="Decode Error")
+        redis_client.set(
+            build_redis_etag_key(GTFS_CONTRIBUTOR), "secondETag"
+        )  # set ETag key as if it was polled
+        manage_db_error(
+            "",
+            "gtfs-rt",
+            contributor=GTFS_CONTRIBUTOR,
+            error="Decode Error",
+            is_reprocess_same_data_allowed=False,
+        )
+        assert (
+            redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR)) == "secondETag"
+        )  # error in feed: remember it's processed
         assert len(RealTimeUpdate.query.all()) == 2
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().status == "KO"
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().error == "Decode Error"
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().created_at > created_at
 
-        manage_db_error("toto", "gtfs-rt", contributor=GTFS_CONTRIBUTOR, status="KO", error="Http Error")
+        redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR), "thirdETag")  # set ETag key as if it was polled
+        manage_db_error(
+            "toto",
+            "gtfs-rt",
+            contributor=GTFS_CONTRIBUTOR,
+            error="Http Error",
+            is_reprocess_same_data_allowed=True,
+        )
+        assert (
+            redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR)) is None
+        )  # external error: forget it was processed and allow reprocess
         assert len(RealTimeUpdate.query.all()) == 3
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().raw_data == "toto"
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().status == "KO"

@@ -36,8 +36,14 @@ import six
 from kirin import core
 from kirin.core import model
 from kirin.core.types import ModificationType, get_higher_status, get_effect_by_stop_time_status
-from kirin.exceptions import KirinException, InternalException
-from kirin.utils import make_rt_update, floor_datetime, to_navitia_utc_str
+from kirin.exceptions import KirinException, InternalException, InvalidArguments
+from kirin.utils import (
+    make_rt_update,
+    floor_datetime,
+    to_navitia_utc_str,
+    set_rtu_status_ko,
+    allow_reprocess_same_data,
+)
 from kirin.utils import record_internal_failure, record_call
 from kirin import app
 import itertools
@@ -45,23 +51,35 @@ import calendar
 
 
 def handle(proto, navitia_wrapper, contributor):
-    data = six.binary_type(proto)  # temp, for the moment, we save the protobuf as text
-    rt_update = make_rt_update(data, "gtfs-rt", contributor=contributor)
     start_datetime = datetime.datetime.utcnow()
+
+    try:
+        data = six.binary_type(proto)  # temp, for the moment, we save the protobuf as text
+        rt_update = make_rt_update(data, "gtfs-rt", contributor=contributor)
+    except Exception as e:
+        if rt_update is None:
+            # rt_update is not built, make sure reprocess is allowed
+            allow_reprocess_same_data(contributor)
+        else:
+            set_rtu_status_ko(rt_update, e.message, is_reprocess_same_data_allowed=True)
+            model.db.session.add(rt_update)
+            model.db.session.commit()
+        record_call("failure", reason=six.text_type(e), contributor=contributor)
+        raise
+
     try:
         trip_updates = KirinModelBuilder(navitia_wrapper, contributor).build(rt_update, data=proto)
         _, log_dict = core.handle(rt_update, trip_updates, contributor)
         record_call("OK", contributor=contributor)
     except KirinException as e:
-        rt_update.status = "KO"
-        rt_update.error = e.data["error"]
+        allow_reprocess = not isinstance(e, InvalidArguments)  # reprocess is useless if input is invalid
+        set_rtu_status_ko(rt_update, e.data["error"], is_reprocess_same_data_allowed=allow_reprocess)
         model.db.session.add(rt_update)
         model.db.session.commit()
         record_call("failure", reason=six.text_type(e), contributor=contributor)
         raise
     except Exception as e:
-        rt_update.status = "KO"
-        rt_update.error = e.message
+        set_rtu_status_ko(rt_update, e.message, is_reprocess_same_data_allowed=True)
         model.db.session.add(rt_update)
         model.db.session.commit()
         record_call("failure", reason=six.text_type(e), contributor=contributor)
@@ -106,9 +124,9 @@ class KirinModelBuilder(object):
             trip_updates.extend(tu)
 
         if not trip_updates:
-            rt_update.status = "KO"
-            rt_update.error = "No information for this gtfs-rt with timestamp: {}".format(data.header.timestamp)
-            self.log.error("No information for this gtfs-rt with timestamp: {}".format(data.header.timestamp))
+            msg = "No information for this gtfs-rt with timestamp: {}".format(data.header.timestamp)
+            set_rtu_status_ko(rt_update, msg, is_reprocess_same_data_allowed=False)
+            self.log.error(msg)
 
         return trip_updates
 

@@ -28,6 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+
 from __future__ import absolute_import, print_function, unicode_literals, division
 
 from kirin import app, db, resources
@@ -35,7 +36,9 @@ from kirin.core import model
 from flask import json
 import pytest
 import jsonschema
-import sqlalchemy
+from kirin.core.model import RealTimeUpdate, db, TripUpdate, VehicleJourney, StopTimeUpdate, Contributor
+from kirin.command.purge_rt import purge_contributor
+from tests.integration.gtfs_rt_test import basic_gtfs_rt_data, mock_rabbitmq, navitia
 
 
 @pytest.yield_fixture
@@ -409,3 +412,69 @@ def test_delete_contributor(test_client, with_custom_contributors):
     # Check that a deleted contributor can't be deleted again
     delete_resp = test_client.delete("/contributors/{}".format(contributor_to_delete))
     assert delete_resp._status_code == 404
+
+
+def test_purge_contributor(test_client, basic_gtfs_rt_data, mock_rabbitmq):
+    """
+    Test the purge with different contributors and rt data
+    """
+
+    def test_rt_data():
+        with app.app_context():
+            assert len(RealTimeUpdate.query.all()) == 1
+            assert len(TripUpdate.query.all()) == 1
+            assert len(VehicleJourney.query.all()) == 1
+            assert len(StopTimeUpdate.query.all()) == 4
+
+    def test_contributor_count(contrib_count):
+        with app.app_context():
+            assert len(Contributor.query.all()) == contrib_count
+
+    def deactivate_contributor(contributor_id):
+        with app.app_context():
+            contrib = Contributor.query.filter_by(id=contributor_id).first()
+            contrib.is_active = False
+            db.session.commit()
+
+    def has_rt_data(contributor_id):
+        with app.app_context():
+            return len(RealTimeUpdate.query.filter_by(contributor_id=contributor_id).all()) > 0
+
+    # We have 4 contributors and all are active:
+    test_contributor_count(4)
+    with app.app_context():
+        contributors = Contributor.query.all()
+        contributors_id = [c.id for c in contributors]
+        assert "rt.tchoutchou" in contributors_id
+        assert "rt.vroumvroum" in contributors_id
+        for c in contributors:
+            assert c.is_active is True
+
+    # Post a simple gtfs-rt for contributor "rt.vroumvroum" in configuration file.
+    resp = test_client.post("/gtfs_rt/rt.vroumvroum", data=basic_gtfs_rt_data.SerializeToString())
+    assert resp.status_code == 200
+    test_rt_data()
+
+    # As all the contributors are active, purge_contributor won't do anything
+    with app.app_context():
+        purge_contributor("rt.vroumvroum")
+    test_contributor_count(4)
+    test_rt_data()
+
+    # We deactivate a contributor "rt.tchoutchou" with rt data and use purge_contributor
+    # purge_contributor won't do anything
+    deactivate_contributor("rt.vroumvroum")
+    assert has_rt_data("rt.vroumvroum") is True
+    with app.app_context():
+        purge_contributor("rt.vroumvroum")
+    test_contributor_count(4)
+    test_rt_data()
+
+    # We deactivate another contributor "rt.vroumvroum_db" without any rt data. purge_contributor will simply
+    # delete rt.vroumvroum_db from the table contributor not other tables.
+    deactivate_contributor("rt.vroumvroum_db")
+    assert has_rt_data("rt.vroumvroum_db") is False
+    with app.app_context():
+        purge_contributor("rt.vroumvroum_db")
+    test_contributor_count(3)
+    test_rt_data()

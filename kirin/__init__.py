@@ -32,10 +32,7 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 import os
 
-import pybreaker
-
 from kirin import exceptions
-from kirin.rabbitmq_handler import RabbitMQHandler
 
 # remplace blocking method by a non blocking equivalent
 # this enable us to use gevent for launching background task
@@ -52,7 +49,6 @@ if str("threading") in sys.modules:
 from flask import Flask
 import logging.config
 from flask_script import Manager
-from kirin import utils
 from kirin.helper import KirinRequest
 
 app = Flask(__name__)
@@ -60,13 +56,6 @@ app.config.from_object(str("kirin.default_settings"))  # type: ignore
 if "KIRIN_CONFIG_FILE" in os.environ:
     app.config.from_envvar(str("KIRIN_CONFIG_FILE"))  # type: ignore
 app.request_class = KirinRequest
-
-if str("LOGGER") in app.config:
-    logging.config.dictConfig(app.config[str("LOGGER")])
-else:  # Default is std out
-    handler = logging.StreamHandler(stream=sys.stdout)
-    app.logger.addHandler(handler)
-    app.logger.setLevel("INFO")
 
 from kirin import new_relic
 
@@ -109,6 +98,16 @@ if str("threading") not in sys.modules:
 logger.info("Configs: %s", app.config)
 
 
+from kirin.rabbitmq_handler import RabbitMQHandler
+
 rabbitmq_handler = RabbitMQHandler(app.config[str("RABBITMQ_CONNECTION_STRING")], app.config[str("EXCHANGE")])
 
 import kirin.api
+from kirin import utils
+
+if str("LOGGER") in app.config:
+    logging.config.dictConfig(app.config[str("LOGGER")])
+else:  # Default is std out
+    handler = logging.StreamHandler(stream=sys.stdout)
+    app.logger.addHandler(handler)
+    app.logger.setLevel("INFO")

@@ -111,8 +111,14 @@ class GtfsRT(Resource):
         try:
             proto.ParseFromString(raw_proto)
         except DecodeError:
-            # We save the non-decodable gtfs-rt feed
-            manage_db_error(proto, "gtfs-rt", contributor=contributor.id, status="KO", error="Decode Error")
+            # We save the non-decodable flux gtfs-rt
+            manage_db_error(
+                proto,
+                "gtfs-rt",
+                contributor=contributor.id,
+                error="Decode Error",
+                is_reprocess_same_data_allowed=False,
+            )
             raise InvalidArguments("invalid protobuf")
         else:
             model_maker.handle(proto, make_navitia_wrapper(contributor), contributor.id)
