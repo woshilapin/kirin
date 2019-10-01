@@ -32,7 +32,7 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 import flask
 from flask.globals import current_app
-from flask_restful import Resource
+from flask_restful import Resource, marshal, abort
 from google.protobuf.message import DecodeError
 from kirin.exceptions import InvalidArguments
 import navitia_wrapper
@@ -41,6 +41,7 @@ from kirin import redis_client
 from kirin.utils import manage_db_error
 from kirin.core import model
 from kirin.core.types import ConnectorType
+from kirin.resources.contributors import contributor_fields
 
 
 def get_gtfsrt_contributors():
@@ -69,7 +70,6 @@ def get_gtfsrt_contributors():
             if c.id != contributor_legacy_id
         ]
     )
-
     return gtfsrt_contributors
 
 
@@ -79,27 +79,29 @@ def _get_gtfs_rt(req):
     return req.data
 
 
-class GtfsRT(Resource):
-    def __init__(self):
-        # TODO:
-        #  Refine a way to handle several contributors
-        url = current_app.config[str("NAVITIA_URL")]
-        token = current_app.config.get(str("NAVITIA_GTFS_RT_TOKEN"))
-        timeout = current_app.config.get(str("NAVITIA_TIMEOUT"), 5)
-        instance = current_app.config[str("NAVITIA_GTFS_RT_INSTANCE")]
-        query_timeout = current_app.config.get(str("NAVITIA_QUERY_CACHE_TIMEOUT"), 600)
-        pubdate_timeout = current_app.config.get(str("NAVITIA_PUBDATE_CACHE_TIMEOUT"), 600)
-        self.navitia_wrapper = navitia_wrapper.Navitia(
-            url=url,
-            token=token,
-            timeout=timeout,
-            cache=redis_client,
-            query_timeout=query_timeout,
-            pubdate_timeout=pubdate_timeout,
-        ).instance(instance)
-        self.contributor = current_app.config[str("GTFS_RT_CONTRIBUTOR")]
+def make_navitia_wrapper(contributor):
+    return navitia_wrapper.Navitia(
+        url=current_app.config.get(str("NAVITIA_URL")),
+        token=contributor.navitia_token,
+        timeout=current_app.config.get(str("NAVITIA_TIMEOUT"), 5),
+        cache=redis_client,
+        query_timeout=current_app.config.get(str("NAVITIA_QUERY_CACHE_TIMEOUT"), 600),
+        pubdate_timeout=current_app.config.get(str("NAVITIA_PUBDATE_CACHE_TIMEOUT"), 600),
+    ).instance(contributor.navitia_coverage)
 
-    def post(self):
+
+class GtfsRT(Resource):
+    def get(self):
+        return {"gtfs-rt": marshal(get_gtfsrt_contributors(), contributor_fields)}
+
+    def post(self, id=None):
+        if id is None:
+            abort(400, message="Contributor's id is missing")
+
+        contributor = model.Contributor.query_existing().filter_by(id=id).first()
+        if not contributor:
+            abort(404, message="Contributor '{}' not found".format(id))
+
         raw_proto = _get_gtfs_rt(flask.globals.request)
 
         from kirin import gtfs_realtime_pb2
@@ -113,11 +115,11 @@ class GtfsRT(Resource):
             manage_db_error(
                 proto,
                 "gtfs-rt",
-                contributor=self.contributor,
+                contributor=contributor.id,
                 error="Decode Error",
                 is_reprocess_same_data_allowed=False,
             )
             raise InvalidArguments("invalid protobuf")
         else:
-            model_maker.handle(proto, self.navitia_wrapper, self.contributor)
-            return "OK", 200
+            model_maker.handle(proto, make_navitia_wrapper(contributor), contributor.id)
+            return {"message": "GTFS-RT feed processed"}, 200

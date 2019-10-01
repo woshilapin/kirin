@@ -28,6 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+
 from __future__ import absolute_import, print_function, unicode_literals, division
 from copy import deepcopy
 from datetime import timedelta
@@ -39,7 +40,7 @@ from kirin import gtfs_rt, redis_client
 from kirin.core.types import TripEffect
 from kirin.tasks import purge_trip_update, purge_rt_update
 from tests import mock_navitia
-from tests.check_utils import dumb_nav_wrapper, api_post
+from tests.check_utils import dumb_nav_wrapper, api_post, api_get
 from kirin import gtfs_realtime_pb2, app
 from kirin.utils import save_rt_data_with_error, manage_db_error, build_redis_etag_key
 from tests.integration.conftest import GTFS_CONTRIBUTOR
@@ -121,12 +122,24 @@ def basic_gtfs_rt_data_without_delays():
     return feed
 
 
+def test_get_gtfs_rt_contributors():
+    """
+    Get GTFS-RT contributors
+    """
+    resp = api_get("/gtfs_rt")
+    assert "gtfs-rt" in resp
+    assert len(resp["gtfs-rt"]) == 2
+    for contributor in resp["gtfs-rt"]:
+        assert contributor["connector_type"] == "gtfs-rt"
+        assert "rt.vroumvroum" in contributor["id"]
+
+
 def test_wrong_gtfs_rt_post():
     """
-    wrong protobuf post on the api
+    Post wrong GTFS-RT data
     """
     redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR), "firstETag")  # set ETag key as if it was polled
-    res, status = api_post("/gtfs_rt", check=False, data="bob")
+    res, status = api_post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), check=False, data="bob")
 
     assert (
         redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR)) == "firstETag"
@@ -134,19 +147,34 @@ def test_wrong_gtfs_rt_post():
     assert status == 400
     assert "invalid protobuf" in res.get("error")
 
+    with app.app_context():
+        # Raw data is saved in db, even when an error occurred
+        assert len(RealTimeUpdate.query.all()) == 1
+        assert len(TripUpdate.query.all()) == 0
+        assert len(StopTimeUpdate.query.all()) == 0
+
 
 def test_gtfs_rt_post_no_data():
     """
-    when no data is given, we got a 400 error
+    Post with a missing id or missing data returns an error 400
+    Post with an unknown id returns an error 404
     """
-    tester = app.test_client()
-    resp = tester.post("/gtfs_rt")
-    assert resp.status_code == 400
 
-    with app.app_context():
-        assert len(RealTimeUpdate.query.all()) == 0
-        assert len(TripUpdate.query.all()) == 0
-        assert len(StopTimeUpdate.query.all()) == 0
+    def post_and_check(url, expected_status, expected_message, expected_error):
+        resp, status = api_post(url, check=False)
+        assert status == expected_status
+        assert expected_message in resp.get("message")
+        if expected_error:
+            assert expected_error == resp.get("error")
+
+        with app.app_context():
+            assert len(RealTimeUpdate.query.all()) == 0
+            assert len(TripUpdate.query.all()) == 0
+            assert len(StopTimeUpdate.query.all()) == 0
+
+    post_and_check("/gtfs_rt/", 400, "Contributor's id is missing", None)
+    post_and_check("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), 400, "invalid arguments", "no gtfs_rt data provided")
+    post_and_check("/gtfs_rt/unknown_id", 404, "Contributor 'unknown_id' not found", None)
 
 
 def test_gtfs_model_builder(basic_gtfs_rt_data, basic_gtfs_rt_data_without_delays):
@@ -224,7 +252,7 @@ def test_gtfs_rt_simple_delay(basic_gtfs_rt_data, mock_rabbitmq):
     """
     redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR), "firstETag")  # set ETag key as if it was polled
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=basic_gtfs_rt_data.SerializeToString())
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=basic_gtfs_rt_data.SerializeToString())
     assert (
         redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR)) == "firstETag"
     )  # all OK: remember it's processed
@@ -292,7 +320,7 @@ def test_gtfs_rt_purge(basic_gtfs_rt_data, mock_rabbitmq):
     POST a simple gtfs-rt, then test the purge
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=basic_gtfs_rt_data.SerializeToString())
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=basic_gtfs_rt_data.SerializeToString())
     assert resp.status_code == 200
 
     with app.app_context():
@@ -449,7 +477,9 @@ def test_gtfs_rt_pass_midnight(pass_midnight_gtfs_rt_data, mock_rabbitmq):
     after the merge, we should have 5 stops properly delayed
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=pass_midnight_gtfs_rt_data.SerializeToString())
+    resp = tester.post(
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=pass_midnight_gtfs_rt_data.SerializeToString()
+    )
     assert resp.status_code == 200
 
     with app.app_context():
@@ -603,7 +633,9 @@ def test_gtfs_rt_pass_midnight_utc(pass_midnight_utc_gtfs_rt_data, mock_rabbitmq
     after the merge, we should have 5 stops properly delayed
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=pass_midnight_utc_gtfs_rt_data.SerializeToString())
+    resp = tester.post(
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=pass_midnight_utc_gtfs_rt_data.SerializeToString()
+    )
     assert resp.status_code == 200
 
     with app.app_context():
@@ -833,7 +865,9 @@ def test_gtfs_rt_partial_update_same_feed(partial_update_gtfs_rt_data_1):
     new trip updates nor new stop time updates
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=partial_update_gtfs_rt_data_1.SerializeToString())
+    resp = tester.post(
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_1.SerializeToString()
+    )
     assert resp.status_code == 200
 
     def check(nb_rt_update):
@@ -863,7 +897,9 @@ def test_gtfs_rt_partial_update_same_feed(partial_update_gtfs_rt_data_1):
     # which increment the nb of RealTimeUpdate, but the rest remains the same that means....
     # 1. There will not be any trip_updates in the data base related to the last real_time_update
     # 2. with real_time_update.status = 'KO' and real_time_update.error = 'No new Information...'
-    resp = tester.post("/gtfs_rt", data=partial_update_gtfs_rt_data_1.SerializeToString())
+    resp = tester.post(
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_1.SerializeToString()
+    )
     assert resp.status_code == 200
 
     check(nb_rt_update=2)
@@ -874,7 +910,9 @@ def test_gtfs_rt_partial_update_diff_feed_1(partial_update_gtfs_rt_data_1, parti
     In this test, we will send the two different gtfs-rt
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=partial_update_gtfs_rt_data_1.SerializeToString())
+    resp = tester.post(
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_1.SerializeToString()
+    )
     assert resp.status_code == 200
 
     with app.app_context():
@@ -891,7 +929,9 @@ def test_gtfs_rt_partial_update_diff_feed_1(partial_update_gtfs_rt_data_1, parti
 
     # Now we apply another gtfs-rt, the new gtfs-rt will be save into the db and
     # increments the nb of real_time_updates
-    resp = tester.post("/gtfs_rt", data=partial_update_gtfs_rt_data_2.SerializeToString())
+    resp = tester.post(
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_2.SerializeToString()
+    )
     assert resp.status_code == 200
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) == 2
@@ -912,7 +952,9 @@ def test_gtfs_rt_partial_update_diff_feed_2(partial_update_gtfs_rt_data_2, parti
     containing two trip_updates
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=partial_update_gtfs_rt_data_2.SerializeToString())
+    resp = tester.post(
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_2.SerializeToString()
+    )
     assert resp.status_code == 200
 
     with app.app_context():
@@ -929,7 +971,9 @@ def test_gtfs_rt_partial_update_diff_feed_2(partial_update_gtfs_rt_data_2, parti
         assert len(trip_update.real_time_updates) == 1
 
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=partial_update_gtfs_rt_data_3.SerializeToString())
+    resp = tester.post(
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_3.SerializeToString()
+    )
     assert resp.status_code == 200
 
     with app.app_context():
@@ -963,7 +1007,9 @@ def test_gtfs_rt_partial_update_last_stop_back_normal(
     supposed to be complete (stops not provided are served on time)
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=partial_update_gtfs_rt_data_2.SerializeToString())
+    resp = tester.post(
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_2.SerializeToString()
+    )
     assert resp.status_code == 200
 
     with app.app_context():
@@ -980,7 +1026,10 @@ def test_gtfs_rt_partial_update_last_stop_back_normal(
         assert trip_update.effect == TripEffect.SIGNIFICANT_DELAYS.name
 
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=partial_update_gtfs_rt_code_r_jv1_last_stop_normal.SerializeToString())
+    resp = tester.post(
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR),
+        data=partial_update_gtfs_rt_code_r_jv1_last_stop_normal.SerializeToString(),
+    )
     assert resp.status_code == 200
 
     with app.app_context():
@@ -1232,7 +1281,7 @@ def test_gtfs_bad_order_model_builder_with_post(bad_ordered_gtfs_rt_data):
 
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=bad_ordered_gtfs_rt_data.SerializeToString())
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=bad_ordered_gtfs_rt_data.SerializeToString())
     assert resp.status_code == 200
 
     def check(nb_rt_update):
@@ -1249,7 +1298,7 @@ def test_gtfs_bad_order_model_builder_with_post(bad_ordered_gtfs_rt_data):
 
     # Now we apply exactly the same gtfs-rt, the new gtfs-rt will be saved into the db,
     # but the trip update won't be saved
-    resp = tester.post("/gtfs_rt", data=bad_ordered_gtfs_rt_data.SerializeToString())
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=bad_ordered_gtfs_rt_data.SerializeToString())
     assert resp.status_code == 200
     check(nb_rt_update=2)
 
@@ -1263,7 +1312,7 @@ def test_gtfs_lollipop_model_builder_with_post(lollipop_gtfs_rt_data):
     Since the gtfs-rt.stop list is a strict ending sublist of vj.stop_times we merge
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=lollipop_gtfs_rt_data.SerializeToString())
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=lollipop_gtfs_rt_data.SerializeToString())
     assert resp.status_code == 200
 
     def check(nb_rt_update):
@@ -1333,7 +1382,7 @@ def test_gtfs_lollipop_model_builder_with_post(lollipop_gtfs_rt_data):
 
     # Now we apply exactly the same gtfs-rt, the new gtfs-rt will be save into the db,
     # which increment the nb of RealTimeUpdate, but every else remains the same
-    resp = tester.post("/gtfs_rt", data=lollipop_gtfs_rt_data.SerializeToString())
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=lollipop_gtfs_rt_data.SerializeToString())
     assert resp.status_code == 200
     check(nb_rt_update=2)
 
@@ -1455,7 +1504,10 @@ def test_gtfs_lollipop_with_second_passage_model_builder_with_post(lollipop_gtfs
 
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=lollipop_gtfs_rt_from_second_passage_data.SerializeToString())
+    resp = tester.post(
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR),
+        data=lollipop_gtfs_rt_from_second_passage_data.SerializeToString(),
+    )
     assert resp.status_code == 200
 
     def check(nb_rt_update):
@@ -1524,7 +1576,10 @@ def test_gtfs_lollipop_with_second_passage_model_builder_with_post(lollipop_gtfs
 
     # Now we apply exactly the same gtfs-rt, the new gtfs-rt will be save into the db,
     # which increment the nb of RealTimeUpdate, but every else remains the same
-    resp = tester.post("/gtfs_rt", data=lollipop_gtfs_rt_from_second_passage_data.SerializeToString())
+    resp = tester.post(
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR),
+        data=lollipop_gtfs_rt_from_second_passage_data.SerializeToString(),
+    )
     assert resp.status_code == 200
     check(nb_rt_update=2)
 
@@ -1655,7 +1710,10 @@ def test_gtfs_start_midnight_model_builder_with_post(gtfs_rt_data_with_vj_starti
     test the model builder with vehicle_journey having first stop_time at midnight
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=gtfs_rt_data_with_vj_starting_at_midnight.SerializeToString())
+    resp = tester.post(
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR),
+        data=gtfs_rt_data_with_vj_starting_at_midnight.SerializeToString(),
+    )
     assert resp.status_code == 200
 
     def check(nb_rt_update):
@@ -1720,7 +1778,10 @@ def test_gtfs_start_midnight_utc_model_builder_with_post(gtfs_rt_data_with_vj_st
     test the model builder with vehicle_journey having first stop_time at midnight UTC
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=gtfs_rt_data_with_vj_starting_at_midnight_utc.SerializeToString())
+    resp = tester.post(
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR),
+        data=gtfs_rt_data_with_vj_starting_at_midnight_utc.SerializeToString(),
+    )
     assert resp.status_code == 200
 
     def check(nb_rt_update):
@@ -1770,7 +1831,9 @@ def test_gtfs_start_midnight_utc_model_builder_with_post(gtfs_rt_data_with_vj_st
 
 def test_gtfs_rt_api_with_decode_error(basic_gtfs_rt_data):
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=basic_gtfs_rt_data.SerializeToString() + str(">toto"))
+    resp = tester.post(
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=basic_gtfs_rt_data.SerializeToString() + str(">toto")
+    )
     assert resp.status_code == 400
 
     def check(nb_rt_update):
@@ -1940,7 +2003,10 @@ def test_gtfs_pass_midnight_negative_delay_utc_model_builder(pass_midnight_negat
     test the model builder with a pass-midnight UTC gtfs-rt
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt", data=pass_midnight_negative_delay_utc_gtfs_rt_data.SerializeToString())
+    resp = tester.post(
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR),
+        data=pass_midnight_negative_delay_utc_gtfs_rt_data.SerializeToString(),
+    )
     assert resp.status_code == 200
 
     with app.app_context():

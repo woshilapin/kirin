@@ -28,6 +28,7 @@
 # IRC #navitia on freenode
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+
 from __future__ import absolute_import, print_function, unicode_literals, division
 
 from kirin import app, db, resources
@@ -450,7 +451,7 @@ def test_purge_contributor(test_client, basic_gtfs_rt_data, mock_rabbitmq):
             assert c.is_active is True
 
     # Post a simple gtfs-rt for contributor "rt.vroumvroum" in configuration file.
-    resp = test_client.post("/gtfs_rt", data=basic_gtfs_rt_data.SerializeToString())
+    resp = test_client.post("/gtfs_rt/rt.vroumvroum", data=basic_gtfs_rt_data.SerializeToString())
     assert resp.status_code == 200
     test_rt_data()
 
