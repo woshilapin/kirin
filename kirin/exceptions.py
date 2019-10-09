@@ -42,6 +42,17 @@ class KirinException(HTTPException):
         if detailed_message:
             self.data["error"] = detailed_message
 
+    def __str__(self):
+        code = self.code if self.code is not None else "???"
+        res = "{c} {n}:".format(c=code, n=self.name)
+        if self.description is not None:
+            res += " {} -".format(self.description)
+        if self.message is not None:
+            res += " {} -".format(self.message)
+        if self.data and "error" in self.data:
+            res += " {}".format(self.data["error"])
+        return res
+
 
 class InvalidArguments(KirinException):
     code = 400
