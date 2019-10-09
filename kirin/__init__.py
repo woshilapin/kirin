@@ -59,6 +59,7 @@ from kirin import new_relic
 new_relic.init(app.config[str("NEW_RELIC_CONFIG_FILE")])
 
 from kirin.helper import KirinRequest
+
 app.request_class = KirinRequest
 
 if app.config[str("USE_GEVENT")]:
@@ -72,6 +73,7 @@ from flask_cache import Cache
 app.cache = Cache(app)
 
 from flask_script import Manager
+
 manager = Manager(app)
 
 from redis import Redis
