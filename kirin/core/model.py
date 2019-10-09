@@ -40,6 +40,7 @@ import sqlalchemy
 from sqlalchemy import desc
 from kirin.core.types import ModificationType, TripEffect, ConnectorType
 from kirin.exceptions import ObjectNotFound, InternalException
+from kirin.new_relic import record_custom_parameter
 
 db = SQLAlchemy()
 
@@ -451,6 +452,7 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         self.error = error
         self.received_at = received_at if received_at else datetime.datetime.utcnow()
         self.contributor_id = contributor
+        record_custom_parameter("real_time_update_id", self.id)
 
     @classmethod
     def get_probes_by_contributor(cls):
