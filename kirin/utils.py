@@ -86,11 +86,11 @@ def to_navitia_utc_str(naive_utc_dt):
     return naive_utc_dt.strftime("%Y%m%dT%H%M%SZ")
 
 
-def make_rt_update(data, connector, contributor, status="OK"):
+def make_rt_update(raw_data, connector, contributor, status="OK"):
     """
     Create an RealTimeUpdate object for the query and persist it
     """
-    rt_update = model.RealTimeUpdate(data, connector=connector, contributor=contributor, status=status)
+    rt_update = model.RealTimeUpdate(raw_data, connector=connector, contributor=contributor, status=status)
     new_relic.record_custom_parameter("real_time_update_id", rt_update.id)
 
     model.db.session.add(rt_update)
@@ -168,6 +168,7 @@ def save_rt_data_with_error(data, connector, contributor, error, is_reprocess_sa
     set_rtu_status_ko(rt_update, error, is_reprocess_same_data_allowed)
     model.db.session.add(rt_update)
     model.db.session.commit()
+    return rt_update
 
 
 def poke_updated_at(rtu):

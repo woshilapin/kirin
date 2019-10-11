@@ -31,8 +31,9 @@
 
 from __future__ import absolute_import, print_function, unicode_literals, division
 
-from kirin.core.model import VehicleJourney, TripUpdate, StopTimeUpdate, RealTimeUpdate, Contributor
+from kirin.core.model import VehicleJourney, TripUpdate, StopTimeUpdate, Contributor
 from kirin.core.types import ConnectorType
+from kirin.utils import make_rt_update
 from tests.integration.conftest import COTS_CONTRIBUTOR, GTFS_CONTRIBUTOR
 from kirin import db, app
 import datetime
@@ -60,7 +61,7 @@ def create_trip_update(vj_id, trip_id, circulation_date, contributor=COTS_CONTRI
 
 
 def create_real_time_update(id, contributor, connector, vj_id, trip_id, circulation_date):
-    rtu = RealTimeUpdate("", connector, contributor=contributor)
+    rtu = make_rt_update("", connector, contributor=contributor)
     rtu.id = id
     trip_update = create_trip_update(vj_id, trip_id, circulation_date)
     trip_update.contributor_id = contributor
