@@ -91,6 +91,7 @@ def make_rt_update(data, connector, contributor, status="OK"):
     Create an RealTimeUpdate object for the query and persist it
     """
     rt_update = model.RealTimeUpdate(data, connector=connector, contributor=contributor, status=status)
+    new_relic.record_custom_parameter("real_time_update_id", rt_update.id)
 
     model.db.session.add(rt_update)
     model.db.session.commit()
