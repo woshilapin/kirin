@@ -38,7 +38,7 @@ from kirin import resources
 from kirin.gtfs_rt import gtfs_rt
 from kirin.cots import cots
 from kirin import app
-from kirin.new_relic import record_custom_parameter, record_exception
+from kirin.new_relic import record_exception
 
 # we always want pretty json
 flask_restful.representations.json.settings = {"indent": 4}

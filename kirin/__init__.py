@@ -48,18 +48,19 @@ if str("threading") in sys.modules:
 
 from flask import Flask
 import logging.config
-from flask_script import Manager
-from kirin.helper import KirinRequest
 
 app = Flask(__name__)
 app.config.from_object(str("kirin.default_settings"))  # type: ignore
 if "KIRIN_CONFIG_FILE" in os.environ:
     app.config.from_envvar(str("KIRIN_CONFIG_FILE"))  # type: ignore
-app.request_class = KirinRequest
 
 from kirin import new_relic
 
 new_relic.init(app.config[str("NEW_RELIC_CONFIG_FILE")])
+
+from kirin.helper import KirinRequest
+
+app.request_class = KirinRequest
 
 if app.config[str("USE_GEVENT")]:
     from gevent import monkey
@@ -70,6 +71,8 @@ from flask_cache import Cache
 
 # register the cache instance and binds it on to your app
 app.cache = Cache(app)
+
+from flask_script import Manager
 
 manager = Manager(app)
 

@@ -42,7 +42,7 @@ from kirin.tasks import purge_trip_update, purge_rt_update
 from tests import mock_navitia
 from tests.check_utils import dumb_nav_wrapper, api_post, api_get
 from kirin import gtfs_realtime_pb2, app
-from kirin.utils import save_rt_data_with_error, manage_db_error, build_redis_etag_key
+from kirin.utils import save_rt_data_with_error, manage_db_error, build_redis_etag_key, make_rt_update
 from tests.integration.conftest import GTFS_CONTRIBUTOR
 import time
 from sqlalchemy import desc
@@ -187,7 +187,7 @@ def test_gtfs_model_builder(basic_gtfs_rt_data, basic_gtfs_rt_data_without_delay
     """
     with app.app_context():
         data = ""
-        rt_update = RealTimeUpdate(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
+        rt_update = make_rt_update(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
         trip_updates = gtfs_rt.KirinModelBuilder(dumb_nav_wrapper(), contributor=GTFS_CONTRIBUTOR).build(
             rt_update, basic_gtfs_rt_data
         )
@@ -233,7 +233,7 @@ def test_gtfs_model_builder(basic_gtfs_rt_data, basic_gtfs_rt_data_without_delay
         assert feed.entity[0].trip_update.trip.start_date == "20120615"  # must be UTC start date
 
         # if there is no delay field (delay is optional in StopTimeEvent), effect = 'UNKNOWN_EFFECT'
-        rt_update = RealTimeUpdate(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
+        rt_update = make_rt_update(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
         trip_updates = gtfs_rt.KirinModelBuilder(dumb_nav_wrapper(), contributor=GTFS_CONTRIBUTOR).build(
             rt_update, basic_gtfs_rt_data_without_delays
         )
@@ -410,7 +410,7 @@ def test_gtfs_pass_midnight_model_builder(pass_midnight_gtfs_rt_data):
     """
     with app.app_context():
         data = ""
-        rt_update = RealTimeUpdate(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
+        rt_update = make_rt_update(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
         trip_updates = gtfs_rt.KirinModelBuilder(dumb_nav_wrapper(), contributor=GTFS_CONTRIBUTOR).build(
             rt_update, pass_midnight_gtfs_rt_data
         )
@@ -566,7 +566,7 @@ def test_gtfs_pass_midnight_utc_model_builder(pass_midnight_utc_gtfs_rt_data):
     """
     with app.app_context():
         data = ""
-        rt_update = RealTimeUpdate(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
+        rt_update = make_rt_update(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
         trip_updates = gtfs_rt.KirinModelBuilder(dumb_nav_wrapper(), contributor=GTFS_CONTRIBUTOR).build(
             rt_update, pass_midnight_utc_gtfs_rt_data
         )
@@ -1129,7 +1129,7 @@ def test_gtfs_lollipop_model_builder(lollipop_gtfs_rt_data):
     """
     with app.app_context():
         data = ""
-        rt_update = RealTimeUpdate(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
+        rt_update = make_rt_update(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
         trip_updates = gtfs_rt.KirinModelBuilder(dumb_nav_wrapper(), contributor=GTFS_CONTRIBUTOR).build(
             rt_update, lollipop_gtfs_rt_data
         )
@@ -1255,7 +1255,7 @@ def test_gtfs_bad_order_model_builder(bad_ordered_gtfs_rt_data):
     """
     with app.app_context():
         data = ""
-        rt_update = RealTimeUpdate(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
+        rt_update = make_rt_update(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
         trip_updates = gtfs_rt.KirinModelBuilder(dumb_nav_wrapper(), contributor=GTFS_CONTRIBUTOR).build(
             rt_update, bad_ordered_gtfs_rt_data
         )
@@ -1439,7 +1439,7 @@ def test_gtfs_lollipop_for_second_passage_model_builder(lollipop_gtfs_rt_from_se
     """
     with app.app_context():
         data = ""
-        rt_update = RealTimeUpdate(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
+        rt_update = make_rt_update(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
         trip_updates = gtfs_rt.KirinModelBuilder(dumb_nav_wrapper(), contributor=GTFS_CONTRIBUTOR).build(
             rt_update, lollipop_gtfs_rt_from_second_passage_data
         )
@@ -1631,7 +1631,7 @@ def test_gtfs_more_stops_model_builder(gtfs_rt_data_with_more_stops):
     """
     with app.app_context():
         data = ""
-        rt_update = RealTimeUpdate(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
+        rt_update = make_rt_update(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
         trip_updates = gtfs_rt.KirinModelBuilder(dumb_nav_wrapper(), contributor=GTFS_CONTRIBUTOR).build(
             rt_update, gtfs_rt_data_with_more_stops
         )

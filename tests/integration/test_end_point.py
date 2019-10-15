@@ -30,6 +30,7 @@
 # www.navitia.io
 from __future__ import absolute_import, print_function, unicode_literals, division
 
+from kirin.utils import make_rt_update, save_rt_data_with_error
 from tests.check_utils import api_get
 from kirin.core import model
 from kirin import app
@@ -140,36 +141,42 @@ def setup_database():
         tu1 = model.TripUpdate(vj1, contributor=COTS_CONTRIBUTOR)
         tu2 = model.TripUpdate(vj2, contributor=COTS_CONTRIBUTOR)
         tu3 = model.TripUpdate(vj3, contributor=GTFS_CONTRIBUTOR)
-        rtu1 = model.RealTimeUpdate(None, "cots", COTS_CONTRIBUTOR)
+        rtu1 = make_rt_update(None, "cots", COTS_CONTRIBUTOR)
         rtu1.created_at = datetime(2015, 11, 4, 6, 32)
+        rtu1.updated_at = None  # mock creation, no update done
         rtu1.trip_updates.append(tu1)
         model.db.session.add(rtu1)
-        rtu2 = model.RealTimeUpdate(None, "cots", contributor=COTS_CONTRIBUTOR)
+        rtu2 = make_rt_update(None, "cots", contributor=COTS_CONTRIBUTOR)
         rtu2.created_at = datetime(2015, 11, 4, 7, 32)
+        rtu2.updated_at = None
         rtu2.trip_updates.append(tu2)
         model.db.session.add(rtu2)
 
-        rtu3 = model.RealTimeUpdate(None, "gtfs-rt", contributor=GTFS_CONTRIBUTOR)
+        rtu3 = make_rt_update(None, "gtfs-rt", contributor=GTFS_CONTRIBUTOR)
         rtu3.created_at = datetime(2015, 11, 4, 7, 42)
+        rtu3.updated_at = None
         rtu3.trip_updates.append(tu3)
         model.db.session.add(rtu3)
 
-        rtu4 = model.RealTimeUpdate(
+        rtu4 = save_rt_data_with_error(
             None,
             connector="gtfs-rt",
             contributor=GTFS_CONTRIBUTOR,
-            status="KO",
             error="No new information destined to navitia for this gtfs-rt",
+            is_reprocess_same_data_allowed=False,
         )
         rtu4.created_at = datetime(2015, 11, 4, 7, 52)
+        rtu4.updated_at = None
         model.db.session.add(rtu4)
 
-        rtu5 = model.RealTimeUpdate(None, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR_DB)
+        rtu5 = make_rt_update(None, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR_DB)
         rtu5.created_at = datetime(2015, 11, 4, 8, 2)
+        rtu5.updated_at = None
         model.db.session.add(rtu5)
 
-        rtu6 = model.RealTimeUpdate(None, connector="cots", contributor=COTS_CONTRIBUTOR_DB)
+        rtu6 = make_rt_update(None, connector="cots", contributor=COTS_CONTRIBUTOR_DB)
         rtu6.created_at = datetime(2015, 11, 4, 8, 12)
+        rtu6.updated_at = None
         model.db.session.add(rtu6)
 
         model.db.session.commit()
