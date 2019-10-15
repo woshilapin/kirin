@@ -48,7 +48,7 @@ class AbstractSNCFResource(Resource):
 
     def process_post(self, input_raw, contributor_type, is_new_complete=False):
         start_datetime = datetime.utcnow()
-
+        rt_update = None
         try:
             # create a raw rt_update obj, save the raw_input into the db
             rt_update = make_rt_update(input_raw, contributor_type, contributor=self.contributor)
