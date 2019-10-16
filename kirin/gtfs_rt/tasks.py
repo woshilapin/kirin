@@ -129,7 +129,7 @@ def gtfs_poller(self, config):
         nav = navitia_wrapper.Navitia(
             url=config["navitia_url"],
             token=config["token"],
-            timeout=5,
+            timeout=app.config.get(str("NAVITIA_TIMEOUT"), 5),
             cache=redis_client,
             query_timeout=app.config.get(str("NAVITIA_QUERY_CACHE_TIMEOUT"), 600),
             pubdate_timeout=app.config.get(str("NAVITIA_PUBDATE_CACHE_TIMEOUT"), 600),
