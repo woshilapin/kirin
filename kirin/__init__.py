@@ -34,17 +34,6 @@ import os
 
 from kirin import exceptions
 
-# remplace blocking method by a non blocking equivalent
-# this enable us to use gevent for launching background task
-# Note: there is a conflict between py.test and gevent
-# http://stackoverflow.com/questions/8774958/keyerror-in-module-threading-after-a-successful-py-test-run
-# so we need to remove threading from the import
-import sys
-
-if str("threading") in sys.modules:
-    del sys.modules[str("threading")]
-# end of conflict's patch
-
 
 from flask import Flask
 import logging.config
@@ -62,7 +51,19 @@ from kirin.helper import KirinRequest
 
 app.request_class = KirinRequest
 
+import sys
+
 if app.config[str("USE_GEVENT")]:
+
+    # replace blocking method by a non blocking equivalent
+    # this enable us to use gevent for launching background task
+    # Note: there is a conflict between py.test and gevent
+    # http://stackoverflow.com/questions/8774958/keyerror-in-module-threading-after-a-successful-py-test-run
+    # so we need to remove threading from the import
+    if str("threading") in sys.modules:
+        del sys.modules[str("threading")]
+    # end of conflict's patch
+
     from gevent import monkey
 
     monkey.patch_all()
