@@ -48,7 +48,7 @@ def get_cots_contributor():
     File has priority over db
     TODO: Remove from config file
     """
-    if "NAVITIA_INSTANCE" in current_app.config and current_app.config.get(str("NAVITIA_INSTANCE")):
+    if "COTS_CONTRIBUTOR" in current_app.config and current_app.config.get(str("COTS_CONTRIBUTOR")):
         return model.Contributor(
             id=current_app.config.get(str("COTS_CONTRIBUTOR")),
             navitia_coverage=current_app.config.get(str("NAVITIA_INSTANCE")),
