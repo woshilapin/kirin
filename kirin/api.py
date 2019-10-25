@@ -30,6 +30,7 @@
 # www.navitia.io
 from __future__ import absolute_import, print_function, unicode_literals, division
 import logging
+
 from flask.signals import got_request_exception
 import flask_restful
 from flask import request
@@ -38,7 +39,7 @@ from kirin import resources
 from kirin.gtfs_rt import gtfs_rt
 from kirin.cots import cots
 from kirin import app
-from kirin.new_relic import record_exception
+from kirin.new_relic import record_exception, must_log_apm, must_never_log
 
 # we always want pretty json
 flask_restful.representations.json.settings = {"indent": 4}
@@ -56,7 +57,7 @@ api.add_resource(resources.Health, "/health", endpoint=str("health"))
 
 def log_exception(sender, exception):
     """
-    log all exceptions not catch before
+    log all exceptions not caught before
     """
     logger = logging.getLogger(__name__)
     message = ""
@@ -64,11 +65,14 @@ def log_exception(sender, exception):
         message = exception.data
     error = "{ex} {data} {url}".format(ex=exception.__class__.__name__, data=message, url=request.url)
 
-    record_exception()
-    if isinstance(exception, HTTPException):
+    if must_never_log(exception):
         logger.debug(error)
     else:
         logger.exception(error)
+
+    # must filter on ALL exceptions (including flask's ones)
+    if must_log_apm(exception):
+        record_exception()
 
 
 got_request_exception.connect(log_exception, app)
