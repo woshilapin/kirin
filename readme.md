@@ -83,6 +83,12 @@ The feeds can be of the following type:
     ctrl + d
     ```
 
+ - Create a configuration file:
+    ```
+    NAVITIA_URL = '<url of the navitia server>' # ex: 'http://localhost:5000/'
+    DEBUG = True
+    log_formatter = 'json'
+    ```
  - Create a file ```.env``` with the path to you configuration file:
     ```
     KIRIN_CONFIG_FILE=default_settings.py
@@ -127,20 +133,6 @@ When running this image, the Kirin web server is launched and an optional *port*
 Note: a Kirin database is needed on localhost for the requests to be done successfully.
 
 
-### Maintenance
-
-##### Definitely remove a contributor from configuration
-
-A command to clean inactive contributors is available, to be triggered manually.
-```bash
-python ./manage.py purge_contributor <contributor_id>
-```
-This will check that for the given contributor, `is_active=false` and that
-no more object (TripUpdate or RealTimeUpdate) is linked to that contributor in Kirin database.
-
-Those objects are progressively purged by automatic jobs configured in the settings file.
-
-
 ## API
 
 Kirin API provides several endpoints (that can be requested through port 5000 by default, or
@@ -150,7 +142,53 @@ To list all available endpoints:
 curl 'http://localhost:5000/'
 ```
 
+##### Contributors (add, update or delete)
+Returns a list of contributors present in the database
 
+```
+curl 'http://localhost:5000/contributors'
+```
+``` json
+{
+  "contributors": [
+    {
+      "feed_url": "feed_url_not_used_for_cots",
+      "navitia_coverage": "sncf",
+      "is_active": true,
+      "navitia_token": "9489dd5f-46b4hhhhhhhhhhhhhhhh",
+      "connector_type": "cots",
+      "id": "realtime.cots"
+    },
+    {
+      "feed_url": "http://0.0.0.0./civilia/TTT/pb/tripUpdates.pb",
+      "navitia_coverage": "ca-qc-sherbrooke",
+      "is_active": true,
+      "navitia_token": "9489dd5f-46b4-mmmmmmmmmm3bfba0c71e8a",
+      "connector_type": "gtfs-rt",
+      "id": "realtime.sherbrooke"
+    }
+  ]
+}
+```
+Returns the contributor present in the database
+```
+curl 'http://localhost:5000/contributors/realtime.sherbrooke'
+```
+
+``` json
+{
+  "contributors": [
+    {
+      "feed_url": "http://0.0.0.0./civilia/TTT/pb/tripUpdates.pb",
+      "navitia_coverage": "ca-qc-sherbrooke",
+      "is_active": true,
+      "navitia_token": "9489dd5f-46b4-mmmmmmmmmm3bfba0c71e8a",
+      "connector_type": "gtfs-rt",
+      "id": "realtime.sherbrooke"
+    }
+  ]
+}
+```
 ##### Status (GET)
 
 Returns info about the Kirin and the previous jobs performed
@@ -171,13 +209,8 @@ For the SNCF's realtime feeds to be taken into account by navitia, some paramete
 for both Kirin and Kraken (the navitia core calculator).
 
 - In Kirin:
-    - KIRIN_CONFIG_FILE:
-    ```
-    NAVITIA_URL = '<url of the navitia server>' # ex: 'http://localhost:5000/'
-    NAVITIA_INSTANCE = '<name of the instance which vehicle journeys will be updated>'
-    DEBUG = True
-    log_formatter = 'json'
-    ```
+    - Add a contributor 'cots' using the end point /contributors
+
 - In Kraken:
     - kraken.ini:
     ```
@@ -220,6 +253,20 @@ For the COTS to be taken into account by navitia, please add the common SNCF's p
     ```
 
 If the COTS was successfully sent and processed by Kirin, the http response 200 will have a message "OK".
+
+
+### Maintenance
+
+##### Definitely remove a contributor from configuration
+
+A command to clean inactive contributors is available, to be triggered manually.
+```bash
+python ./manage.py purge_contributor <contributor_id>
+```
+This will check that for the given contributor, `is_active=false` and that
+no more object (TripUpdate or RealTimeUpdate) is linked to that contributor in Kirin database.
+
+Those objects are progressively purged by automatic jobs configured in the settings file.
 
 
 ## Development
