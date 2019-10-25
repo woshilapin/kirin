@@ -142,11 +142,13 @@ To list all available endpoints:
 curl 'http://localhost:5000/'
 ```
 
-##### Contributors (add, update or delete)
+#### Contributors
+
+##### GET
 Returns a list of contributors present in the database
 
 ```
-curl 'http://localhost:5000/contributors'
+curl -X GET 'http://localhost:5000/contributors'
 ```
 ``` json
 {
@@ -170,9 +172,9 @@ curl 'http://localhost:5000/contributors'
   ]
 }
 ```
-Returns the contributor present in the database
+Returns a specific contributor present in the database
 ```
-curl 'http://localhost:5000/contributors/realtime.sherbrooke'
+curl -X GET 'http://localhost:5000/contributors/realtime.sherbrooke'
 ```
 
 ``` json
@@ -189,6 +191,64 @@ curl 'http://localhost:5000/contributors/realtime.sherbrooke'
   ]
 }
 ```
+
+##### POST
+To create a new contributor, parameters need to be given in the query's string or in json send in the body
+
+###### post Parameters
+Property | Type | Description
+--- | --- | ---
+id | String, Required | Unique code of the contributor
+navitia_coverage | String, Required | Navitia coverage to be used while calling navitia to retrieve corresponding element
+navitia_token | String, Optional | Navitia token to be used while calling navitia to retrieve corresponding element
+feed_url | String, Optional | Url to retrieve the realtime information feed (for polled sources)
+connector_type | Enum, Required | Type of connector (possible values are `cots`, `gtfs-rt`)
+is_active | Boolean, Required | Used to activate/deactivate the kirin service for the contributor
+
+```
+curl -X POST 'http://localhost:5000/contributors/' -d'{"feed_url": "http://0.0.0.0./civilia/TTT/pb/tripUpdates.pb", "navitia_coverage": "ca-qc-sherbrooke", "is_active": true, "navitia_token": "9489dd5f-46b4-mmmmmmmmmm3bfba0c71e8a", "connector_type": "gtfs-rt", "id": "realtime.sherbrooke"}' -H'content-type: application/json'
+```
+``` json
+{
+  "contributor": {
+    "feed_url": "http://0.0.0.0./civilia/TTT/pb/tripUpdates.pb",
+    "navitia_coverage": "ca-qc-sherbrooke",
+    "is_active": true,
+    "navitia_token": "9489dd5f-46b4-mmmmmmmmmm3bfba0c71e8a",
+    "connector_type": "gtfs-rt",
+    "id": "realtime.sherbrooke"
+  }
+}
+```
+
+##### PUT
+Modifies a contributor and has same parameters as POST
+When a parameter is missing, it is not changed.
+When PUTing the exact result of a GET (using disable_geojson or not), nothing is changed.
+
+```
+curl -X PUT 'http://localhost:5000/contributors/' -d'{"feed_url": "http://0.0.0.0./civilia/TTT/pb/tripUpdates.pb", "navitia_coverage": "ca-qc-sherbrooke", "is_active": true, "navitia_token": "9489dd5f-46b4-mmmmmmmmmm3bfba0c71e8a", "connector_type": "gtfs-rt", "id": "realtime.sherbrooke"}' -H'content-type: application/json'
+```
+``` json
+{
+  "contributor": {
+    "feed_url": "http://0.0.0.0./civilia/TTT/pb/tripUpdates.pb",
+    "navitia_coverage": "ca-qc-sherbrooke",
+    "is_active": true,
+    "navitia_token": "9489dd5f-46b4-mmmmmmmmmm3bfba0c71e8a",
+    "connector_type": "gtfs-rt",
+    "id": "realtime.sherbrooke"
+  }
+}
+```
+
+##### DELETE
+Deletes a specific contributor
+
+```
+curl -X DELETE 'http://localhost:5000/contributors/realtime.toto'
+```
+
 ##### Status (GET)
 
 Returns info about the Kirin and the previous jobs performed
