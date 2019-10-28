@@ -19,7 +19,7 @@ navitia_coverage | String, Required | Navitia coverage to be used while calling 
 navitia_token | String, Optional | Navitia token to be used while calling navitia to retrieve corresponding element
 feed_url | String, Optional | Url to retrieve the realtime information feed (for polled sources)
 connector_type | Enum, Required | Type of connector (possible values are `cots`, `gtfs-rt`)
-is_active | Boolean, Required | Used to activate/deactivate the kirin service for the contributor
+is_active | Boolean, Optional | Used to activate/deactivate the kirin service for the contributor (default value `true`)
 
 ### RealTimeUpdate
 Received raw data from a Real Time Update.
