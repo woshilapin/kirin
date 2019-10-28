@@ -193,17 +193,7 @@ curl -X GET 'http://localhost:5000/contributors/realtime.sherbrooke'
 ```
 
 ##### POST
-To create a new contributor, parameters need to be given in json sent in the body
-
-###### post Parameters
-Property | Type | Description
---- | --- | ---
-id | String, Required | Unique code of the contributor
-navitia_coverage | String, Required | Navitia coverage to be used while calling navitia to retrieve corresponding element
-navitia_token | String, Optional | Navitia token to be used while calling navitia to retrieve corresponding element
-feed_url | String, Optional | Url to retrieve the realtime information feed (for polled sources)
-connector_type | Enum, Required | Type of connector (possible values are `cots`, `gtfs-rt`)
-is_active | Boolean, Optional | Used to activate/deactivate the kirin service for the contributor (default value `true`)
+To create a new contributor, parameters need to be given in json sent in the body as described [here](documentation/internal_format.md)
 
 ```
 curl -X POST 'http://localhost:5000/contributors/' -d'{"feed_url": "http://0.0.0.0./civilia/TTT/pb/tripUpdates.pb", "navitia_coverage": "ca-qc-sherbrooke", "is_active": true, "navitia_token": "9489dd5f-46b4-mmmmmmmmmm3bfba0c71e8a", "connector_type": "gtfs-rt", "id": "realtime.sherbrooke"}' -H'content-type: application/json'
@@ -271,7 +261,7 @@ For the SNCF's realtime feeds to be taken into account by navitia, some paramete
 for both Kirin and Kraken (the navitia core calculator).
 
 - In Kirin:
-    - Add a contributor 'cots' using the end point /contributors
+    - Add a contributor 'cots' using the end point `/contributors`
 
 - In Kraken:
     - kraken.ini:
