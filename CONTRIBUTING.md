@@ -81,9 +81,7 @@ Its roles are:
   On given endpoints, the webservice receives and directly processes the feed.
   The result is then saved in db and sent to corresponding Navitia's Kraken.
   It is mainly used for COTS.
-* provide a POST endpoint to ask for a full reload on a given realtime provider.  
-  When a Kraken restarts it pops a rabbitmq queue and asks Kirin to provide all info in it.
-  Then the webservice asks Kirin background to fulfill this task.
+* provide a CRUD `/contributors` endpoint to configure connectors to use.
 
 There can be several of these (if they are behind a load-balancer).
 
@@ -93,6 +91,9 @@ There can be several of these (if they are behind a load-balancer).
 
 Its role is to provide all information available in db for a given provider in the rabbitmq queue, so
 that Kraken can restart fully aware of realtime.
+
+It is listening to a rabbitmq queue to be triggered on a given realtime provider.  
+When a Kraken restarts it pops a rabbitmq queue and asks Kirin to provide all info in it.
 
 There can be several of these if the load is important.
 

@@ -9,6 +9,19 @@ It is composed of several objects :
 - StopTimeUpdate
 
 ## Model details
+### Contributor
+A contributor is a provider of a realtime service.
+In db, it is linked to a referent coverage and contains configuration information.
+
+Property | Type | Description
+--- | --- | ---
+id | String, Required | Unique code of the contributor
+navitia_coverage | String, Required | Navitia coverage to be used while calling navitia to retrieve corresponding element
+navitia_token | String, Optional | Navitia token to be used while calling navitia to retrieve corresponding element
+feed_url | String, Optional | Url to retrieve the realtime information feed (for polled sources)
+connector_type | Enum, Required | Type of connector (possible values are `cots`, `gtfs-rt`)
+is_active | Boolean, Optional | Used to activate/deactivate the kirin service for the contributor (default value `true`)
+
 ### RealTimeUpdate
 Received raw data from a Real Time Update.
 
