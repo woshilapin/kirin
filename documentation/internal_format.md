@@ -10,7 +10,8 @@ It is composed of several objects :
 
 ## Model details
 ### Contributor
-A contributor is the owner of a realtime service and contains configuration information.
+A contributor is a provider of a realtime service.
+In db, it is linked to a referent coverage and contains configuration information.
 
 Property | Type | Description
 --- | --- | ---
