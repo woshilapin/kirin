@@ -80,7 +80,7 @@ class RTReloader(ConsumerProducerMixin):
                 body = str(message.payload)
                 task.ParseFromString(body)
             except DecodeError as e:
-                log.warn("invalid protobuf: {}".format(six.text_type(e)))
+                log.warning("invalid protobuf: {}".format(six.text_type(e)))
                 return
 
             log.info("Getting a full feed publication request", extra={"task": task})
