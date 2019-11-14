@@ -47,7 +47,7 @@ def init(config_file):
         agent.initialize(config_file)
     else:
         logger = logging.getLogger(__name__)
-        logger.warn("newrelic hasn't been initialized")
+        logger.warning("newrelic hasn't been initialized")
 
 
 def record_exception():
