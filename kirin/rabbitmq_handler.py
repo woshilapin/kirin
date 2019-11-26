@@ -148,7 +148,9 @@ class RabbitMQHandler(object):
                 )
 
     def info(self):
-        return self._connection.info()
+        info = self._connection.info()
+        info.pop("password", None)
+        return info
 
     def listen_load_realtime(self, queue_name, max_retries=10):
         log = logging.getLogger(__name__)
