@@ -69,6 +69,9 @@ def test_status(setup_database):
     assert "2015-11-04T07:32:00Z" in resp["last_valid_update"][COTS_CONTRIBUTOR]
     assert "2015-11-04T07:42:00Z" in resp["last_valid_update"][GTFS_CONTRIBUTOR]
 
+    assert "rabbitmq_info" in resp
+    assert "password" not in resp["rabbitmq_info"]
+
 
 def test_status_from_db(setup_database):
     """
