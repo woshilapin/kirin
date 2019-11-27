@@ -43,6 +43,7 @@ from contextlib import contextmanager
 from kirin.core import model
 from kirin.core.model import RealTimeUpdate
 from kirin.exceptions import InternalException
+import requests
 
 
 def floor_datetime(datetime):
@@ -205,6 +206,24 @@ def manage_db_error(data, connector, contributor, error, is_reprocess_same_data_
 def manage_db_no_new(connector, contributor):
     last = model.RealTimeUpdate.get_last_rtu(connector, contributor)
     poke_updated_at(last)
+
+
+def connect_to_navitia():
+    try:
+        response = requests.head(current_app.config[str("NAVITIA_URL")])
+        return response.status_code == 200
+    except Exception:
+        return False
+
+
+def connect_to_database():
+    try:
+        engine = model.db.engine
+        connection = engine.connect()
+        connection.close()
+    except Exception:
+        return False
+    return True
 
 
 @contextmanager

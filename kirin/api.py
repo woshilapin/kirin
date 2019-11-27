@@ -51,6 +51,7 @@ api.add_resource(resources.Status, "/status", endpoint=str("status"))
 api.add_resource(cots.Cots, "/cots", endpoint=str("cots"))
 api.add_resource(gtfs_rt.GtfsRT, "/gtfs_rt", "/gtfs_rt/<string:id>", endpoint=str("gtfs_rt"))
 api.add_resource(resources.Contributors, "/contributors", "/contributors/<string:id>")
+api.add_resource(resources.Health, "/health", endpoint=str("health"))
 
 
 def log_exception(sender, exception):

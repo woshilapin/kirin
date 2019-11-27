@@ -42,6 +42,8 @@ from tests.integration.conftest import (
     GTFS_CONTRIBUTOR_DB,
 )
 import pytest
+import requests_mock
+import kirin
 
 
 def test_end_point():
@@ -99,6 +101,34 @@ def test_status_from_db(setup_database):
     assert "2015-11-04T08:02:00Z" in resp["last_update"][GTFS_CONTRIBUTOR_DB]
     assert GTFS_CONTRIBUTOR in resp["last_update"]
     assert "2015-11-04T07:52:00Z" in resp["last_update"][GTFS_CONTRIBUTOR]
+
+
+def test_health(setup_database):
+    with requests_mock.mock() as m:
+        # Connection to navitia and database works
+        kirin.app.config["NAVITIA_URL"] = "http://navitia"
+        m.head("http://navitia", status_code=200)
+        resp = api_get("/health")
+        assert resp["message"] == "OK"
+
+        # Connection to navitia fails
+        kirin.app.config["NAVITIA_URL"] = "http://navitia_on_error"
+        m.head("http://navitia_on_error", status_code=400)
+        resp, status = api_get("/health", check=False)
+        assert resp["message"] == "KO"
+        assert status == 503
+
+        # Connection to navitia works but to database fails
+        kirin.app.config["NAVITIA_URL"] = "http://navitia"
+        m.head("http://navitia", status_code=200)
+        # Keep original database configuration for future
+        db_config = kirin.app.config[str("SQLALCHEMY_DATABASE_URI")]
+        kirin.app.config["SQLALCHEMY_DATABASE_URI"] = "toto"
+        resp, status = api_get("/health", check=False)
+        assert resp["message"] == "KO"
+        assert status == 503
+        # We need to reassign original configuration for teardown
+        kirin.app.config["SQLALCHEMY_DATABASE_URI"] = db_config
 
 
 @pytest.fixture()
