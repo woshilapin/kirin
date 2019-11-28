@@ -1,6 +1,6 @@
 # coding=utf-8
 
-# Copyright (c) 2001-2019, Canal TP and/or its affiliates. All rights reserved.
+# Copyright (c) 2019, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
 #     the software to build cool stuff with public transport.
@@ -30,7 +30,17 @@
 # www.navitia.io
 
 from __future__ import absolute_import, print_function, unicode_literals, division
-from .index import Index
-from .status import Status
-from .contributors import Contributors
-from .health import Health
+from flask_restful import Resource, abort
+from kirin.utils import can_connect_to_navitia, can_connect_to_database
+
+
+class Health(Resource):
+    def get(self):
+        # Verify connection to navitia
+        if not can_connect_to_navitia():
+            abort(503, message="KO")
+        # Verify connection to database
+        if not can_connect_to_database():
+            abort(503, message="KO")
+
+        return {"message": "OK"}, 200
