@@ -34,15 +34,30 @@ from flask_restful import Resource
 import kirin
 from kirin.version import version
 from flask import current_app
-from kirin.core import model
+from kirin.utils import (
+    get_database_version,
+    get_database_info,
+    can_connect_to_navitia,
+    can_connect_to_database,
+    get_database_pool_status,
+)
 
 
 class Status(Resource):
     def get(self):
-        res = model.RealTimeUpdate.get_probes_by_contributor()
+        res = get_database_info()
         res["version"] = version
-        res["db_pool_status"] = kirin.db.engine.pool.status()
-        res["db_version"] = kirin.db.engine.scalar("select version_num from alembic_version;")
+        res["db_pool_status"] = get_database_pool_status()
+        res["db_version"] = get_database_version()
         res["navitia_url"] = current_app.config[str("NAVITIA_URL")]
         res["rabbitmq_info"] = kirin.rabbitmq_handler.info()
+        if can_connect_to_navitia():
+            res["navitia_connection"] = "OK"
+        else:
+            res["navitia_connection"] = "KO"
+        if can_connect_to_database():
+            res["db_connection"] = "OK"
+        else:
+            res["db_connection"] = "KO"
+
         return res, 200

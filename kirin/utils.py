@@ -208,7 +208,7 @@ def manage_db_no_new(connector, contributor):
     poke_updated_at(last)
 
 
-def connect_to_navitia():
+def can_connect_to_navitia():
     try:
         response = requests.head(current_app.config[str("NAVITIA_URL")])
         return response.status_code == 200
@@ -216,7 +216,7 @@ def connect_to_navitia():
         return False
 
 
-def connect_to_database():
+def can_connect_to_database():
     try:
         engine = model.db.engine
         connection = engine.connect()
@@ -224,6 +224,27 @@ def connect_to_database():
     except Exception:
         return False
     return True
+
+
+def get_database_version():
+    try:
+        return model.db.engine.scalar("select version_num from alembic_version;")
+    except Exception:
+        return None
+
+
+def get_database_info():
+    try:
+        return model.RealTimeUpdate.get_probes_by_contributor()
+    except Exception:
+        return {"last_update": {}, "last_valid_update": {}, "last_update_error": {}}
+
+
+def get_database_pool_status():
+    try:
+        return model.db.engine.pool.status()
+    except Exception:
+        return None
 
 
 @contextmanager

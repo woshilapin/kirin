@@ -123,12 +123,82 @@ def test_health(setup_database):
         m.head("http://navitia", status_code=200)
         # Keep original database configuration for future
         db_config = kirin.app.config[str("SQLALCHEMY_DATABASE_URI")]
-        kirin.app.config["SQLALCHEMY_DATABASE_URI"] = "toto"
+        kirin.app.config["SQLALCHEMY_DATABASE_URI"] = "database_on_error"
         resp, status = api_get("/health", check=False)
         assert resp["message"] == "KO"
         assert status == 503
         # We need to reassign original configuration for teardown
         kirin.app.config["SQLALCHEMY_DATABASE_URI"] = db_config
+
+        # The heath check is back to normal
+        kirin.app.config["NAVITIA_URL"] = "http://navitia"
+        m.head("http://navitia", status_code=200)
+        resp = api_get("/health")
+        assert resp["message"] == "OK"
+
+
+def test_status_with_error(setup_database):
+    with requests_mock.mock() as m:
+        # Test with error on navitia_connection
+        kirin.app.config["NAVITIA_URL"] = "http://navitia_on_error"
+        m.head("http://navitia_on_error", status_code=400)
+        resp, _ = api_get("/status", check=False)
+        assert resp["navitia_connection"] == "KO"
+        assert resp["db_connection"] == "OK"
+
+        # All the other attributes are present as in the test "test_status()"
+        assert "version" in resp
+        assert "db_pool_status" in resp
+        assert "db_version" in resp
+        assert "navitia_url" in resp
+        assert "last_update" in resp
+        assert COTS_CONTRIBUTOR in resp["last_update"]
+        assert GTFS_CONTRIBUTOR in resp["last_update"]
+        assert "2015-11-04T07:32:00Z" in resp["last_update"][COTS_CONTRIBUTOR]
+        assert "2015-11-04T07:52:00Z" in resp["last_update"][GTFS_CONTRIBUTOR]
+        assert GTFS_CONTRIBUTOR in resp["last_update_error"]
+        assert "2015-11-04T07:32:00Z" in resp["last_valid_update"][COTS_CONTRIBUTOR]
+        assert "2015-11-04T07:42:00Z" in resp["last_valid_update"][GTFS_CONTRIBUTOR]
+
+        # Test with error on database connection
+        kirin.app.config["NAVITIA_URL"] = "http://navitia"
+        m.head("http://navitia", status_code=200)
+        # Keep original database configuration for future
+        db_config = kirin.app.config[str("SQLALCHEMY_DATABASE_URI")]
+        kirin.app.config["SQLALCHEMY_DATABASE_URI"] = "database_on_error"
+        resp, _ = api_get("/status", check=False)
+        # We need to reassign original configuration for teardown
+        kirin.app.config["SQLALCHEMY_DATABASE_URI"] = db_config
+        assert resp["navitia_connection"] == "OK"
+        assert resp["db_connection"] == "KO"
+
+        assert "version" in resp
+        assert len(resp["last_update"]) == 0
+        assert len(resp["last_update_error"]) == 0
+        assert len(resp["last_valid_update"]) == 0
+        resp["db_pool_status"] is None
+        resp["db_version"] is None
+        assert "navitia_url" in resp
+
+        # Test with error on database connection and navitia connection
+        kirin.app.config["NAVITIA_URL"] = "http://navitia_on_error"
+        m.head("http://navitia_on_error", status_code=400)
+        # Keep original database configuration for future
+        db_config = kirin.app.config[str("SQLALCHEMY_DATABASE_URI")]
+        kirin.app.config["SQLALCHEMY_DATABASE_URI"] = "database_on_error"
+        resp, _ = api_get("/status", check=False)
+        # We need to reassign original configuration for teardown
+        kirin.app.config["SQLALCHEMY_DATABASE_URI"] = db_config
+        assert resp["navitia_connection"] == "KO"
+        assert resp["db_connection"] == "KO"
+
+        assert "version" in resp
+        assert len(resp["last_update"]) == 0
+        assert len(resp["last_update_error"]) == 0
+        assert len(resp["last_valid_update"]) == 0
+        resp["db_pool_status"] is None
+        resp["db_version"] is None
+        assert "navitia_url" in resp
 
 
 @pytest.fixture()
