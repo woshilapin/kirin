@@ -61,6 +61,8 @@ def test_status(setup_database):
     assert "db_version" in resp
     assert "navitia_url" in resp
     assert "last_update" in resp
+    assert resp["navitia_connection"] == "KO"
+    assert resp["db_connection"] == "OK"
     assert COTS_CONTRIBUTOR in resp["last_update"]
     assert GTFS_CONTRIBUTOR in resp["last_update"]
 
@@ -103,7 +105,7 @@ def test_status_from_db(setup_database):
     assert "2015-11-04T07:52:00Z" in resp["last_update"][GTFS_CONTRIBUTOR]
 
 
-def test_health(setup_database):
+def test_health_ok(setup_database):
     with requests_mock.mock() as m:
         # Connection to navitia and database works
         kirin.app.config["NAVITIA_URL"] = "http://navitia"
@@ -111,6 +113,9 @@ def test_health(setup_database):
         resp = api_get("/health")
         assert resp["message"] == "OK"
 
+
+def test_health_navitia_ko(setup_database):
+    with requests_mock.mock() as m:
         # Connection to navitia fails
         kirin.app.config["NAVITIA_URL"] = "http://navitia_on_error"
         m.head("http://navitia_on_error", status_code=400)
@@ -118,7 +123,9 @@ def test_health(setup_database):
         assert resp["message"] == "KO"
         assert status == 503
 
-        # Connection to navitia works but to database fails
+
+def test_health_database_ko(setup_database):
+    with requests_mock.mock() as m:
         kirin.app.config["NAVITIA_URL"] = "http://navitia"
         m.head("http://navitia", status_code=200)
         # Keep original database configuration for future
@@ -127,19 +134,18 @@ def test_health(setup_database):
         resp, status = api_get("/health", check=False)
         assert resp["message"] == "KO"
         assert status == 503
-        # We need to reassign original configuration for teardown
-        kirin.app.config["SQLALCHEMY_DATABASE_URI"] = db_config
 
+        # We need to reassign original configuration for teardown
         # The heath check is back to normal
+        kirin.app.config["SQLALCHEMY_DATABASE_URI"] = db_config
         kirin.app.config["NAVITIA_URL"] = "http://navitia"
         m.head("http://navitia", status_code=200)
         resp = api_get("/health")
         assert resp["message"] == "OK"
 
 
-def test_status_with_error(setup_database):
+def test_status_with_navitia_ko(setup_database):
     with requests_mock.mock() as m:
-        # Test with error on navitia_connection
         kirin.app.config["NAVITIA_URL"] = "http://navitia_on_error"
         m.head("http://navitia_on_error", status_code=400)
         resp, _ = api_get("/status", check=False)
@@ -160,7 +166,9 @@ def test_status_with_error(setup_database):
         assert "2015-11-04T07:32:00Z" in resp["last_valid_update"][COTS_CONTRIBUTOR]
         assert "2015-11-04T07:42:00Z" in resp["last_valid_update"][GTFS_CONTRIBUTOR]
 
-        # Test with error on database connection
+
+def test_status_with_database_ko(setup_database):
+    with requests_mock.mock() as m:
         kirin.app.config["NAVITIA_URL"] = "http://navitia"
         m.head("http://navitia", status_code=200)
         # Keep original database configuration for future
@@ -180,7 +188,9 @@ def test_status_with_error(setup_database):
         resp["db_version"] is None
         assert "navitia_url" in resp
 
-        # Test with error on database connection and navitia connection
+
+def test_status_with_database_and_navitia_ko(setup_database):
+    with requests_mock.mock() as m:
         kirin.app.config["NAVITIA_URL"] = "http://navitia_on_error"
         m.head("http://navitia_on_error", status_code=400)
         # Keep original database configuration for future
