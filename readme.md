@@ -241,6 +241,25 @@ Deletes a specific contributor
 curl -X DELETE 'http://localhost:5000/contributors/realtime.toto'
 ```
 
+#### Health (GET)
+
+Returns info about the health of Kirin **webservice** (whether it can be used or not).
+```
+curl 'http://localhost:5000/health'
+```
+Returns message "OK" (HTTP status `200`) if Kirin webservice is healthy, "KO" (HTTP status `503`) otherwise.
+This endpoint checks that the webservice runs and responds (obviously).
+
+It also checks:
+* the connection to postgresql database (ability to process RT feeds and store initial feed and the result)
+* the connection to Navitia (ability to process RT feeds)
+
+This does not check:
+* the connection to redis (ability to cache and use circuit-breaker)
+* the connection to rabbitmq (ability to send immediately result to Navitia for integration)
+
+For details on errors or statuses... check `/status` :-)
+
 #### Status (GET)
 
 Returns info about the Kirin and the previous jobs performed
@@ -251,7 +270,9 @@ In the response received:
 - last_update: last time Kirin received a file (or pulled it, depending the client) in order to update navitia data.
 - last_valid_update: last time Kirin received a file that was valid and managed to update navitia data properly.
 - last_update_error: information about error from the last time Kirin processed a file and a problem occurred. It can either be a problem about the file or the data update. The field will be empty if last_update = last_valid_update.
-- navitia_url: root url of the navitia server used to consolidate real-time information received by Kirin.  
+- navitia_url: root url of the navitia server used to consolidate real-time information received by Kirin.
+- db_connection: state of the connection to postgresql database (condition for /health to be "OK")
+- navitia_connection: state of the connection to navitia (condition for /health to be "OK")
 Other info are available about Kirin ("version"), the database ("db_version", "db_pool_status") and the rabbitmq ("rabbitmq_info").
 
 

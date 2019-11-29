@@ -51,6 +51,7 @@ def test_end_point():
     assert "status" in resp
     assert "cots" in resp
     assert "contributors" in resp
+    assert "health" in resp
 
 
 def test_status(setup_database):
