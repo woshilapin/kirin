@@ -36,6 +36,7 @@ from flask_restful import Resource, url_for
 class Index(Resource):
     def get(self):
         response = {
+            "health": {"href": url_for("health", _external=True)},
             "status": {"href": url_for("status", _external=True)},
             "cots": {"href": url_for("cots", _external=True)},
             "contributors": {"href": url_for("contributors", _external=True)},
