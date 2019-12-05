@@ -126,7 +126,7 @@ class KirinModelBuilder(object):
         if not trip_updates:
             msg = "No information for this gtfs-rt with timestamp: {}".format(data.header.timestamp)
             set_rtu_status_ko(rt_update, msg, is_reprocess_same_data_allowed=False)
-            self.log.error(msg)
+            self.log.warning(msg)
 
         return trip_updates
 
@@ -189,7 +189,7 @@ class KirinModelBuilder(object):
                 trip_update.effect = get_effect_by_stop_time_status(highest_st_status)
                 trip_updates.append(trip_update)
             else:
-                self.log.error(
+                self.log.warning(
                     "stop_time_update do not match with stops in navitia for trip : {} timestamp: {}".format(
                         input_trip_update.trip.trip_id, calendar.timegm(input_data_time.utctimetuple())
                     )
