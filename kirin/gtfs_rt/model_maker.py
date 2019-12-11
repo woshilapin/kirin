@@ -73,9 +73,7 @@ def handle(proto, navitia_wrapper, contributor):
             allow_reprocess = False  # reprocess is useless if input is invalid
 
         if rt_update is not None:
-            error = e.message
-            if isinstance(e, KirinException) and "error" in e.data:
-                error = e.data["error"]
+            error = e.data["error"] if (isinstance(e, KirinException) and "error" in e.data) else e.message
             set_rtu_status_ko(rt_update, error, is_reprocess_same_data_allowed=allow_reprocess)
             model.db.session.add(rt_update)
             model.db.session.commit()
