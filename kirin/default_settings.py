@@ -160,11 +160,13 @@ TASK_LOCK_PREFIX = "kirin.lock"
 TASK_STOP_MAX_DELAY = int(os.getenv("KIRIN_TASK_STOP_MAX_DELAY", timedelta(seconds=10).total_seconds()))
 TASK_WAIT_FIXED = int(os.getenv("KIRIN_TASK_WAIT_FIXED", timedelta(seconds=2).total_seconds()))
 
+# Must be >= 1. Defines the minimal interval (seconds) between 2 tries for polling (can be longer if a task is running).
+POLLER_MIN_INTERVAL = int(os.getenv("KIRIN_POLLER_MIN_INTERVAL", timedelta(seconds=10).total_seconds()))
 CELERYBEAT_SCHEDULE = {
     "poller": {
         "task": "kirin.tasks.poller",
-        "schedule": timedelta(seconds=1),
-        "options": {"expires": timedelta(seconds=1).total_seconds()},
+        "schedule": timedelta(seconds=POLLER_MIN_INTERVAL),
+        "options": {"expires": timedelta(seconds=POLLER_MIN_INTERVAL).total_seconds()},
     },
     "purge_gtfs_trip_update": {
         "task": "kirin.tasks.purge_gtfs_trip_update",
