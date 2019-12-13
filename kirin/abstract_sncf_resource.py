@@ -34,9 +34,9 @@ from flask_restful import Resource
 import logging
 from datetime import datetime
 
-from kirin.new_relic import record_custom_parameter, must_log_apm, is_invalid_input_exception
+from kirin.new_relic import record_custom_parameter, is_invalid_input_exception
 from kirin.utils import make_rt_update, record_call, set_rtu_status_ko, allow_reprocess_same_data
-from kirin.exceptions import KirinException, InvalidArguments
+from kirin.exceptions import KirinException
 from kirin import core
 from kirin.core import model
 
@@ -85,7 +85,7 @@ class AbstractSNCFResource(Resource):
 
             log_dict.update({"exc_summary": six.text_type(e), "reason": e})
 
-            record_custom_parameter("reason", e)  # use __str__() to have complete details
+            record_custom_parameter("reason", e)  # using __str__() here to have complete details
             raise  # filters later for APM
 
         finally:

@@ -39,7 +39,7 @@ from kirin import resources
 from kirin.gtfs_rt import gtfs_rt
 from kirin.cots import cots
 from kirin import app
-from kirin.new_relic import record_exception, must_log_apm, must_never_log
+from kirin.new_relic import record_exception, allow_apm_logging, must_never_log
 
 # we always want pretty json
 flask_restful.representations.json.settings = {"indent": 4}
@@ -71,7 +71,7 @@ def log_exception(sender, exception):
         logger.exception(error)
 
     # must filter on ALL exceptions (including flask's ones)
-    if must_log_apm(exception):
+    if allow_apm_logging(exception):
         record_exception()
 
 

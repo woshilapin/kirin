@@ -36,8 +36,8 @@ import six
 from kirin import core
 from kirin.core import model
 from kirin.core.types import ModificationType, get_higher_status, get_effect_by_stop_time_status
-from kirin.exceptions import KirinException, InternalException, InvalidArguments
-from kirin.new_relic import record_custom_parameter, must_log_apm, is_invalid_input_exception
+from kirin.exceptions import KirinException, InternalException
+from kirin.new_relic import record_custom_parameter, allow_apm_logging, is_invalid_input_exception
 from kirin.utils import (
     make_rt_update,
     floor_datetime,
@@ -82,8 +82,8 @@ def handle(proto, navitia_wrapper, contributor):
             allow_reprocess_same_data(contributor)
 
         log_dict.update({"exc_summary": six.text_type(e), "reason": e})
-        if must_log_apm(e):
-            record_custom_parameter("reason", e)  # use __str__() to have complete details
+        if allow_apm_logging(e):
+            record_custom_parameter("reason", e)  # using __str__() here to have complete details
             raise  # to be visible in APM (auto.)
 
     finally:

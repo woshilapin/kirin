@@ -58,7 +58,7 @@ def must_never_log(exception):
     # Not tracking requests to wrong endpoints
     if isinstance(exception, NotFound):
         return True
-    # Not tracking requests with wrong HTTP verbs
+    # Not tracking requests with wrong HTTP methods
     if isinstance(exception, MethodNotAllowed):
         return True
     # Any other exception should be logged
@@ -72,7 +72,7 @@ def is_invalid_input_exception(exception):
     return False
 
 
-def must_log_apm(exception):
+def allow_apm_logging(exception):
     if must_never_log(exception):
         return False
     # Not tracking bad data errors in APM
