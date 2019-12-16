@@ -1,7 +1,7 @@
 """
 Deleting column contributor from tables real_time_update and trip_update
 Revision ID: 57860080e5d6
-Revises: 443587af1780
+Revises: 21194e8e2308
 Create Date: 2019-09-05 17:16:35.675541
 
 """
@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals, divisi
 
 # revision identifiers, used by Alembic.
 revision = "57860080e5d6"
-down_revision = "443587af1780"
+down_revision = "21194e8e2308"
 
 from alembic import op
 import sqlalchemy as sa

@@ -148,7 +148,7 @@ def set_rtu_status_ko(rtu, error, is_reprocess_same_data_allowed):
         reprocess it (hoping a happier ending)
         """
     if is_reprocess_same_data_allowed:
-        allow_reprocess_same_data(rtu.contributor)
+        allow_reprocess_same_data(rtu.contributor_id)
 
     rtu.status = "KO"
     rtu.error = error
