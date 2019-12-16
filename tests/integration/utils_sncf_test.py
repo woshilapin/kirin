@@ -104,7 +104,6 @@ def check_db_96231_delayed(contributor=None, motif_externe_is_null=False):
         else:
             assert second_st.message == "Affluence exceptionnelle de voyageurs"
 
-        assert db_trip_delayed.contributor == contributor
         assert db_trip_delayed.contributor_id == contributor
 
         return db_trip_delayed  # for additional testing if needed
@@ -152,7 +151,6 @@ def check_db_870154_partial_removal(contributor=None):
         assert fourth_st.departure_status == "delete"
         assert fourth_st.message is None
 
-        assert db_trip.contributor == contributor
         assert db_trip.contributor_id == contributor
 
 
@@ -414,7 +412,6 @@ def check_db_96231_mixed_statuses_inside_stops(contributor=None):
         assert sixth_st.departure_status == "none"  # not in the feed, so none and no delay
         assert sixth_st.departure_delay == timedelta(0)
 
-        assert db_trip_delayed.contributor == contributor
         assert db_trip_delayed.contributor_id == contributor
 
 
@@ -488,7 +485,6 @@ def check_db_96231_mixed_statuses_delay_removal_delay(contributor=None):
         assert sixth_st.departure_status == "none"  # not in the feed, so none and no delay
         assert sixth_st.departure_delay == timedelta(0)
 
-        assert db_trip_delayed.contributor == contributor
         assert db_trip_delayed.contributor_id == contributor
 
 
@@ -552,7 +548,6 @@ def check_db_96231_normal(contributor=None):
         except AssertionError:
             pass  # xfail: we don't change back the departure :(
 
-        assert db_trip_delayed.contributor == contributor
         assert db_trip_delayed.contributor_id == contributor
 
 
@@ -741,7 +736,6 @@ def check_db_96231_partial_removal(contributor=None):
         assert last_st.departure_delay == timedelta(minutes=0)
         assert last_st.departure_status == "none"
 
-        assert db_trip_partial_removed.contributor == contributor
         assert db_trip_partial_removed.contributor_id == contributor
 
 
@@ -797,5 +791,4 @@ def check_db_840427_partial_removal(contributor=None):
         assert tro_st.departure_status == "none"  # the train still does not leave from this stop
         assert tro_st.message == "Défaut d'alimentation électrique"
 
-        assert db_trip_partial_removed.contributor == contributor
         assert db_trip_partial_removed.contributor_id == contributor

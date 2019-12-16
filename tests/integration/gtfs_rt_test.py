@@ -201,7 +201,6 @@ def test_gtfs_model_builder(basic_gtfs_rt_data, basic_gtfs_rt_data_without_delay
         assert len(trip_updates) == 1
         assert len(trip_updates[0].stop_time_updates) == 4
         assert trip_updates[0].effect == "SIGNIFICANT_DELAYS"
-        assert trip_updates[0].contributor == GTFS_CONTRIBUTOR
         assert trip_updates[0].contributor_id == GTFS_CONTRIBUTOR
 
         # stop_time_update created with no delay
@@ -489,7 +488,6 @@ def test_gtfs_rt_pass_midnight(pass_midnight_gtfs_rt_data, mock_rabbitmq):
         assert RealTimeUpdate.query.first().status == "OK"
 
         trip_update = TripUpdate.find_by_dated_vj("R:vj1", datetime.datetime(2012, 6, 16, 3, 30))
-        assert trip_update.contributor == GTFS_CONTRIBUTOR
         assert trip_update.contributor_id == GTFS_CONTRIBUTOR
         assert trip_update
 
