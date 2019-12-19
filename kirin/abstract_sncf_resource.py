@@ -33,8 +33,10 @@ from flask_restful import Resource
 
 import logging
 from datetime import datetime
+
+from kirin.new_relic import record_custom_parameter, is_invalid_input_exception
 from kirin.utils import make_rt_update, record_call, set_rtu_status_ko, allow_reprocess_same_data
-from kirin.exceptions import KirinException, InvalidArguments
+from kirin.exceptions import KirinException
 from kirin import core
 from kirin.core import model
 
@@ -49,45 +51,51 @@ class AbstractSNCFResource(Resource):
     def process_post(self, input_raw, contributor_type, is_new_complete=False):
         start_datetime = datetime.utcnow()
         rt_update = None
+        log_dict = {"contributor": self.contributor}
+        status = "OK"
+
         try:
             # create a raw rt_update obj, save the raw_input into the db
             rt_update = make_rt_update(input_raw, contributor_type, contributor=self.contributor)
-        except Exception as e:
-            if rt_update is None:
-                # rt_update is not built, make sure reprocess is allowed
-                allow_reprocess_same_data(self.contributor)
-            else:
-                set_rtu_status_ko(rt_update, e.message, is_reprocess_same_data_allowed=True)
-                model.db.session.add(rt_update)
-                model.db.session.commit()
-            record_call("failure", reason=six.text_type(e), contributor=self.contributor)
-            raise
-
-        try:
             # assuming UTF-8 encoding for all input
             rt_update.raw_data = rt_update.raw_data.encode("utf-8")
 
             # raw_input is interpreted
             trip_updates = self.builder(self.navitia_wrapper, self.contributor).build(rt_update)
-            _, log_dict = core.handle(rt_update, trip_updates, self.contributor, is_new_complete=is_new_complete)
-            record_call("OK", contributor=self.contributor)
-        except KirinException as e:
-            allow_reprocess = not isinstance(e, InvalidArguments)  # reprocess is useless if input is invalid
-            set_rtu_status_ko(rt_update, e.data["error"], is_reprocess_same_data_allowed=allow_reprocess)
-            model.db.session.add(rt_update)
-            model.db.session.commit()
-            record_call("failure", reason=six.text_type(e), contributor=self.contributor)
-            raise
-        except Exception as e:
-            set_rtu_status_ko(rt_update, e.message, is_reprocess_same_data_allowed=True)
-            model.db.session.add(rt_update)
-            model.db.session.commit()
-            record_call("failure", reason=six.text_type(e), contributor=self.contributor)
-            raise
+            _, handler_log_dict = core.handle(
+                rt_update, trip_updates, self.contributor, is_new_complete=is_new_complete
+            )
+            log_dict.update(handler_log_dict)
 
-        duration = (datetime.utcnow() - start_datetime).total_seconds()
-        log_dict.update({"duration": duration})
-        record_call("Simple feed publication", **log_dict)
-        logging.getLogger(__name__).info("Simple feed publication", extra=log_dict)
+        except Exception as e:
+            status = "failure"
+            allow_reprocess = True
+            if is_invalid_input_exception(e):
+                status = "warning"  # Kirin did his job correctly if the input is invalid and rejected
+                allow_reprocess = False  # reprocess is useless if input is invalid
+
+            if rt_update is not None:
+                error = e.data["error"] if (isinstance(e, KirinException) and "error" in e.data) else e.message
+                set_rtu_status_ko(rt_update, error, is_reprocess_same_data_allowed=allow_reprocess)
+                model.db.session.add(rt_update)
+                model.db.session.commit()
+            else:
+                # rt_update is not built, make sure reprocess is allowed
+                allow_reprocess_same_data(self.contributor)
+
+            log_dict.update({"exc_summary": six.text_type(e), "reason": e})
+
+            record_custom_parameter("reason", e)  # using __str__() here to have complete details
+            raise  # filters later for APM
+
+        finally:
+            log_dict.update({"duration": (datetime.utcnow() - start_datetime).total_seconds()})
+            record_call(status, **log_dict)
+            if status == "OK":
+                logging.getLogger(__name__).info(status, extra=log_dict)
+            elif status == "warning":
+                logging.getLogger(__name__).warning(status, extra=log_dict)
+            else:
+                logging.getLogger(__name__).error(status, extra=log_dict)
 
         return "OK", 200

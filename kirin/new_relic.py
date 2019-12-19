@@ -34,6 +34,10 @@ import logging
 import flask
 import os
 
+from werkzeug.exceptions import NotFound, MethodNotAllowed
+
+from kirin.exceptions import InvalidArguments
+
 try:
     from newrelic import agent
 except ImportError:
@@ -48,6 +52,34 @@ def init(config_file):
     else:
         logger = logging.getLogger(__name__)
         logger.warning("newrelic hasn't been initialized")
+
+
+def must_never_log(exception):
+    # Not tracking requests to wrong endpoints
+    if isinstance(exception, NotFound):
+        return True
+    # Not tracking requests with wrong HTTP methods
+    if isinstance(exception, MethodNotAllowed):
+        return True
+    # Any other exception should be logged
+    return False
+
+
+def is_invalid_input_exception(exception):
+    if isinstance(exception, InvalidArguments):
+        return True
+    # Any other exception is not related to an invalid input
+    return False
+
+
+def allow_apm_logging(exception):
+    if must_never_log(exception):
+        return False
+    # Not tracking bad data errors in APM
+    if is_invalid_input_exception(exception):
+        return False
+
+    return True
 
 
 def record_exception():

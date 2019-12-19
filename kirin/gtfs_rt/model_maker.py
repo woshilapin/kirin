@@ -36,7 +36,8 @@ import six
 from kirin import core
 from kirin.core import model
 from kirin.core.types import ModificationType, get_higher_status, get_effect_by_stop_time_status
-from kirin.exceptions import KirinException, InternalException, InvalidArguments
+from kirin.exceptions import KirinException, InternalException
+from kirin.new_relic import record_custom_parameter, allow_apm_logging, is_invalid_input_exception
 from kirin.utils import (
     make_rt_update,
     floor_datetime,
@@ -53,44 +54,47 @@ import calendar
 def handle(proto, navitia_wrapper, contributor):
     start_datetime = datetime.datetime.utcnow()
     rt_update = None
+    log_dict = {"contributor": contributor}
+    status = "OK"
+
     try:
         data = six.binary_type(proto)  # temp, for the moment, we save the protobuf as text
         rt_update = make_rt_update(data, "gtfs-rt", contributor=contributor)
+        log_dict.update({"input_timestamp": datetime.datetime.utcfromtimestamp(proto.header.timestamp)})
+        trip_updates = KirinModelBuilder(navitia_wrapper, contributor).build(rt_update, data=proto)
+        _, handler_log_dict = core.handle(rt_update, trip_updates, contributor)
+        log_dict.update(handler_log_dict)
+
     except Exception as e:
-        if rt_update is None:
-            # rt_update is not built, make sure reprocess is allowed
-            allow_reprocess_same_data(contributor)
-        else:
-            set_rtu_status_ko(rt_update, e.message, is_reprocess_same_data_allowed=True)
+        status = "failure"
+        allow_reprocess = True
+        if is_invalid_input_exception(e):
+            status = "warning"  # Kirin did his job correctly if the input is invalid and rejected
+            allow_reprocess = False  # reprocess is useless if input is invalid
+
+        if rt_update is not None:
+            error = e.data["error"] if (isinstance(e, KirinException) and "error" in e.data) else e.message
+            set_rtu_status_ko(rt_update, error, is_reprocess_same_data_allowed=allow_reprocess)
             model.db.session.add(rt_update)
             model.db.session.commit()
-        record_call("failure", reason=six.text_type(e), contributor=contributor)
-        raise
+        else:
+            # rt_update is not built, make sure reprocess is allowed
+            allow_reprocess_same_data(contributor)
 
-    try:
-        trip_updates = KirinModelBuilder(navitia_wrapper, contributor).build(rt_update, data=proto)
-        _, log_dict = core.handle(rt_update, trip_updates, contributor)
-        record_call("OK", contributor=contributor)
-    except KirinException as e:
-        allow_reprocess = not isinstance(e, InvalidArguments)  # reprocess is useless if input is invalid
-        set_rtu_status_ko(rt_update, e.data["error"], is_reprocess_same_data_allowed=allow_reprocess)
-        model.db.session.add(rt_update)
-        model.db.session.commit()
-        record_call("failure", reason=six.text_type(e), contributor=contributor)
-        raise
-    except Exception as e:
-        set_rtu_status_ko(rt_update, e.message, is_reprocess_same_data_allowed=True)
-        model.db.session.add(rt_update)
-        model.db.session.commit()
-        record_call("failure", reason=six.text_type(e), contributor=contributor)
-        raise
+        log_dict.update({"exc_summary": six.text_type(e), "reason": e})
+        if allow_apm_logging(e):
+            record_custom_parameter("reason", e)  # using __str__() here to have complete details
+            raise  # to be visible in APM (auto.)
 
-    duration = (datetime.datetime.utcnow() - start_datetime).total_seconds()
-    log_dict.update(
-        {"duration": duration, "input_timestamp": datetime.datetime.utcfromtimestamp(proto.header.timestamp)}
-    )
-    record_call("Simple feed publication", **log_dict)
-    logging.getLogger(__name__).info("Simple feed publication", extra=log_dict)
+    finally:
+        log_dict.update({"duration": (datetime.datetime.utcnow() - start_datetime).total_seconds()})
+        record_call(status, **log_dict)
+        if status == "OK":
+            logging.getLogger(__name__).info(status, extra=log_dict)
+        elif status == "warning":
+            logging.getLogger(__name__).warning(status, extra=log_dict)
+        else:
+            logging.getLogger(__name__).error(status, extra=log_dict)
 
 
 class KirinModelBuilder(object):
@@ -126,7 +130,7 @@ class KirinModelBuilder(object):
         if not trip_updates:
             msg = "No information for this gtfs-rt with timestamp: {}".format(data.header.timestamp)
             set_rtu_status_ko(rt_update, msg, is_reprocess_same_data_allowed=False)
-            self.log.error(msg)
+            self.log.warning(msg)
 
         return trip_updates
 
@@ -189,7 +193,7 @@ class KirinModelBuilder(object):
                 trip_update.effect = get_effect_by_stop_time_status(highest_st_status)
                 trip_updates.append(trip_update)
             else:
-                self.log.error(
+                self.log.warning(
                     "stop_time_update do not match with stops in navitia for trip : {} timestamp: {}".format(
                         input_trip_update.trip.trip_id, calendar.timegm(input_data_time.utctimetuple())
                     )
