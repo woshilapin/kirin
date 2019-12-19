@@ -189,3 +189,7 @@ CELERYBEAT_SCHEDULE = {
         "options": {"expires": timedelta(hours=1).total_seconds()},
     },
 }
+
+# https://flask-sqlalchemy.palletsprojects.com/en/2.x/signals/
+# deprecated and slow
+SQLALCHEMY_TRACK_MODIFICATIONS = False

@@ -68,7 +68,7 @@ if app.config[str("USE_GEVENT")]:
 
     monkey.patch_all()
 
-from flask_cache import Cache
+from flask_caching import Cache
 
 # register the cache instance and binds it on to your app
 app.cache = Cache(app)
