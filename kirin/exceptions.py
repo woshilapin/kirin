@@ -38,6 +38,7 @@ class KirinException(HTTPException):
     """
 
     def __init__(self, detailed_message=None):
+        super(KirinException, self).__init__()
         self.data = {"status": self.code, "message": self.message}
         if detailed_message:
             self.data["error"] = detailed_message
