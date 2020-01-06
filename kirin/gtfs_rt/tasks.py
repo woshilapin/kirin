@@ -31,6 +31,8 @@
 
 from __future__ import absolute_import, print_function, unicode_literals, division
 import logging
+from datetime import datetime
+
 import requests
 import six
 
@@ -44,6 +46,7 @@ from kirin.utils import (
     manage_db_error,
     manage_db_no_new,
     build_redis_etag_key,
+    record_input_retrieval,
 )
 from kirin.gtfs_rt import model_maker
 from retrying import retry
@@ -89,6 +92,15 @@ def _is_newer(config):
     return True  # whatever the exception is, we don't want to break the polling
 
 
+@new_relic.agent.function_trace()  # trace it specifically in transaction times
+def _retrieve_gtfsrt(config):
+    start_dt = datetime.utcnow()
+    resp = requests.get(config["feed_url"], timeout=config.get("timeout", 1))
+    duration_ms = (datetime.utcnow() - start_dt).total_seconds() * 1000
+    record_input_retrieval(contributor=config["contributor"], duration_ms=duration_ms)
+    return resp
+
+
 @celery.task(bind=True)  # type: ignore
 @retry(stop_max_delay=TASK_STOP_MAX_DELAY, wait_fixed=TASK_WAIT_FIXED, retry_on_exception=should_retry_exception)
 def gtfs_poller(self, config):
@@ -112,9 +124,8 @@ def gtfs_poller(self, config):
             return
 
         try:
-            response = requests.get(config["feed_url"], timeout=config.get("timeout", 1))
+            response = _retrieve_gtfsrt(config)
             response.raise_for_status()
-
         except Exception as e:
             manage_db_error(
                 data="",

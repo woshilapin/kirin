@@ -99,6 +99,13 @@ def make_rt_update(raw_data, connector, contributor, status="OK"):
     return rt_update
 
 
+def record_input_retrieval(contributor, duration_ms, **kwargs):
+    params = {"duration": duration_ms, "contributor": contributor}
+    params.update(kwargs)
+    logging.getLogger(__name__).info("Input retrieval", extra=params)
+    new_relic.record_custom_event("kirin_input_retrieval", params)
+
+
 def record_internal_failure(log, **kwargs):
     params = {"log": log}
     params.update(kwargs)
