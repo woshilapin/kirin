@@ -124,14 +124,13 @@ def basic_gtfs_rt_data_without_delays():
 
 def test_get_gtfs_rt_contributors():
     """
-    Get GTFS-RT contributors
+    Get GTFS-RT contributors index
     """
     resp = api_get("/gtfs_rt")
-    assert "gtfs-rt" in resp
-    assert len(resp["gtfs-rt"]) == 2
-    for contributor in resp["gtfs-rt"]:
-        assert contributor["connector_type"] == "gtfs-rt"
-        assert "rt.vroumvroum" in contributor["id"]
+    assert len(resp) == 2
+    for contrib, link in resp.iteritems():
+        assert "rt.vroumvroum" in contrib
+        assert "rt.vroumvroum" in link["href"]
 
 
 def test_wrong_gtfs_rt_post():
@@ -172,7 +171,7 @@ def test_gtfs_rt_post_no_data():
             assert len(TripUpdate.query.all()) == 0
             assert len(StopTimeUpdate.query.all()) == 0
 
-    post_and_check("/gtfs_rt/", 400, "Contributor's id is missing", None)
+    post_and_check("/gtfs_rt/", 405, "The method is not allowed for the requested URL.", None)
     post_and_check("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), 400, "invalid arguments", "no gtfs_rt data provided")
     post_and_check("/gtfs_rt/unknown_id", 404, "Contributor 'unknown_id' not found", None)
 

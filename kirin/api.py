@@ -50,8 +50,11 @@ api.app.url_map.strict_slashes = False
 api.add_resource(resources.Index, "/", endpoint=str("index"))
 api.add_resource(resources.Status, "/status", endpoint=str("status"))
 api.add_resource(cots.Cots, "/cots", endpoint=str("cots"))
-api.add_resource(gtfs_rt.GtfsRT, "/gtfs_rt", "/gtfs_rt/<string:id>", endpoint=str("gtfs_rt"))
-api.add_resource(resources.Contributors, "/contributors", "/contributors/<string:id>")
+api.add_resource(gtfs_rt.GtfsRTIndex, "/gtfs_rt", endpoint=str("gtfs_rt_index"))
+api.add_resource(gtfs_rt.GtfsRT, "/gtfs_rt/<string:id>", endpoint=str("gtfs_rt"))
+api.add_resource(
+    resources.Contributors, "/contributors", "/contributors/<string:id>", endpoint=str("contributors")
+)
 api.add_resource(resources.Health, "/health", endpoint=str("health"))
 
 

@@ -31,6 +31,7 @@
 
 from __future__ import absolute_import, print_function, unicode_literals, division
 import flask
+from flask import url_for
 from flask.globals import current_app
 from flask_restful import Resource, marshal, abort
 from google.protobuf.message import DecodeError
@@ -90,10 +91,18 @@ def make_navitia_wrapper(contributor):
     ).instance(contributor.navitia_coverage)
 
 
-class GtfsRT(Resource):
+class GtfsRTIndex(Resource):
     def get(self):
-        return {"gtfs-rt": marshal(get_gtfsrt_contributors(), contributor_fields)}
+        contributors = get_gtfsrt_contributors()
 
+        if not contributors:
+            return {"message": "No GTFS-RT contributor defined"}, 200
+
+        response = {c.id: {"href": url_for("gtfs_rt", id=c.id, _external=True)} for c in contributors}
+        return response, 200
+
+
+class GtfsRT(Resource):
     def post(self, id=None):
         if id is None:
             abort(400, message="Contributor's id is missing")
