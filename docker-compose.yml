@@ -1,0 +1,21 @@
+version: "3.7"
+services:
+    db:
+        image: postgres:12
+        restart: always
+        environment:
+            POSTGRES_USER: "navitia"
+            POSTGRES_PASSWORD: "navitia"
+            POSTGRES_DB: "kirin"
+        ports:
+            - "5432:5432"
+    redis:
+        image: redis:5
+        restart: always
+        ports:
+            - "6379:6379"
+    mq:
+        image: rabbitmq:3
+        restart: always
+        ports:
+            - "5672:5672"
