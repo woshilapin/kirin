@@ -352,12 +352,6 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
 
         return self._get_navitia_vjs(train_numbers, vj_start, vj_end, action_on_trip=action_on_trip)
 
-    def _record_and_log(self, logger, log_str):
-        log_dict = {"log": log_str}
-        record_internal_failure(log_dict["log"], contributor=self.contributor)
-        log_dict.update({"contributor": self.contributor})
-        logger.info("internal failure", extra=log_dict)
-
     @staticmethod
     def _check_stop_time_consistency(last_stop_time_depart, projected_stop_time, pdp_code):
         last_stop_time_depart = (
