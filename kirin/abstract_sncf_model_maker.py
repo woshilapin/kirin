@@ -125,7 +125,7 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
             Typically the supposed datetime of last base-schedule stop_time.
         :param action_on_trip: action to be performed on trip. This param is used to do consistency check
         """
-        log = logging.getLogger(__name__)
+        log = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": self.contributor})
 
         if (since_dt is None) or (until_dt is None):
             return []
@@ -165,7 +165,7 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
             # Consistency check on action applied to trip
             if action_on_trip == ActionOnTrip.NOT_ADDED.name:
                 if not navitia_vjs:
-                    logging.getLogger(__name__).info(
+                    log.info(
                         "impossible to find train {t} on [{s}, {u}[".format(
                             t=train_number, s=extended_since_dt, u=extended_until_dt
                         )
@@ -186,9 +186,7 @@ class AbstractSNCFKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
                     vj = model.VehicleJourney(nav_vj, extended_since_dt, extended_until_dt, vj_start_dt=since_dt)
                     vjs[nav_vj["id"]] = vj
                 except Exception as e:
-                    logging.getLogger(__name__).exception(
-                        "Error while creating kirin VJ of {}: {}".format(nav_vj.get("id"), e)
-                    )
+                    log.exception("Error while creating kirin VJ of {}: {}".format(nav_vj.get("id"), e))
                     record_internal_failure("Error while creating kirin VJ", contributor=self.contributor)
 
         if not vjs:

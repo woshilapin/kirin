@@ -215,7 +215,9 @@ def handle(real_time_update, trip_updates, contributor, is_new_complete=False):
     if not real_time_update.trip_updates and real_time_update.status == "OK":
         msg = "No new information destined to navitia for this {}".format(real_time_update.connector)
         set_rtu_status_ko(real_time_update, msg, is_reprocess_same_data_allowed=False)
-        logging.getLogger(__name__).warning("RealTimeUpdate id={}: {}".format(real_time_update.id, msg))
+        logging.getLogger(__name__).warning(
+            "RealTimeUpdate id={}: {}".format(real_time_update.id, msg), extra=log_dict
+        )
         model.db.session.add(real_time_update)
         model.db.session.commit()
 
@@ -653,5 +655,7 @@ def publish(feed, contributor):
         kirin.rabbitmq_handler.publish(feed, contributor)
 
     except socket.error:
-        logging.getLogger(__name__).exception("impossible to publish in rabbitmq")
+        logging.getLogger(__name__).exception(
+            "impossible to publish in rabbitmq", extra={"contributor": contributor}
+        )
         raise MessageNotPublished()
