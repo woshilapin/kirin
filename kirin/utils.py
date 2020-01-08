@@ -114,7 +114,7 @@ def record_internal_failure(log, **kwargs):
 
 def record_call(status, **kwargs):
     """
-    status can be in: ok, a message text or failure with reason.
+    status can be in: ok, warning, a message text or failure with reason.
     parameters: contributor, timestamp, trip_update_count, size...
     """
     params = {"status": status}

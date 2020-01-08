@@ -126,7 +126,7 @@ def ignore():
             agent.suppress_transaction_trace()
         except:
             logger = logging.getLogger(__name__)
-            logger.exception("failure while suppressing transaction")
+            logger.exception("failure while suppressing newrelic transaction")
 
 
 def ignore_transaction():
@@ -138,4 +138,4 @@ def ignore_transaction():
             agent.ignore_transaction()
         except:
             logger = logging.getLogger(__name__)
-            logger.exception("failure while ignoring transaction")
+            logger.exception("failure while ignoring newrelic transaction")
