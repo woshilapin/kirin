@@ -133,6 +133,15 @@ def test_get_gtfs_rt_contributors():
         assert "rt.vroumvroum" in link["href"]
 
 
+def test_wrong_get_gtfs_rt_with_id():
+    """
+    GET /gtfs_rt/id.contributor (so with an id) is not allowed, only POST is possible
+    """
+    resp, status = api_get("/gtfs_rt/rt.vroumvroum", check=False)
+    assert status == 405
+    assert resp.get("message") == "The method is not allowed for the requested URL."
+
+
 def test_wrong_gtfs_rt_post():
     """
     Post wrong GTFS-RT data
