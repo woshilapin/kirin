@@ -36,6 +36,7 @@ import socket
 from collections import namedtuple
 
 import kirin
+from kirin import gtfs_realtime_pb2
 from kirin.core import model
 from kirin.core.model import TripUpdate, StopTimeUpdate
 from kirin.core.populate_pb import convert_to_gtfsrt
@@ -199,7 +200,7 @@ def handle(real_time_update, trip_updates, contributor, is_new_complete=False):
 
     persist(real_time_update)
 
-    feed = convert_to_gtfsrt(real_time_update.trip_updates)
+    feed = convert_to_gtfsrt(real_time_update.trip_updates, gtfs_realtime_pb2.FeedHeader.DIFFERENTIAL)
     feed_str = feed.SerializeToString()
     publish(feed_str, contributor)
 

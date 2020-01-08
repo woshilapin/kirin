@@ -31,7 +31,7 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 
 from kirin import gtfs_realtime_pb2, kirin_pb2
-from kirin.core.types import stop_time_status_to_protobuf
+from kirin.core.types import stop_time_status_to_protobuf, ModificationType
 import datetime
 
 
@@ -145,9 +145,11 @@ def fill_trip_update(pb_trip_update, trip_update):
         # WARNING: here trip.start_date is UTC, not local
         # (this date differs if vj starts during the period between midnight UTC and local midnight)
         pb_trip.start_date = date_to_str(vj.get_circulation_date())
-        # TODO fill the right schedule_relationship
-        if trip_update.status == "delete":
+        # DEPRECATED field TripUpdate.TripDescriptor.schedule_relationship in favor of TripUpdate.effect
+        if trip_update.status == ModificationType.delete.name:
             pb_trip.schedule_relationship = gtfs_realtime_pb2.TripDescriptor.CANCELED
+        elif trip_update.status == ModificationType.add.name:
+            pb_trip.schedule_relationship = gtfs_realtime_pb2.TripDescriptor.ADDED
         else:
             pb_trip.schedule_relationship = gtfs_realtime_pb2.TripDescriptor.SCHEDULED
 
