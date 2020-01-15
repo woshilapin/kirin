@@ -609,12 +609,12 @@ def check_db_6113_trip_removal():
         assert len(TripUpdate.query.all()) >= 1
         assert len(StopTimeUpdate.query.all()) >= 0
         db_trip_removal = TripUpdate.find_by_dated_vj(
-            "trip:OCETGV-87686006-87751008-2:25768", datetime(2015, 10, 6, 10, 37)
+            "trip:OCETGV-87686006-87751008-2:25768", datetime(2015, 10, 6, 11, 16)
         )
         assert db_trip_removal
 
         assert db_trip_removal.vj.navitia_trip_id == "trip:OCETGV-87686006-87751008-2:25768"
-        assert db_trip_removal.vj.start_timestamp == datetime(2015, 10, 6, 10, 37)
+        assert db_trip_removal.vj.start_timestamp == datetime(2015, 10, 6, 11, 16)
         assert db_trip_removal.vj_id == db_trip_removal.vj.id
         assert db_trip_removal.status == "delete"
         assert db_trip_removal.effect == "NO_SERVICE"
