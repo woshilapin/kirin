@@ -456,9 +456,9 @@ class KirinModelBuilder(AbstractSNCFKirinModelBuilder):
 
                 cots_stop_time_status = get_value(cots_traveler_time, "statutCirculationOPE", nullable=True)
 
-                if cots_stop_time_status is None:
+                if cots_stop_time_status is None or cots_stop_time_status == "REACTIVATION":
                     # if no cots_stop_time_status, it is considered an 'update' of the stop_time
-                    # (can be a delay, back to normal, normal, ...)
+                    # (can be a delay, back to normal, normal, reactivation...)
                     cots_base_datetime = _retrieve_stop_event_datetime(cots_traveler_time)
                     if cots_base_datetime:
                         projected_stop_time[arrival_departure_toggle] = cots_base_datetime
