@@ -29,7 +29,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 from __future__ import absolute_import, print_function, unicode_literals, division
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -548,14 +548,23 @@ def test_cots_two_trip_removal_post_twice(mock_rabbitmq):
     assert mock_rabbitmq.call_count == 2
 
 
-def test_cots_partial_removal(mock_rabbitmq):
+def test_cots_partial_removal_then_reactivation(mock_rabbitmq):
     """
-    the trip 840427 has been partialy deleted
+    the trip 840427 is partially deleted
 
-    Normally there are 7 stops in this VJ, but 4 (Chaumont, Bar-sur-Aube, Vendeuvre and Troyes) have been removed
+    Normally there are 7 stops in this VJ, but 3 (Bar-sur-Aube, Vendeuvre and Troyes) are
+    removed (departure from Chaumont deleted)
+
+    Then 2 stops are reactivated
+
+    Then all 3 are reactivated
+
+    Then the penultimate is delayed by 5 min
+
     """
-    cots_080427 = get_fixture_data("cots_train_840427_partial_removal.json")
-    res = api_post("/cots", data=cots_080427)
+    # Simple partial removal
+    cots_080427_removal = get_fixture_data("cots_train_840427_partial_removal.json")
+    res = api_post("/cots", data=cots_080427_removal)
     assert res == "OK"
 
     with app.app_context():
@@ -565,6 +574,133 @@ def test_cots_partial_removal(mock_rabbitmq):
         assert RealTimeUpdate.query.first().status == "OK"
     check_db_840427_partial_removal(contributor=COTS_CONTRIBUTOR)
     assert mock_rabbitmq.call_count == 1
+
+    # Then 2 stops are reactivated
+    cots_080427_partial_react = get_fixture_data("cots_train_840427_partial_reactivation.json")
+    res = api_post("/cots", data=cots_080427_partial_react)
+    assert res == "OK"
+
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 2
+        assert len(TripUpdate.query.all()) == 1
+        assert len(StopTimeUpdate.query.all()) == 7
+        assert RealTimeUpdate.query.first().status == "OK"
+
+        db_trip_partial_react = TripUpdate.find_by_dated_vj("OCE:SN840427F03001", datetime(2017, 3, 18, 13, 5))
+        assert db_trip_partial_react
+
+        assert db_trip_partial_react.vj.navitia_trip_id == "OCE:SN840427F03001"
+        assert db_trip_partial_react.vj.start_timestamp == datetime(2017, 3, 18, 13, 5)
+        assert db_trip_partial_react.vj_id == db_trip_partial_react.vj.id
+        assert db_trip_partial_react.status == "update"
+        assert db_trip_partial_react.effect == "REDUCED_SERVICE"
+
+        assert len(db_trip_partial_react.stop_time_updates) == 7
+
+        for s in db_trip_partial_react.stop_time_updates[0:3]:
+            assert s.arrival_status == "none"
+            assert s.departure_status == "none"
+            assert s.message is None
+
+        # the stops Chaumont, Bar-sur-Aube, Vendeuvre and Troyes should have message (same as deletion one)
+        ch_st = db_trip_partial_react.stop_time_updates[3]
+        assert ch_st.stop_id == "stop_point:OCE:SP:TrainTER-87142000"  # Chaumont is fully back
+        assert ch_st.arrival_status == "none"
+        assert ch_st.departure_status == "none"
+
+        bar_st = db_trip_partial_react.stop_time_updates[4]
+        assert bar_st.stop_id == "stop_point:OCE:SP:TrainTER-87118299"  # Bar-sur-Aube
+        assert bar_st.arrival_status == "delete"  # only that stop is deleted
+        assert bar_st.departure_status == "delete"
+
+        ven_st = db_trip_partial_react.stop_time_updates[5]
+        assert ven_st.stop_id == "stop_point:OCE:SP:TrainTER-87118257"  # Vendeuvre is back
+        assert ven_st.arrival_status == "none"
+        assert ven_st.departure_status == "none"
+
+        tro_st = db_trip_partial_react.stop_time_updates[6]
+        assert tro_st.stop_id == "stop_point:OCE:SP:TrainTER-87118000"  # Troyes is back
+        assert tro_st.arrival_status == "none"
+        assert tro_st.departure_status == "none"
+
+        for s in db_trip_partial_react.stop_time_updates[3:6]:
+            assert s.message == "Défaut d'alimentation électrique"
+
+        assert db_trip_partial_react.contributor_id == COTS_CONTRIBUTOR
+
+    # Then all 3 stops are reactivated
+    cots_080427_full_react = get_fixture_data("cots_train_840427_full_reactivation.json")
+    res = api_post("/cots", data=cots_080427_full_react)
+    assert res == "OK"
+
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 3
+        assert len(TripUpdate.query.all()) == 1
+        assert len(StopTimeUpdate.query.all()) == 7
+        assert RealTimeUpdate.query.first().status == "OK"
+
+        db_trip_full_react = TripUpdate.find_by_dated_vj("OCE:SN840427F03001", datetime(2017, 3, 18, 13, 5))
+        assert db_trip_full_react
+
+        assert db_trip_full_react.vj.navitia_trip_id == "OCE:SN840427F03001"
+        assert db_trip_full_react.vj.start_timestamp == datetime(2017, 3, 18, 13, 5)
+        assert db_trip_full_react.vj_id == db_trip_partial_react.vj.id
+        assert db_trip_full_react.status == "update"
+        assert db_trip_full_react.effect == "UNKNOWN_EFFECT"
+
+        assert len(db_trip_full_react.stop_time_updates) == 7
+
+        for s in db_trip_full_react.stop_time_updates:
+            assert s.arrival_status == "none"
+            assert s.departure_status == "none"
+
+        for s in db_trip_full_react.stop_time_updates[:3]:
+            assert s.message is None
+
+        for s in db_trip_full_react.stop_time_updates[3:]:
+            assert s.message == "Défaut d'alimentation électrique"
+
+    # Then all 3 stops are reactivated and the penultimate has a 5 min delay
+    cots_080427_full_react = get_fixture_data("cots_train_840427_full_reactivation_delay.json")
+    res = api_post("/cots", data=cots_080427_full_react)
+    assert res == "OK"
+
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 4
+        assert len(TripUpdate.query.all()) == 1
+        assert len(StopTimeUpdate.query.all()) == 7
+        assert RealTimeUpdate.query.first().status == "OK"
+
+        db_trip_full_react = TripUpdate.find_by_dated_vj("OCE:SN840427F03001", datetime(2017, 3, 18, 13, 5))
+        assert db_trip_full_react
+
+        assert db_trip_full_react.vj.navitia_trip_id == "OCE:SN840427F03001"
+        assert db_trip_full_react.vj.start_timestamp == datetime(2017, 3, 18, 13, 5)
+        assert db_trip_full_react.vj_id == db_trip_partial_react.vj.id
+        assert db_trip_full_react.status == "update"
+        assert db_trip_full_react.effect == "SIGNIFICANT_DELAYS"
+
+        assert len(db_trip_full_react.stop_time_updates) == 7
+
+        for s in db_trip_full_react.stop_time_updates[:5]:
+            assert s.arrival_status == "none"
+            assert s.departure_status == "none"
+
+        assert db_trip_full_react.stop_time_updates[5].arrival_status == "update"
+        assert db_trip_full_react.stop_time_updates[5].arrival_delay == timedelta(minutes=5)
+        assert db_trip_full_react.stop_time_updates[5].departure_status == "update"
+        assert db_trip_full_react.stop_time_updates[5].departure_delay == timedelta(minutes=5)
+
+        assert db_trip_full_react.stop_time_updates[6].arrival_status == "none"
+        assert db_trip_full_react.stop_time_updates[6].departure_status == "none"
+
+        for s in db_trip_full_react.stop_time_updates[:3]:
+            assert s.message is None
+
+        for s in db_trip_full_react.stop_time_updates[3:]:
+            assert s.message == "Défaut d'alimentation électrique"
+
+    assert mock_rabbitmq.call_count == 4
 
 
 def test_wrong_planned_stop_time_reference_post():
