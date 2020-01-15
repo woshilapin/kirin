@@ -249,9 +249,11 @@ def _get_first_stop_datetime(list_pdps, hour_obj_name, skip_fully_added_stops=Tr
 
 def _get_action_on_trip(train_numbers, dict_version, pdps):
     """
-    Verify if trip in flux cots is a newly added and permitted possible actions
-    :param dict_version: Value of attribut nouvelleVersion in Flux cots
-    :return: True or False
+    Verify if trip in cots feed is a newly added one and check possible actions
+    :param dict_version: Value of attribut nouvelleVersion in cots feed
+    :return: NOT_ADDED if the trip is not added by current feed,
+        FIRST_TIME_ADDED if it's the first time this trip is added,
+        PREVIOUSLY_ADDED if this train is already added (present in db)
     """
     cots_trip_status = get_value(dict_version, "statutOperationnel", TripStatus.PERTURBEE.name)
 
@@ -278,7 +280,7 @@ def _get_action_on_trip(train_numbers, dict_version, pdps):
         ):
             raise InvalidArguments("Invalid action, trip {} already deleted in database".format(train_numbers))
 
-        # Trip deleted followed by add should be handled as FIRST_TIME_ADDED
+        # Trip added then deleted followed by add should be handled as FIRST_TIME_ADDED
         if (
             cots_trip_status == TripStatus.AJOUTEE.name
             and trip_added_in_db.status == ModificationType.delete.name
