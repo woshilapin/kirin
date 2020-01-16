@@ -976,12 +976,11 @@ def test_cots_for_detour():
         assert len(RealTimeUpdate.query.all()) == 1
         assert len(TripUpdate.query.all()) == 1
         assert TripUpdate.query.all()[0].status == "update"
+        assert TripUpdate.query.all()[0].effect == "DETOUR"
         stop_time_updates = TripUpdate.query.all()[0].stop_time_updates
         assert len(stop_time_updates) == 7
         assert stop_time_updates[2].departure_status == "deleted_for_detour"
         assert stop_time_updates[2].arrival_status == "deleted_for_detour"
-        assert stop_time_updates[2].arrival == datetime(2015, 9, 21, 15, 40)
-        assert stop_time_updates[2].departure == datetime(2015, 9, 21, 15, 40)
 
         assert stop_time_updates[3].departure_status == "added_for_detour"
         assert stop_time_updates[3].arrival_status == "added_for_detour"
@@ -1001,6 +1000,7 @@ def test_cots_for_detour_in_advance():
         assert len(RealTimeUpdate.query.all()) == 1
         assert len(TripUpdate.query.all()) == 1
         assert TripUpdate.query.all()[0].status == "update"
+        assert TripUpdate.query.all()[0].effect == "DETOUR"
         stop_time_updates = TripUpdate.query.all()[0].stop_time_updates
         assert len(stop_time_updates) == 7
         assert stop_time_updates[2].departure_status == "deleted_for_detour"
