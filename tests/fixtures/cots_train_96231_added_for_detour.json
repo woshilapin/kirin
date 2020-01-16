@@ -152,20 +152,6 @@
                 "listeHoraireProjeteArrivee":[
                 ],
                 "listeHoraireProjeteDepart":[
-                    {
-                        "dateHeure":"2015-09-21T15:40:30+0000",
-                        "dateHeureEmission":"2018-04-19T15:44:53+0000",
-                        "pronosticBrut":0,
-                        "pronosticIV":0,
-                        "source":"ESCALE"
-                    },
-                    {
-                        "dateHeure":"2015-09-21T17:40:30+0000",
-                        "dateHeureEmission":"2018-04-19T15:44:53+0000",
-                        "pronosticBrut":0,
-                        "pronosticIV":0,
-                        "source":"TEST"
-                    }
                 ],
                 "idMotifInterneDepartReference": 3,
                 "idMotifInterneArriveeReference": 3,
@@ -174,7 +160,6 @@
                 "listeMotifDepart":[
                 ],
                 "rang":2,
-                "sourceHoraireProjeteDepartReference":"ESCALE",
                 "typeArret":"CH"
             },
             {
@@ -309,36 +294,14 @@
                     "nbJoursPasseMinuit":0
                 },
                 "listeHoraireProjeteArrivee":[
-                    {
-                        "dateHeure":"2015-09-21T16:14:00+0000",
-                        "dateHeureEmission":"2018-04-19T15:44:53+0000",
-                        "pronosticBrut":0,
-                        "pronosticIV":0,
-                        "source":"TEST"
-                    }
                 ],
                 "listeHoraireProjeteDepart":[
-                    {
-                        "dateHeure":"2015-09-21T16:16:00+0000",
-                        "dateHeureEmission":"2018-04-19T15:44:53+0000",
-                        "pronosticBrut":0,
-                        "pronosticIV":0,
-                        "source":"ESCALE"
-                    },
-                    {
-                        "dateHeure":"2015-09-21T16:16:00+0000",
-                        "dateHeureEmission":"2018-04-19T15:44:53+0000",
-                        "pronosticBrut":0,
-                        "pronosticIV":0,
-                        "source":"TEST"
-                    }
                 ],
                 "listeMotifArrivee":[
                 ],
                 "listeMotifDepart":[
                 ],
                 "rang":4,
-                "sourceHoraireProjeteDepartReference":"TEST",
                 "typeArret":"CH"
             },
             {
@@ -374,44 +337,14 @@
                     "nbJoursPasseMinuit":0
                 },
                 "listeHoraireProjeteArrivee":[
-                    {
-                        "dateHeure":"2015-09-21T16:30:00+0000",
-                        "dateHeureEmission":"2018-04-19T15:44:53+0000",
-                        "pronosticBrut":0,
-                        "pronosticIV":0,
-                        "source":"ESCALE"
-                    },
-                    {
-                        "dateHeure":"2015-09-21T16:30:00+0000",
-                        "dateHeureEmission":"2018-04-19T15:44:53+0000",
-                        "pronosticBrut":0,
-                        "pronosticIV":0,
-                        "source":"TEST"
-                    }
                 ],
                 "listeHoraireProjeteDepart":[
-                    {
-                        "dateHeure":"2015-09-21T16:31:00+0000",
-                        "dateHeureEmission":"2018-04-19T15:44:53+0000",
-                        "pronosticBrut":0,
-                        "pronosticIV":0,
-                        "source":"ESCALE"
-                    },
-                    {
-                        "dateHeure":"2015-09-21T16:31:00+0000",
-                        "dateHeureEmission":"2018-04-19T15:44:53+0000",
-                        "pronosticBrut":0,
-                        "pronosticIV":0,
-                        "source":"TEST"
-                    }
                 ],
                 "listeMotifArrivee":[
                 ],
                 "listeMotifDepart":[
                 ],
                 "rang":5,
-                "sourceHoraireProjeteArriveeReference":"ESCALE",
-                "sourceHoraireProjeteDepartReference":"ESCALE",
                 "typeArret":"CH"
             },
             {
@@ -435,20 +368,6 @@
                     "nbJoursPasseMinuit":0
                 },
                 "listeHoraireProjeteArrivee":[
-                    {
-                        "dateHeure":"2015-09-21T16:39:00+0000",
-                        "dateHeureEmission":"2018-04-19T15:44:53+0000",
-                        "pronosticBrut":0,
-                        "pronosticIV":0,
-                        "source":"ESCALE"
-                    },
-                    {
-                        "dateHeure":"2015-09-21T16:39:00+0000",
-                        "dateHeureEmission":"2018-04-19T15:44:53+0000",
-                        "pronosticBrut":0,
-                        "pronosticIV":0,
-                        "source":"TEST"
-                    }
                 ],
                 "listeHoraireProjeteDepart":[
                 ],
@@ -459,7 +378,6 @@
                 "listeMotifDepart":[
                 ],
                 "rang":6,
-                "sourceHoraireProjeteArriveeReference":"ESCALE",
                 "typeArret":"CH"
             }
         ],
