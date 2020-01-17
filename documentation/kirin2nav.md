@@ -1,13 +1,19 @@
 # Kirin to Navitia Interface
 ## Overview
-This document describes the realtime feed sent from Kirin to Navitia. The exchanged
-feed is derived from the [GTFS-RT](https://gtfs.org/reference/realtime/v2/) TripUpdate message with some extensions.
+This document describes the realtime feed sent from Kirin to Navitia.  
+The exchanged feed is derived from the [GTFS-RT](https://gtfs.org/reference/realtime/v2/) TripUpdate message with some extensions.
 
 ## Message description
 The realtime feed is defined with relation to the existing static schedule in Navitia.
+
 Each feed provides realtime information for the complete vehicle journey and
-overwrites all previous realtime information.
-In the following, the optional fields that are not provided in the output feed are not specified.
+overwrites all previous realtime information for this vehicle journey.  
+No information about a vehicle journey means it stays the same (previous realtime information stays valid).
+
+In the following, the optional fields that are not provided in the output feed are not specified.  
+Required fields not specified are unused, so filled with any format-valid value.
+
+NB: Every time (date, timestamp, datetime, hour of day) field is expressed in UTC.
 
 ### FeedHeader
 Field | Type | Description
@@ -56,7 +62,7 @@ stoptime_message | String | Extended field. The text to be displayed for the giv
 ### StopTimeEvent
 Field | Type | Description
 --- | --- | ---
-time | unit64 | Updated time in POSIX time for the StopTime.
+time | unit64 | Updated time in UTC POSIX time for the StopTime.
 delay | String | Delay in seconds of the update at the StopTime. The default value is `0`. This field is only used to determine the StopTime status and `time` always takes precedence over `delay`.
 stop_time_event_relationship | Enum | Extended field. The type of the update of the StopTime in relation with the static schedule. The possible values are `SCHEDULED`, `SKIPPED`. This field is deprecated in favor of `stop_time_event_status`.
 stop_time_event_status | Enum | Extended field. The possible values are `SCHEDULED`, `DELETED`, `ADDED`, `DELETED_FOR_DETOUR`, `ADDED_FOR_DETOUR`.
