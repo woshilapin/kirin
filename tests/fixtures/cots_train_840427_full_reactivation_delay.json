@@ -1,3 +1,4 @@
+
 {
     "ressource":"courseOPE",
     "mode":"modification",
@@ -74,7 +75,7 @@
         ],
         "listeJourRegimeDApplication":[
             {
-                "date":"2015-09-21"
+                "date":"2017-03-18"
             }
         ],
         "listeJourRegimeFacultatif":[
@@ -87,17 +88,29 @@
                 "arretFacultatif":false,
                 "categorieStatistiqueDepart":"LVK",
                 "cr":"0087",
-                "ci":"212027",
+                "ci":"713040",
                 "ch":"BV",
                 "horaireProductionDepart":{
                     "idFuseauHoraire":"Europe/Paris",
                     "heureIncertaine":false,
-                    "heureLocale":"16:30:00",
+                    "heureLocale":"14:05:00",
                     "nbJoursPasseMinuit":0
                 },
                 "horaireVoyageurDepart":{
-                    "dateHeure":"2015-09-21T14:30:00+0000",
-                    "heureLocale":"16:30:00",
+                    "dateHeure":"2017-03-18T13:05:00+0000",
+                    "heureLocale":"14:05:00",
+                    "idFuseauHoraire":"Europe/Paris",
+                    "nbJoursPasseMinuit":0
+                },
+                "horaireProductionArrivee":{
+                    "idFuseauHoraire":"Europe/Paris",
+                    "heureIncertaine":false,
+                    "heureLocale":"14:05:00",
+                    "nbJoursPasseMinuit":0
+                },
+                "horaireVoyageurArrivee":{
+                    "dateHeure":"2017-03-18T13:05:00+0000",
+                    "heureLocale":"14:05:00",
                     "idFuseauHoraire":"Europe/Paris",
                     "nbJoursPasseMinuit":0
                 },
@@ -118,34 +131,34 @@
                 "categorieStatistiqueArrivee":"LVK",
                 "categorieStatistiqueDepart":"LVK",
                 "cr":"0087",
-                "ci":"214056",
-                "ch":"00",
+                "ci":"142125",
+                "ch":"BV",
                 "horaireObserveArrivee":{
-                    "dateHeure":"2015-09-21T15:38:00+0000",
+                    "dateHeure":"2017-03-18T15:39:00+0000",
                     "dateHeureEmission":"2018-04-19T15:44:53+0000",
                     "source":"ESCALE"
                 },
                 "horaireProductionArrivee":{
                     "idFuseauHoraire":"Europe/Paris",
                     "heureIncertaine":false,
-                    "heureLocale":"17:39:00",
+                    "heureLocale":"14:51:00",
                     "nbJoursPasseMinuit":0
                 },
                 "horaireProductionDepart":{
                     "idFuseauHoraire":"Europe/Paris",
                     "heureIncertaine":false,
-                    "heureLocale":"17:56:30",
+                    "heureLocale":"14:53:00",
                     "nbJoursPasseMinuit":0
                 },
                 "horaireVoyageurArrivee":{
-                    "dateHeure":"2015-09-21T15:38:00+0000",
-                    "heureLocale":"17:38:00",
+                    "dateHeure":"2017-03-18T13:51:00+0000",
+                    "heureLocale":"14:51:00",
                     "idFuseauHoraire":"Europe/Paris",
                     "nbJoursPasseMinuit":0
                 },
                 "horaireVoyageurDepart":{
-                    "dateHeure":"2015-09-21T15:40:30+0000",
-                    "heureLocale":"17:40:30",
+                    "dateHeure":"2017-03-18T13:53:00+0000",
+                    "heureLocale":"14:53:00",
                     "idFuseauHoraire":"Europe/Paris",
                     "nbJoursPasseMinuit":0
                 },
@@ -153,8 +166,6 @@
                 ],
                 "listeHoraireProjeteDepart":[
                 ],
-                "idMotifInterneDepartReference": 3,
-                "idMotifInterneArriveeReference": 3,
                 "listeMotifArrivee":[
                 ],
                 "listeMotifDepart":[
@@ -163,133 +174,34 @@
                 "typeArret":"CH"
             },
             {
-                "@id":"5168b9d7-34b9-45d8-b434-88577c26bd73",
-                "arretFacultatif":false,
-                "categorieStatistiqueArrivee":"LVK",
-                "categorieStatistiqueDepart":"LVK",
-                "cr": "0087",
-                "ci": "182014",
-                "ch": "BV",
-                "horaireObserveArrivee":{
-                    "dateHeure":"2015-09-21T15:51:00+0000",
-                    "dateHeureEmission":"2018-04-19T15:45:53+0000",
-                    "source":"ESCALE"
-                },
-                "horaireProductionArrivee":{
-                    "idFuseauHoraire":"Europe/Paris",
-                    "heureIncertaine":false,
-                    "heureLocale":"17:45:00",
-                    "nbJoursPasseMinuit":0
-                },
-                "horaireProductionDepart":{
-                    "idFuseauHoraire":"Europe/Paris",
-                    "heureIncertaine":false,
-                    "heureLocale":"17:46:00",
-                    "nbJoursPasseMinuit":0
-                },
-                "horaireVoyageurArrivee":{
-                    "dateHeure":"2015-09-21T15:51:00+0000",
-                    "heureLocale":"17:51:00",
-                    "idFuseauHoraire":"Europe/Paris",
-                    "nbJoursPasseMinuit":0,
-                    "statutCirculationOPE": "SUPPRESSION_DETOURNEMENT"
-                },
-                "horaireVoyageurDepart":{
-                    "dateHeure":"2015-09-21T15:53:00+0000",
-                    "heureLocale":"17:53:00",
-                    "idFuseauHoraire":"Europe/Paris",
-                    "nbJoursPasseMinuit":0,
-                    "statutCirculationOPE": "SUPPRESSION_DETOURNEMENT"
-                },
-                "listeHoraireProjeteArrivee":[
-                ],
-                "listeHoraireProjeteDepart":[
-                ],
-                "idMotifInterneDepartReference": 3,
-                "idMotifInterneArriveeReference": 3,
-                "listeMotifArrivee":[
-                ],
-                "listeMotifDepart":[
-                ],
-                "rang":3,
-                "typeArret":"CH"
-            },
-            {
-                "@id":"5168b9d7-34b9-45d8-b434-88577c26bd73",
-                "arretFacultatif":false,
-                "categorieStatistiqueArrivee":"LVK",
-                "categorieStatistiqueDepart":"LVK",
-                "cr": "0087",
-                "ci": "713666",
-                "ch": "BV",
-                "horaireProductionArrivee":{
-                    "idFuseauHoraire":"Europe/Paris",
-                    "heureIncertaine":false,
-                    "heureLocale":"17:51:00",
-                    "nbJoursPasseMinuit":0
-                },
-                "horaireProductionDepart":{
-                    "idFuseauHoraire":"Europe/Paris",
-                    "heureIncertaine":false,
-                    "heureLocale":"17:53:00",
-                    "nbJoursPasseMinuit":0
-                },
-                "horaireVoyageurArrivee":{
-                    "dateHeure":"2015-09-21T15:58:00+0000",
-                    "heureLocale":"17:58:00",
-                    "idFuseauHoraire":"Europe/Paris",
-                    "nbJoursPasseMinuit":0,
-                    "statutCirculationOPE": "DETOURNEMENT"
-                },
-                "horaireVoyageurDepart":{
-                    "dateHeure":"2015-09-21T15:58:00+0000",
-                    "heureLocale":"17:58:00",
-                    "idFuseauHoraire":"Europe/Paris",
-                    "nbJoursPasseMinuit":0,
-                    "statutCirculationOPE": "DETOURNEMENT"
-                },
-                "listeHoraireProjeteArrivee":[
-                ],
-                "listeHoraireProjeteDepart":[
-                ],
-                "idMotifInterneDepartReference": 3,
-                "idMotifInterneArriveeReference": 3,
-                "listeMotifArrivee":[
-                ],
-                "listeMotifDepart":[
-                ],
-                "rang":3,
-                "typeArret":"CH"
-            },
-            {
                 "@id":"a9d59792-a5b5-471b-a477-cca0be7aa2bf",
                 "arretFacultatif":false,
                 "categorieStatistiqueArrivee":"LVK",
                 "categorieStatistiqueDepart":"LVK",
                 "cr":"0087",
-                "ci":"182063",
+                "ci":"142091",
                 "ch":"BV",
                 "horaireProductionArrivee":{
                     "idFuseauHoraire":"Europe/Paris",
                     "heureIncertaine":false,
-                    "heureLocale":"18:14:00",
+                    "heureLocale":"15:02:00",
                     "nbJoursPasseMinuit":0
                 },
                 "horaireProductionDepart":{
                     "idFuseauHoraire":"Europe/Paris",
                     "heureIncertaine":false,
-                    "heureLocale":"18:16:00",
+                    "heureLocale":"15:03:00",
                     "nbJoursPasseMinuit":0
                 },
                 "horaireVoyageurArrivee":{
-                    "dateHeure":"2015-09-21T16:14:00+0000",
-                    "heureLocale":"18:14:00",
+                    "dateHeure":"2017-03-18T14:02:00+0000",
+                    "heureLocale":"15:02:00",
                     "idFuseauHoraire":"Europe/Paris",
                     "nbJoursPasseMinuit":0
                 },
                 "horaireVoyageurDepart":{
-                    "dateHeure":"2015-09-21T16:16:00+0000",
-                    "heureLocale":"18:16:00",
+                    "dateHeure":"2017-03-18T14:03:00+0000",
+                    "heureLocale":"15:03:00",
                     "idFuseauHoraire":"Europe/Paris",
                     "nbJoursPasseMinuit":0
                 },
@@ -301,6 +213,58 @@
                 ],
                 "listeMotifDepart":[
                 ],
+                "rang":3,
+                "typeArret":"CH"
+            },
+            {
+                "@id":"2ce15bf7-134d-4cd5-978f-d746d238e008",
+                "arretFacultatif":false,
+                "categorieStatistiqueArrivee":"LVK",
+                "categorieStatistiqueDepart":"LVA",
+                "cr":"0087",
+                "ci":"142000",
+                "ch":"BV",
+                "horaireProductionArrivee":{
+                    "idFuseauHoraire":"Europe/Paris",
+                    "heureIncertaine":false,
+                    "heureLocale":"15:22:00",
+                    "nbJoursPasseMinuit":0
+                },
+                "horaireProductionDepart":{
+                    "idFuseauHoraire":"Europe/Paris",
+                    "heureIncertaine":false,
+                    "heureLocale":"15:24:00",
+                    "nbJoursPasseMinuit":0
+                },
+                "horaireVoyageurArrivee":{
+                    "dateHeure":"2017-03-18T14:22:00+0000",
+                    "heureLocale":"15:22:00",
+                    "idFuseauHoraire":"Europe/Paris",
+                    "nbJoursPasseMinuit":0,
+                },
+                "horaireVoyageurDepart":{
+                    "dateHeure":"2017-03-18T14:24:00+0000",
+                    "heureLocale":"15:24:00",
+                    "idFuseauHoraire":"Europe/Paris",
+                    "nbJoursPasseMinuit":0,
+                    "statutCirculationOPE": "REACTIVATION"
+                },
+                "listeHoraireProjeteArrivee":[
+                ],
+                "listeHoraireProjeteDepart":[
+                ],
+                "idMotifInterneDepartReference": 4,
+                "idMotifInterneArriveeReference": 4,
+                "listeMotifArrivee": [
+                {
+                    "idMotifInterne": 4,
+                    "source": "IRE-GOP"
+                }],
+                "listeMotifDepart": [
+                {
+                    "idMotifInterne": 4,
+                    "source": "IRE-GOP"
+                }],
                 "rang":4,
                 "typeArret":"CH"
             },
@@ -310,36 +274,40 @@
                 "categorieStatistiqueArrivee":"LVK",
                 "categorieStatistiqueDepart":"LVA",
                 "cr":"0087",
-                "ci":"182139",
+                "ci":"118299",
                 "ch":"BV",
                 "horaireProductionArrivee":{
                     "idFuseauHoraire":"Europe/Paris",
                     "heureIncertaine":false,
-                    "heureLocale":"18:30:00",
+                    "heureLocale":"15:44:00",
                     "nbJoursPasseMinuit":0
                 },
                 "horaireProductionDepart":{
                     "idFuseauHoraire":"Europe/Paris",
                     "heureIncertaine":false,
-                    "heureLocale":"18:31:00",
+                    "heureLocale":"15:45:00",
                     "nbJoursPasseMinuit":0
                 },
                 "horaireVoyageurArrivee":{
-                    "dateHeure":"2015-09-21T16:30:00+0000",
-                    "heureLocale":"18:30:00",
+                    "dateHeure":"2017-03-18T14:44:00+0000",
+                    "heureLocale":"15:44:00",
                     "idFuseauHoraire":"Europe/Paris",
-                    "nbJoursPasseMinuit":0
+                    "nbJoursPasseMinuit":0,
+                    "statutCirculationOPE": "REACTIVATION"
                 },
                 "horaireVoyageurDepart":{
-                    "dateHeure":"2015-09-21T16:31:00+0000",
-                    "heureLocale":"18:31:00",
+                    "dateHeure":"2017-03-18T14:45:00+0000",
+                    "heureLocale":"15:45:00",
                     "idFuseauHoraire":"Europe/Paris",
-                    "nbJoursPasseMinuit":0
+                    "nbJoursPasseMinuit":0,
+                    "statutCirculationOPE": "REACTIVATION"
                 },
                 "listeHoraireProjeteArrivee":[
                 ],
                 "listeHoraireProjeteDepart":[
                 ],
+                "idMotifInterneDepartReference": 4,
+                "idMotifInterneArriveeReference": 4,
                 "listeMotifArrivee":[
                 ],
                 "listeMotifDepart":[
@@ -353,31 +321,100 @@
                 "categorieStatistiqueArrivee":"LVK",
                 "categorieStatistiqueDepart":"LVA",
                 "cr":"0087",
-                "ci":"187914",
-                "ch":"WS",
+                "ci":"118257",
+                "ch":"BV",
                 "horaireProductionArrivee":{
                     "idFuseauHoraire":"Europe/Paris",
                     "heureIncertaine":false,
-                    "heureLocale":"18:39:00",
+                    "heureLocale":"15:58:00",
+                    "nbJoursPasseMinuit":0
+                },
+                "horaireProductionDepart":{
+                    "idFuseauHoraire":"Europe/Paris",
+                    "heureIncertaine":false,
+                    "heureLocale":"15:59:00",
                     "nbJoursPasseMinuit":0
                 },
                 "horaireVoyageurArrivee":{
-                    "dateHeure":"2015-09-21T16:39:00+0000",
-                    "heureLocale":"18:39:00",
+                    "dateHeure":"2017-03-18T14:58:00+0000",
+                    "heureLocale":"15:58:00",
                     "idFuseauHoraire":"Europe/Paris",
-                    "nbJoursPasseMinuit":0
+                    "nbJoursPasseMinuit":0,
+                    "statutCirculationOPE": "REACTIVATION"
                 },
-                "listeHoraireProjeteArrivee":[
-                ],
-                "listeHoraireProjeteDepart":[
-                ],
-                "idMotifInterneDepartReference": 3,
-                "idMotifInterneArriveeReference": 3,
+                "horaireVoyageurDepart":{
+                    "dateHeure":"2017-03-18T14:59:00+0000",
+                    "heureLocale":"15:59:00",
+                    "idFuseauHoraire":"Europe/Paris",
+                    "nbJoursPasseMinuit":0,
+                    "statutCirculationOPE": "REACTIVATION"
+                },
+                "listeHoraireProjeteArrivee": [{
+                    "dateHeure": "2017-03-18T15:03:00+0000",
+                    "dateHeureEmission": "2016-11-02T09:00:15+0000",
+                    "pronosticBrut": 300,
+                    "pronosticIV": 300,
+                    "source": "IRE-GOP"
+                }],
+                "listeHoraireProjeteDepart": [{
+                    "dateHeure": "2017-03-18T15:04:00+0000",
+                    "dateHeureEmission": "2016-11-02T09:00:15+0000",
+                    "pronosticBrut": 300,
+                    "pronosticIV": 300,
+                    "source": "IRE-GOP"
+                }],
+                "idMotifInterneDepartReference": 4,
+                "idMotifInterneArriveeReference": 4,
                 "listeMotifArrivee":[
                 ],
                 "listeMotifDepart":[
                 ],
                 "rang":6,
+                "typeArret":"CH"
+            },
+            {
+                "@id":"2ce15bf7-134d-4cd5-978f-d746d238e008",
+                "arretFacultatif":false,
+                "categorieStatistiqueArrivee":"LVK",
+                "categorieStatistiqueDepart":"LVA",
+                "cr":"0087",
+                "ci":"118000",
+                "ch":"BV",
+                "horaireProductionDepart":{
+                    "idFuseauHoraire":"Europe/Paris",
+                    "heureIncertaine":false,
+                    "heureLocale":"16:16:00",
+                    "nbJoursPasseMinuit":0
+                },
+                "horaireVoyageurDepart":{
+                    "dateHeure":"2017-03-18T15:16:00+0000",
+                    "heureLocale":"16:16:00",
+                    "idFuseauHoraire":"Europe/Paris",
+                    "nbJoursPasseMinuit":0
+                },
+                "horaireProductionArrivee":{
+                    "idFuseauHoraire":"Europe/Paris",
+                    "heureIncertaine":false,
+                    "heureLocale":"16:16:00",
+                    "nbJoursPasseMinuit":0
+                },
+                "horaireVoyageurArrivee":{
+                    "dateHeure":"2017-03-18T15:16:00+0000",
+                    "heureLocale":"16:16:00",
+                    "idFuseauHoraire":"Europe/Paris",
+                    "nbJoursPasseMinuit":0,
+                    "statutCirculationOPE": "REACTIVATION"
+                },
+                "listeHoraireProjeteArrivee":[
+                ],
+                "listeHoraireProjeteDepart":[
+                ],
+                "idMotifInterneArriveeReference": 4,
+                "listeMotifArrivee":[
+                ],
+                "listeMotifDepart":[
+                ],
+                "rang":7,
                 "typeArret":"CH"
             }
         ],
@@ -386,7 +423,7 @@
                 "code":"CS01",
                 "listeJourRegimeDApplication":[
                     {
-                        "date":"2015-09-21"
+                        "date":"2017-03-18"
                     }
                 ],
                 "listePropriete":[
@@ -421,12 +458,12 @@
         "listeUtilisationSillon":[
             {
                 "identifiantSillon":{
-                    "numeroOperationnelSillon":"096231",
+                    "numeroOperationnelSillon":"840427",
                     "sillonTTH":"042522760051"
                 },
                 "listeJourRegimeDApplication":[
                     {
-                        "date":"2015-09-21"
+                        "date":"2017-03-18"
                     }
                 ],
                 "listeJourRegimeFacultatif":[
@@ -446,7 +483,7 @@
                 },
                 "listeJourRegimeDApplication":[
                     {
-                        "date":"2015-09-21"
+                        "date":"2017-03-18"
                     }
                 ],
                 "listeJourRegimeFacultatif":[
@@ -460,7 +497,7 @@
                 "porteur":false
             }
         ],
-        "numeroCourse":"096231",
+        "numeroCourse":"840427",
         "statutSillonCourse":"NON_CONNU",
         "statutOperationnel":"PERTURBEE",
         "systemeCreateur":"2148",

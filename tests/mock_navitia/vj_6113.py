@@ -121,14 +121,14 @@ response.json_response = """{
             ],
             "stop_times": [
                 {
-                    "arrival_time": "123700",
-                    "utc_arrival_time": "103700",
-                    "utc_departure_time": "103700",
+                    "arrival_time": "131600",
+                    "utc_arrival_time": "111600",
+                    "utc_departure_time": "111600",
                     "journey_pattern_point": {
                         "id": "OCE:TGV-87751008-87686006-4066:OCE:SP:TGV-87686006:0"
                     },
                     "headsign": "6113",
-                    "departure_time": "123700",
+                    "departure_time": "131600",
                     "stop_point": {
                         "codes": [
                             {
@@ -152,6 +152,10 @@ response.json_response = """{
                         "stop_area": {
                             "codes": [
                                 {
+                                  "type": "CR-CI-CH",
+                                  "value": "0087-686006-BV"
+                                },
+                                {
                                     "type": "external_code",
                                     "value": "OCE87686006"
                                 }
@@ -171,14 +175,14 @@ response.json_response = """{
                     }
                 },
                 {
-                    "arrival_time": "152100",
-                    "utc_arrival_time": "132100",
-                    "utc_departure_time": "132400",
+                    "arrival_time": "155600",
+                    "utc_arrival_time": "135600",
+                    "utc_departure_time": "135900",
                     "journey_pattern_point": {
                         "id": "OCE:TGV-87751008-87686006-4066:OCE:SP:TGV-87318964:1"
                     },
                     "headsign": "6113",
-                    "departure_time": "152400",
+                    "departure_time": "155900",
                     "stop_point": {
                         "codes": [
                             {
@@ -202,6 +206,10 @@ response.json_response = """{
                         "stop_area": {
                             "codes": [
                                 {
+                                  "type": "CR-CI-CH",
+                                  "value": "0087-318964-BV"
+                                },
+                                {
                                     "type": "external_code",
                                     "value": "OCE87318964"
                                 }
@@ -221,14 +229,14 @@ response.json_response = """{
                     }
                 },
                 {
-                    "arrival_time": "154300",
-                    "utc_arrival_time": "134300",
-                    "utc_departure_time": "134600",
+                    "arrival_time": "161900",
+                    "utc_arrival_time": "141900",
+                    "utc_departure_time": "142200",
                     "journey_pattern_point": {
                         "id": "OCE:TGV-87751008-87686006-4066:OCE:SP:TGV-87319012:2"
                     },
                     "headsign": "6113",
-                    "departure_time": "154600",
+                    "departure_time": "162200",
                     "stop_point": {
                         "codes": [
                             {
@@ -252,6 +260,10 @@ response.json_response = """{
                         "stop_area": {
                             "codes": [
                                 {
+                                  "type": "CR-CI-CH",
+                                  "value": "0087-319012-00"
+                                },
+                                {
                                     "type": "external_code",
                                     "value": "OCE87319012"
                                 }
@@ -271,14 +283,14 @@ response.json_response = """{
                     }
                 },
                 {
-                    "arrival_time": "160300",
-                    "utc_arrival_time": "140300",
-                    "utc_departure_time": "140300",
+                    "arrival_time": "163400",
+                    "utc_arrival_time": "143400",
+                    "utc_departure_time": "143400",
                     "journey_pattern_point": {
                         "id": "OCE:TGV-87751008-87686006-4066:OCE:SP:TGV-87751008:3"
                     },
                     "headsign": "6113",
-                    "departure_time": "160300",
+                    "departure_time": "163400",
                     "stop_point": {
                         "codes": [
                             {
@@ -301,6 +313,10 @@ response.json_response = """{
                         "id": "stop_point:OCE:SP:TGV-87751008",
                         "stop_area": {
                             "codes": [
+                                {
+                                  "type": "CR-CI-CH",
+                                  "value": "0087-751008-BV"
+                                },
                                 {
                                     "type": "external_code",
                                     "value": "OCE87751008"
