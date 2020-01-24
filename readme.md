@@ -60,14 +60,13 @@ The feeds can be of the following type:
 
  - Install dependencies with
     ```
-    pip install -r requirements.txt
+    pip install -r requirements_dev.txt
     ```
     (virtualenv is strongly advised)
- - Create a configuration file by copying and editing ```kirin/default_settings.py```
  - You also need a redis-server to use cache on some requests and a rabbitmq-server to post updated data in the queue.
     It can be installed with :
     ```
-    sudo apt-get install redis-server rabbitmq-server
+    sudo apt-get install redis-server rabbitmq-server protobuf-compiler
     ```
  - Setup the Kirin database (postgresql >= 9.1 is required):
     ```
@@ -83,7 +82,7 @@ The feeds can be of the following type:
     ctrl + d
     ```
 
- - Create a configuration file:
+ - Create a configuration file by copying and editing ```kirin/default_settings.py```
     ```
     NAVITIA_URL = '<url of the navitia server>' # ex: 'http://localhost:5000/'
     DEBUG = True
