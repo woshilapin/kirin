@@ -101,7 +101,7 @@ class KirinModelBuilder(object):
     def __init__(self, nav, contributor):
         self.navitia = nav
         self.contributor = contributor
-        self.log = logging.getLogger(__name__)
+        self.log = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": self.contributor})
         # TODO better period handling
         self.period_filter_tolerance = datetime.timedelta(hours=3)
         self.stop_code_key = "source"  # TODO conf
