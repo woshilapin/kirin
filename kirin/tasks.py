@@ -133,7 +133,7 @@ def purge_gtfs_trip_update(self):
     This task will remove ONLY TripUpdate, StoptimeUpdate and VehicleJourney that are created by gtfs-rt but the
     RealTimeUpdate are kept so that we can replay it for debug purpose. RealTimeUpdate will be remove by another task
     """
-    for contributor in get_gtfsrt_contributors():
+    for contributor in get_gtfsrt_contributors(include_deactivated=True):
         config = {
             "contributor": contributor.id,
             "nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_TRIP_UPDATE")),
@@ -156,7 +156,7 @@ def purge_cots_trip_update(self):
     This task will remove ONLY TripUpdate, StopTimeUpdate and VehicleJourney that are created by COTS but the
     RealTimeUpdate are kept so that we can replay it for debug purpose. RealTimeUpdate will be remove by another task
     """
-    contributor = get_cots_contributor()
+    contributor = get_cots_contributor(include_deactivated=True)
     config = {"contributor": contributor.id, "nb_days_to_keep": 10}
     purge_trip_update.delay(config)
 

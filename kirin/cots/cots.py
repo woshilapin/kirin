@@ -42,7 +42,7 @@ from kirin.core import model
 from kirin.core.types import ConnectorType
 
 
-def get_cots_contributor():
+def get_cots_contributor(include_deactivated=False):
     """
     :return 1 COTS contributor from config file or db
     File has priority over db
@@ -56,7 +56,9 @@ def get_cots_contributor():
             navitia_token=current_app.config.get(str("NAVITIA_TOKEN")),
         )
     else:
-        contributor = model.Contributor.find_by_connector_type(ConnectorType.cots.value)
+        contributor = model.Contributor.find_by_connector_type(
+            ConnectorType.cots.value, include_deactivated=include_deactivated
+        )
         if len(contributor) == 0:
             logging.getLogger(__name__).error("No COTS contributor found")
             raise SubServiceError

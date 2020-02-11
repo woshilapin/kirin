@@ -45,7 +45,7 @@ from kirin.core.types import ConnectorType
 from kirin.resources.contributors import contributor_fields
 
 
-def get_gtfsrt_contributors():
+def get_gtfsrt_contributors(include_deactivated=False):
     """
     :return: all GTFS-RT contributors from config file + db
     File has priority over db
@@ -67,7 +67,9 @@ def get_gtfsrt_contributors():
     gtfsrt_contributors.extend(
         [
             c
-            for c in model.Contributor.find_by_connector_type(ConnectorType.gtfs_rt.value)
+            for c in model.Contributor.find_by_connector_type(
+                ConnectorType.gtfs_rt.value, include_deactivated=include_deactivated
+            )
             if c.id != contributor_legacy_id
         ]
     )

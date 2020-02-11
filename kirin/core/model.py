@@ -539,7 +539,9 @@ class Contributor(db.Model):  # type: ignore
         self.is_active = is_active
 
     @classmethod
-    def find_by_connector_type(cls, type):
+    def find_by_connector_type(cls, type, include_deactivated=False):
+        if include_deactivated:
+            return cls.query.filter_by(connector_type=type).all()
         return cls.query.filter_by(connector_type=type, is_active=True).all()
 
     @classmethod
