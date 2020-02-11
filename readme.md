@@ -331,15 +331,21 @@ If the COTS was successfully sent and processed by Kirin, the http response 200 
 
 ##### Definitely remove a contributor from configuration
 
-A command to clean inactive contributors is available, to be triggered manually.
+A command to clean inactive contributors is available, to be triggered manually:
 ```bash
 python ./manage.py purge_contributor <contributor_id>
 ```
+If Kirin is deployed inside docker containers on a platform, you may locate the docker-compose file defining a `kirin`
+webservice that was used to launch containers.  
+Then for example, if the file is `docker-compose_kirin.yml`, you can launch:
+```bash
+docker-compose -f docker-compose_kirin.yml run --rm --no-deps kirin ./manage.py purge_contributor <contributor_id>
+```
+
 This will check that for the given contributor, `is_active=false` and that
 no more object (TripUpdate or RealTimeUpdate) is linked to that contributor in Kirin database.
 
 Those objects are progressively purged by automatic jobs configured in the settings file.
-
 
 ## Development
 
