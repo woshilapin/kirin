@@ -337,8 +337,7 @@ python ./manage.py purge_contributor <contributor_id>
 ```
 If Kirin is deployed inside docker containers on a platform, you may locate the docker-compose file defining a `kirin`
 webservice that was used to launch containers.  
-Then for example, if the file is `docker-compose_kirin.yml` (sometimes referencing a `kirin.env` for parameters),
-you can launch :
+Then for example, if the file is `docker-compose_kirin.yml`, you can launch:
 ```bash
 docker-compose -f docker-compose_kirin.yml run --rm --no-deps kirin ./manage.py purge_contributor <contributor_id>
 ```
