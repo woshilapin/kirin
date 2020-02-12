@@ -60,7 +60,7 @@ def with_custom_contributors():
 
     db.session.add_all(
         [
-            model.Contributor("realtime.sherbrooke", "ca", "gtfs-rt", "my_token", "http://feed.url"),
+            model.Contributor("realtime.sherbrooke", "ca", "gtfs-rt", "my_token", "http://feed.url", 5),
             model.Contributor("realtime.paris", "idf", "gtfs-rt", "my_other_token", "http://otherfeed.url"),
             model.Contributor("realtime.london", "gb", "cots"),
         ]
@@ -93,6 +93,7 @@ def test_get_contributors_with_specific_id(test_client, with_custom_contributors
     assert contrib[0]["connector_type"] == "gtfs-rt"
     assert contrib[0]["navitia_token"] == "my_other_token"
     assert contrib[0]["feed_url"] == "http://otherfeed.url"
+    assert contrib[0]["retrieval_interval"] == 10
 
 
 def test_get_partial_contributor_with_empty_fields(test_client, with_custom_contributors):
@@ -126,6 +127,7 @@ def test_post_new_contributor(test_client):
         "navitia_token": "blablablabla",
         "feed_url": "http://nihongo.jp",
         "connector_type": "gtfs-rt",
+        "retrieval_interval": 30,
     }
     resp = test_client.post("/contributors", json=new_contrib)
     assert resp.status_code == 201
@@ -136,6 +138,7 @@ def test_post_new_contributor(test_client):
     assert contrib.connector_type == "gtfs-rt"
     assert contrib.navitia_token == "blablablabla"
     assert contrib.feed_url == "http://nihongo.jp"
+    assert contrib.retrieval_interval == 30
 
 
 def test_post_new_partial_contributor(test_client):
@@ -149,6 +152,7 @@ def test_post_new_partial_contributor(test_client):
     assert contrib.connector_type == "gtfs-rt"
     assert contrib.navitia_token is None
     assert contrib.feed_url is None
+    assert contrib.retrieval_interval == 10
 
 
 def test_post_empty_contributor_should_fail(test_client):
@@ -233,6 +237,7 @@ def test_put_contributor_with_id(test_client):
             "connector_type": "gtfs-rt",
             "navitia_token": "new_token",
             "feed_url": "http://new.feed",
+            "retrieval_interval": 50,
         },
     )
 
@@ -243,6 +248,7 @@ def test_put_contributor_with_id(test_client):
     assert contrib.connector_type == "gtfs-rt"
     assert contrib.navitia_token == "new_token"
     assert contrib.feed_url == "http://new.feed"
+    assert contrib.retrieval_interval == 50
 
 
 def test_put_partial_contributor(test_client):
@@ -305,6 +311,7 @@ def test_post_get_put_to_ensure_API_consitency(test_client):
         "navitia_token": "blablablabla",
         "feed_url": "http://nihongo.jp",
         "connector_type": "gtfs-rt",
+        "retrieval_interval": 180,
         "is_active": True,
     }
     test_client.post("/contributors", json=new_contrib)

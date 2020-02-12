@@ -77,13 +77,13 @@ def clean_db():
         # Add two contributors in the table
         db.session.add_all(
             [
-                model.Contributor(COTS_CONTRIBUTOR, "sncf", "cots", "cots_token", "cots_feed_url", True),
+                model.Contributor(COTS_CONTRIBUTOR, "sncf", "cots", "cots_token", "cots_feed_url", 10, True),
                 model.Contributor(
-                    GTFS_CONTRIBUTOR, "sherbrooke", "gtfs-rt", "gtfs-rt_token", "gtfs-rt_feed_url", True
+                    GTFS_CONTRIBUTOR, "sherbrooke", "gtfs-rt", "gtfs-rt_token", "gtfs-rt_feed_url", 1, True
                 ),
                 model.Contributor(COTS_CONTRIBUTOR_DB, "idfm", "cots", "cots_db_token", "cots_db_feed_url"),
                 model.Contributor(
-                    GTFS_CONTRIBUTOR_DB, "laval", "gtfs-rt", "gtfs-rt_db_token", "gtfs-rt_db_feed_url"
+                    GTFS_CONTRIBUTOR_DB, "laval", "gtfs-rt", "gtfs-rt_db_token", "gtfs-rt_db_feed_url", 30
                 ),
             ]
         )
