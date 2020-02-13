@@ -122,6 +122,7 @@ def poller(self):
             "token": contributor.navitia_token,
             "coverage": contributor.navitia_coverage,
             "feed_url": contributor.feed_url,
+            "retrieval_interval": contributor.retrieval_interval,
             "timeout": app.config.get(str("GTFS_RT_TIMEOUT"), 1),
         }
         gtfs_poller.delay(config)

@@ -132,6 +132,12 @@ def make_kirin_lock_name(*args):
     return "|".join([app.config[str("TASK_LOCK_PREFIX")]] + [a for a in args])
 
 
+def make_kirin_last_call_dt_name(*args):
+    from kirin import app
+
+    return "|".join([app.config[str("TASK_LAST_CALL_DATETIME_PREFIX")]] + [a for a in args])
+
+
 def build_redis_etag_key(contributor):
     # type: (unicode) -> unicode
     return "|".join([contributor, "polling_HEAD"])
