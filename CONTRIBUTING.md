@@ -21,7 +21,8 @@ Everywhere.
 So a naive-UTC-datetime is produced right after it's read,
 and timezone info is added as late as possible when needed (ex: when requesting external service).  
 When absolutely needed, datetimes that are not UTC **must** be timezone-aware to avoid
-being able to mix them with naive-UTC-datetimes (it's also the easiest and safest way to handle timezones).
+being able to mix them with naive-UTC-datetimes (it's also the easiest and safest way to handle timezones).  
+Communication (request and read) with external services is done in UTC as much as possible (with Navitia especially).
 
 
 ### Python formatting
