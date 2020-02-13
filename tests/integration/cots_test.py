@@ -124,7 +124,7 @@ def test_cots_simple_post(mock_rabbitmq):
         assert len(rtu_array) == 1
         rtu = rtu_array[0]
         assert "-" in rtu.id
-        assert rtu.received_at
+        assert rtu.created_at
         assert rtu.status == "OK"
         assert rtu.error is None
         assert rtu.contributor_id == COTS_CONTRIBUTOR
