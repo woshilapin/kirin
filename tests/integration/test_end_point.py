@@ -257,18 +257,18 @@ def setup_database():
         tu3 = model.TripUpdate(vj3, contributor=GTFS_CONTRIBUTOR)
         rtu1 = make_rt_update(None, "cots", COTS_CONTRIBUTOR)
         rtu1.created_at = datetime(2015, 11, 4, 6, 32)
-        rtu1.updated_at = None  # mock creation, no update done
+        rtu1.updated_at = datetime(2015, 11, 4, 6, 32)  # mock creation, no update done
         rtu1.trip_updates.append(tu1)
         model.db.session.add(rtu1)
         rtu2 = make_rt_update(None, "cots", contributor=COTS_CONTRIBUTOR)
         rtu2.created_at = datetime(2015, 11, 4, 7, 32)
-        rtu2.updated_at = None
+        rtu2.updated_at = datetime(2015, 11, 4, 7, 32)
         rtu2.trip_updates.append(tu2)
         model.db.session.add(rtu2)
 
         rtu3 = make_rt_update(None, "gtfs-rt", contributor=GTFS_CONTRIBUTOR)
         rtu3.created_at = datetime(2015, 11, 4, 7, 42)
-        rtu3.updated_at = None
+        rtu3.updated_at = datetime(2015, 11, 4, 7, 42)
         rtu3.trip_updates.append(tu3)
         model.db.session.add(rtu3)
 
@@ -280,17 +280,17 @@ def setup_database():
             is_reprocess_same_data_allowed=False,
         )
         rtu4.created_at = datetime(2015, 11, 4, 7, 52)
-        rtu4.updated_at = None
+        rtu4.updated_at = datetime(2015, 11, 4, 7, 52)
         model.db.session.add(rtu4)
 
         rtu5 = make_rt_update(None, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR_DB)
         rtu5.created_at = datetime(2015, 11, 4, 8, 2)
-        rtu5.updated_at = None
+        rtu5.updated_at = datetime(2015, 11, 4, 8, 2)
         model.db.session.add(rtu5)
 
         rtu6 = make_rt_update(None, connector="cots", contributor=COTS_CONTRIBUTOR_DB)
         rtu6.created_at = datetime(2015, 11, 4, 8, 12)
-        rtu6.updated_at = None
+        rtu6.updated_at = datetime(2015, 11, 4, 8, 12)
         model.db.session.add(rtu6)
 
         model.db.session.commit()

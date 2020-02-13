@@ -74,7 +74,7 @@ def gen_uuid():
 
 class TimestampMixin(object):
     created_at = db.Column(db.DateTime(), default=datetime.datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime(), default=None, onupdate=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime(), default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
 
 Db_TripEffect = db.Enum(*[e.name for e in TripEffect], name="trip_effect")
