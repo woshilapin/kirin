@@ -94,6 +94,24 @@ def _is_newer(config):
     return True  # whatever the exception is, we don't want to break the polling
 
 
+def _is_last_call_too_recent(func_name, contributor, minimal_call_interval):
+    # retrieve last_call_datetime from redis
+    str_dt_format = "%Y-%m-%d %H:%M:%S.%f"
+
+    last_exe_dt_name = make_kirin_last_call_dt_name(func_name, contributor)
+    last_exe_dt_str = redis_client.get(last_exe_dt_name)
+    last_exe_dt = datetime.strptime(last_exe_dt_str, str_dt_format) if last_exe_dt_str else None
+    now = datetime.utcnow()
+
+    if last_exe_dt and now <= last_exe_dt + as_duration(minimal_call_interval):
+        return True
+
+    # store last_call_datetime in redis
+    # to avoid storing things forever in redis: set an expiration duration of (interval + "security" margin)
+    redis_client.set(last_exe_dt_name, now.strftime(str_dt_format), ex=minimal_call_interval + 10)
+    return False
+
+
 @new_relic.agent.function_trace()  # trace it specifically in transaction times
 def _retrieve_gtfsrt(config):
     start_dt = datetime.utcnow()
@@ -116,23 +134,11 @@ def gtfs_poller(self, config):
             new_relic.ignore_transaction()
             return
 
-        # retrieve last_call_datetime from redis
         retrieval_interval = config["retrieval_interval"] or 10
-        str_dt_format = "%Y-%m-%d %H:%M:%S.%f"
-
-        last_exe_dt_name = make_kirin_last_call_dt_name(func_name, contributor)
-        last_exe_dt_str = redis_client.get(last_exe_dt_name)
-        last_exe_dt = datetime.strptime(last_exe_dt_str, str_dt_format) if last_exe_dt_str else None
-        now = datetime.utcnow()
-
-        if last_exe_dt and now <= last_exe_dt + as_duration(retrieval_interval):
+        if _is_last_call_too_recent(func_name, contributor, retrieval_interval):
             # do nothing if the last call is too recent
             new_relic.ignore_transaction()
             return
-
-        # store last_call_datetime in redis
-        # to avoid storing things forever in redis: set an expiration duration of (interval + "security" margin)
-        redis_client.set(last_exe_dt_name, now.strftime(str_dt_format), ex=retrieval_interval + 10)
 
         logger.debug("polling of %s", config["feed_url"])
 
