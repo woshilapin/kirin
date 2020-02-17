@@ -36,9 +36,12 @@ from kirin import exceptions
 
 
 from flask import Flask
+from flask_cors import CORS
 import logging.config
 
 app = Flask(__name__)
+CORS(app)
+
 app.config.from_object(str("kirin.default_settings"))  # type: ignore
 if "KIRIN_CONFIG_FILE" in os.environ:
     app.config.from_envvar(str("KIRIN_CONFIG_FILE"))  # type: ignore
