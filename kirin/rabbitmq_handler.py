@@ -152,6 +152,13 @@ class RabbitMQHandler(object):
         info.pop("password", None)
         return info
 
+    def connect(self):
+        self._connection.connect()
+
+    def close(self):
+        for c in self._connections:
+            c.release()
+
     def listen_load_realtime(self, queue_name, max_retries=10):
         log = logging.getLogger(__name__)
 
@@ -165,7 +172,7 @@ class RabbitMQHandler(object):
 
 def monitor_heartbeats(connections, rate=2):
     """
-    launch the heartbeat of amqp, it's mostly for prevent the f@#$ firewall from droping the connection
+    launch the heartbeat of amqp, it's mostly for preventing the f@#$ firewall from dropping the connection
     """
     supports_heartbeats = False
     interval = 10000

@@ -37,6 +37,7 @@ from io import BytesIO
 
 from redis import ConnectionPool
 from kirin import Redis
+from kirin.rabbitmq_handler import RabbitMQHandler
 from typing import List, Optional, Dict, IO
 from retrying import retry
 
@@ -49,7 +50,7 @@ logger = logging.getLogger(__name__)  # type: logging.Logger
 
 class DockerWrapper(object):
     """
-    launch a temporary docker with a postgresql db
+    launch a temporary docker
     """
 
     def __init__(
@@ -104,7 +105,7 @@ class DockerWrapper(object):
                 raise
 
         self.container = self.docker_client.containers.create(
-            self.image_name, name=self.container_name, environment=self.env_vars, mounts=self.mounts
+            self.image_name, name=self.container_name, environment=self.env_vars, mounts=self.mounts,
         )
         logger.info("docker id is {}".format(self.container.id))
         logger.info("starting the temporary docker")
@@ -268,3 +269,50 @@ def redis_docker(mounts=None):
     redis_wrap.test_redis_cnx()
 
     return redis_wrap
+
+
+class RabbitMQDockerWrapper(DockerWrapper):
+    def __init__(
+        self,
+        image_name,  # type: unicode
+        container_name=None,  # type: Optional[unicode]
+        dockerfile_obj=None,  # type: Optional[IO]
+        dockerfile_path=None,  # type: Optional[unicode]
+        env_vars={},  # type: Dict[unicode, unicode]
+        mounts=None,  # type: Optional[List[docker.types.Mount]]
+    ):
+        # type: (...) -> None
+        super(RabbitMQDockerWrapper, self).__init__(
+            image_name, container_name, dockerfile_obj, dockerfile_path, env_vars, mounts,
+        )
+        protocol = "pyamqp"
+        username = "guest"
+        password = "guest"
+        url = "{0}://{1}:{2}@{3}//?heartbeat=60".format(protocol, username, password, self.ip_addr)
+        self.handler = RabbitMQHandler(url, "navitia")
+
+    def get_rabbitmq_handler(self):
+        # type: () -> RabbitMQHandler
+        return self.handler
+
+    @retry(stop_max_delay=10000, wait_fixed=100, retry_on_exception=lambda e: isinstance(e, Exception))
+    def test_rabbitmq_handler(self):
+        self.handler.connect()
+
+    def close(self):
+        self.handler.close()
+        super(RabbitMQDockerWrapper, self).close()
+
+
+def rabbitmq_docker():
+    rabbitmq_image = "rabbitmq:3"
+
+    # The best way to get the image would be to get it from dockerhub,
+    # but with this dumb wrapper the runtime time of the unit tests is reduced by 10s
+    dockerfile_obj = BytesIO(str("FROM " + rabbitmq_image))
+
+    rabbitmq_wrap = RabbitMQDockerWrapper(
+        image_name=rabbitmq_image, dockerfile_obj=dockerfile_obj, container_name="kirin_test_rabbitmq"
+    )
+    rabbitmq_wrap.test_rabbitmq_handler()
+    return rabbitmq_wrap
