@@ -528,14 +528,25 @@ class Contributor(db.Model):  # type: ignore
     navitia_token = db.Column(db.Text, nullable=True)
     feed_url = db.Column(db.Text, nullable=True)
     connector_type = db.Column(Db_ConnectorType, nullable=False)
+    retrieval_interval = db.Column(db.Integer, nullable=True, default=10)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
 
-    def __init__(self, id, navitia_coverage, connector_type, navitia_token=None, feed_url=None, is_active=True):
+    def __init__(
+        self,
+        id,
+        navitia_coverage,
+        connector_type,
+        navitia_token=None,
+        feed_url=None,
+        retrieval_interval=10,
+        is_active=True,
+    ):
         self.id = id
         self.navitia_coverage = navitia_coverage
         self.connector_type = connector_type
         self.navitia_token = navitia_token
         self.feed_url = feed_url
+        self.retrieval_interval = retrieval_interval
         self.is_active = is_active
 
     @classmethod

@@ -156,12 +156,16 @@ REDIS_LOCK_TIMEOUT_POLLER = int(
 REDIS_LOCK_TIMEOUT_PURGE = int(os.getenv("KIRIN_REDIS_LOCK_TIMEOUT_PURGE", timedelta(hours=12).total_seconds()))
 
 TASK_LOCK_PREFIX = "kirin.lock"
+TASK_LAST_CALL_DATETIME_PREFIX = "kirin.last_exec_datetime"
 
 TASK_STOP_MAX_DELAY = int(os.getenv("KIRIN_TASK_STOP_MAX_DELAY", timedelta(seconds=10).total_seconds()))
 TASK_WAIT_FIXED = int(os.getenv("KIRIN_TASK_WAIT_FIXED", timedelta(seconds=2).total_seconds()))
 
-# Must be >= 1. Defines the minimal interval (seconds) between 2 tries for polling (can be longer if a task is running).
-POLLER_MIN_INTERVAL = int(os.getenv("KIRIN_POLLER_MIN_INTERVAL", timedelta(seconds=10).total_seconds()))
+# Must be >= 1. Defines the general minimal interval (seconds) between 2 possible tries for polling.
+# WARNING: this is anyway also managed by retrieval_interval for each contributor
+# (can also  be longer if a task is running).
+POLLER_MIN_INTERVAL = int(os.getenv("KIRIN_POLLER_MIN_INTERVAL", timedelta(seconds=1).total_seconds()))
+
 CELERYBEAT_SCHEDULE = {
     "poller": {
         "task": "kirin.tasks.poller",

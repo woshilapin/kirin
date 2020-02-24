@@ -44,6 +44,7 @@ contributor_fields = {
     "navitia_token": fields.String,
     "feed_url": fields.String,
     "connector_type": fields.String,
+    "retrieval_interval": fields.Integer,
     "is_active": fields.Boolean,
 }
 
@@ -59,6 +60,7 @@ class Contributors(Resource):
         "navitia_token": {"type": "string"},
         "feed_url": {"type": "string", "format": "uri"},
         "connector_type": {"type": "string", "enum": ConnectorType.values()},
+        "retrieval_interval": {"type": "integer", "minimum": 1},
         "is_active": {"type": "boolean"},
     }
 
@@ -93,11 +95,18 @@ class Contributors(Resource):
         id = id or data.get("id")
         token = data.get("navitia_token", None)
         feed_url = data.get("feed_url", None)
+        retrieval_interval = data.get("retrieval_interval", 10)
         is_active = data.get("is_active", True)
 
         try:
             new_contrib = model.Contributor(
-                id, data["navitia_coverage"], data["connector_type"], token, feed_url, is_active
+                id,
+                data["navitia_coverage"],
+                data["connector_type"],
+                token,
+                feed_url,
+                retrieval_interval,
+                is_active,
             )
             model.db.session.add(new_contrib)
             model.db.session.commit()

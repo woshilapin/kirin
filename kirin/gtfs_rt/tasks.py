@@ -37,6 +37,7 @@ import requests
 import six
 
 from kirin import gtfs_realtime_pb2
+from kirin.cots.model_maker import as_duration
 
 from kirin.tasks import celery
 from kirin.utils import (
@@ -47,6 +48,7 @@ from kirin.utils import (
     manage_db_no_new,
     build_redis_etag_key,
     record_input_retrieval,
+    make_kirin_last_call_dt_name,
 )
 from kirin.gtfs_rt import model_maker
 from retrying import retry
@@ -92,6 +94,24 @@ def _is_newer(config):
     return True  # whatever the exception is, we don't want to break the polling
 
 
+def _is_last_call_too_recent(func_name, contributor, minimal_call_interval):
+    # retrieve last_call_datetime from redis
+    str_dt_format = "%Y-%m-%d %H:%M:%S.%f"
+
+    last_exe_dt_name = make_kirin_last_call_dt_name(func_name, contributor)
+    last_exe_dt_str = redis_client.get(last_exe_dt_name)
+    last_exe_dt = datetime.strptime(last_exe_dt_str, str_dt_format) if last_exe_dt_str else None
+    now = datetime.utcnow()
+
+    if last_exe_dt and now <= last_exe_dt + as_duration(minimal_call_interval):
+        return True
+
+    # store last_call_datetime in redis
+    # to avoid storing things forever in redis: set an expiration duration of (interval + "security" margin)
+    redis_client.set(last_exe_dt_name, now.strftime(str_dt_format), ex=minimal_call_interval + 10)
+    return False
+
+
 @new_relic.agent.function_trace()  # trace it specifically in transaction times
 def _retrieve_gtfsrt(config):
     start_dt = datetime.utcnow()
@@ -106,14 +126,21 @@ def _retrieve_gtfsrt(config):
 def gtfs_poller(self, config):
     func_name = "gtfs_poller"
     logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": config["contributor"]})
-    logger.debug("polling of %s", config["feed_url"])
 
     contributor = config["contributor"]
     lock_name = make_kirin_lock_name(func_name, contributor)
     with get_lock(logger, lock_name, app.config[str("REDIS_LOCK_TIMEOUT_POLLER")]) as locked:
-        if not locked:
+        if not locked or not config["feed_url"]:
             new_relic.ignore_transaction()
             return
+
+        retrieval_interval = config["retrieval_interval"] or 10
+        if _is_last_call_too_recent(func_name, contributor, retrieval_interval):
+            # do nothing if the last call is too recent
+            new_relic.ignore_transaction()
+            return
+
+        logger.debug("polling of %s", config["feed_url"])
 
         # We do a HEAD request at the very beginning of polling and we compare it with the previous one to check if
         # the gtfs-rt is changed.
