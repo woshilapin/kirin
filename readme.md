@@ -1,4 +1,5 @@
 ![Continuous Integration Status](https://img.shields.io/github/workflow/status/CanalTP/kirin/Continuous%20Integration)
+![Code Coverage](https://img.shields.io/codecov/c/gh/CanalTP/kirin)
 
 # Kirin
 
