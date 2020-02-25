@@ -1,5 +1,15 @@
 """
+Empty migration // Used to be:
 Deleting column contributor from tables real_time_update and trip_update
+
+Not anymore, as these removals should only be done when no version in prod is using concerned fields.
+And db migration is applied before deploying Kirin itself.
+So version n-1 should not use fields, no more than version n.
+
+But it is still used in 3.0.0 and only unused from 4.0.0.
+So no removal can be done in 4.0.x (and columns are actually unused)
+The actual db removal will be done in a version >= 4.1.0
+
 Revision ID: 57860080e5d6
 Revises: 21194e8e2308
 Create Date: 2019-09-05 17:16:35.675541
@@ -11,34 +21,12 @@ from __future__ import absolute_import, print_function, unicode_literals, divisi
 revision = "57860080e5d6"
 down_revision = "21194e8e2308"
 
-from alembic import op
-import sqlalchemy as sa
-
 
 def upgrade():
-    # Drop indexes on contributor
-    op.drop_index("realtime_update_contributor_and_created_at", table_name="real_time_update")
-    op.drop_index("contributor_idx", table_name="trip_update")
-
-    # Drop column contributor
-    op.drop_column("real_time_update", "contributor")
-    op.drop_column("trip_update", "contributor")
+    # To be done in a later revision
+    pass
 
 
 def downgrade():
-    # Add column contributor in the tables real_time_update and trip_update
-    op.add_column("trip_update", sa.Column("contributor", sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column("real_time_update", sa.Column("contributor", sa.TEXT(), autoincrement=False, nullable=True))
-
-    # Add indexes on contributor
-    op.create_index("contributor_idx", "trip_update", ["contributor"], unique=False)
-    op.create_index(
-        "realtime_update_contributor_and_created_at",
-        "real_time_update",
-        ["created_at", "contributor"],
-        unique=False,
-    )
-
-    # Update contributor with the value of contributor_id
-    op.execute("UPDATE real_time_update SET contributor = contributor_id;")
-    op.execute("UPDATE trip_update SET contributor = contributor_id;")
+    # To be done in a later revision
+    pass
