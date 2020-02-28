@@ -28,7 +28,6 @@ Received raw data from a Real Time Update.
 Property | TYpe | Description
 --- | --- | ---
 id | UUID |
-received_at | DateTime, Required | Date and time of the reception of the data (UTC)
 connector | Enum, Required | Source of the data. See below for an available source format.
 status | Enum, Required | Processing status of the received data (Possible values are `OK`, `KO` or `pending`)
 error | String, Optional | Description of the error (if any)

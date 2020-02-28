@@ -74,7 +74,7 @@ def gen_uuid():
 
 class TimestampMixin(object):
     created_at = db.Column(db.DateTime(), default=datetime.datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime(), default=None, onupdate=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime(), default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
 
 Db_TripEffect = db.Enum(*[e.name for e in TripEffect], name="trip_effect")
@@ -416,7 +416,6 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
     """
 
     id = db.Column(postgresql.UUID, default=gen_uuid, primary_key=True)
-    received_at = db.Column(db.DateTime, nullable=False)
     connector = db.Column(Db_ConnectorType, nullable=False)
     status = db.Column(db.Enum("OK", "KO", "pending", name="rt_status"), nullable=False)
     db.Index("status_idx", status)
@@ -437,13 +436,12 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         db.Index("realtime_update_contributor_id_and_created_at", "created_at", "contributor_id"),
     )
 
-    def __init__(self, raw_data, connector, contributor, status="OK", error=None, received_at=None):
+    def __init__(self, raw_data, connector, contributor, status="OK", error=None):
         self.id = gen_uuid()
         self.raw_data = raw_data
         self.connector = connector
         self.status = status
         self.error = error
-        self.received_at = received_at if received_at else datetime.datetime.utcnow()
         self.contributor_id = contributor
 
     @classmethod

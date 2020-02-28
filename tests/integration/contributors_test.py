@@ -96,6 +96,21 @@ def test_get_contributors_with_specific_id(test_client, with_custom_contributors
     assert contrib[0]["retrieval_interval"] == 10
 
 
+def test_get_contributors_with_specific_retrieval_interval(test_client, with_custom_contributors):
+    resp = test_client.get("/contributors/realtime.sherbrooke")
+    assert resp.status_code == 200
+
+    data = json.loads(resp.data)
+    contrib = data["contributors"]
+    assert len(contrib) == 1
+    assert contrib[0]["id"] == "realtime.sherbrooke"
+    assert contrib[0]["navitia_coverage"] == "ca"
+    assert contrib[0]["connector_type"] == "gtfs-rt"
+    assert contrib[0]["navitia_token"] == "my_token"
+    assert contrib[0]["feed_url"] == "http://feed.url"
+    assert contrib[0]["retrieval_interval"] == 5
+
+
 def test_get_partial_contributor_with_empty_fields(test_client, with_custom_contributors):
     resp = test_client.get("/contributors/realtime.london")
     assert resp.status_code == 200
@@ -314,14 +329,16 @@ def test_post_get_put_to_ensure_API_consitency(test_client):
         "retrieval_interval": 180,
         "is_active": True,
     }
-    test_client.post("/contributors", json=new_contrib)
+    post_resp = test_client.post("/contributors", json=new_contrib)
+    post_contrib = json.loads(post_resp.data)
+    assert post_contrib["contributor"] == new_contrib
 
     get_resp = test_client.get("/contributors/realtime.tokyo")
     get_contrib = json.loads(get_resp.data)["contributors"][0]
+    assert get_contrib == new_contrib
 
     put_resp = test_client.put("/contributors", json=get_contrib)
     put_data = json.loads(put_resp.data)
-
     assert put_data["contributor"] == new_contrib
 
 
