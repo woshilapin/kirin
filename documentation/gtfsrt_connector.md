@@ -21,7 +21,7 @@ trip_updates |  | List of trip updates information, see `TripUpdates` below.
 ### TripUpdate
 Kirin property | GTFS-RT object | Comment/Mapping rule
 --- | --- | ---
-vj_id | trip_update.trip.trip_id (indirectly) | The id of the Navitia `VehicleJourney` being updated by the `TripUpdate`. See the mapping methode below.
+vj_id | trip_update.trip.trip_id (indirectly) | The id of the Navitia `VehicleJourney` being updated by the `TripUpdate`. See the mapping method below.
 status |  | Status is always set to `none` currently.
 contributor_id |  | Id of the contributor producing the data.
 stop_time_updates |  | List of arrival/departure time updates at stops for this trip, see `StopTimeUpdates` below.
