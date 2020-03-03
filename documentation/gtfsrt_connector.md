@@ -28,8 +28,8 @@ stop_time_updates |  | List of arrival/departure time updates at stops for this 
 effect |  | Effect is set to `SIGNIFICANT_DELAYS` if at least one of the trip's stops is updated and `UNKNOWN_EFFECT` otherwise.
 
 ### VehicleJourney
-The right Navitia trip that is impacted by a given realtime update is retrieved 
-through a call to Navitia. The call should search for the `VehicleJourney` that has 
+The right Navitia trip that is impacted by a given realtime update is retrieved
+through a call to Navitia. The call should search for the `VehicleJourney` that has
 a code of type `source` with a value matching the input trip_id.
 
 The date used to narrow down the research of the right Navitia trip is defined by the date found in `header.timestamp`.
@@ -45,11 +45,11 @@ The whole resulting trip is stored, including the unchanged stop_times.
 
 Kirin property | GTFS-RT object | Comment/Mapping rule
 --- | --- | ---
-order |  | `stop_time` order of this stop in the `VehicleJourney`. 
+order |  | `stop_time` order of this stop in the `VehicleJourney`.
 stop_id | trip_update.stop_time_update.stop_id (indirectly) | The id of the updated stop in Navitia that has a code of type `source` with a value matching the input stop_id.
-departure |  | Realtime departure datetime for this stop (including delay). 
-departure_delay | trip_update.stop_time_update.departure.delay | 
+departure |  | Realtime departure datetime for this stop (including delay).
+departure_delay | trip_update.stop_time_update.departure.delay |
 departure_status |  | Status is set to `none` if the departure delay is 0 or not provided, otherwise status is set to `update`.
 arrival |  | Realtime arrival datetime for this stop (including delay).
-arrival_delay | trip_update.stop_time_update.arrival.delay | 
+arrival_delay | trip_update.stop_time_update.arrival.delay |
 arrival_status |  | Status is set to `none` if the arrival delay is 0 or not provided, otherwise status is set to `update`.
