@@ -15,7 +15,7 @@ In db, it is linked to a referent coverage and contains configuration informatio
 
 Property | Type | Description
 --- | --- | ---
-id | String, Required | Unique code of the contributor. It must be known by Kraken that consumes the output (internal component of (navitia)[https://github.com/CanalTP/navitia].
+id | String, Required | Unique code of the contributor. It must be known by Kraken that consumes the output (internal component of (navitia)[https://github.com/CanalTP/navitia]).
 navitia_coverage | String, Required | Navitia coverage to be used while calling navitia to retrieve corresponding element
 navitia_token | String, Optional | Navitia token to be used while calling navitia to retrieve corresponding element
 feed_url | String, Optional | Url to retrieve the realtime information feed (for polled sources)
