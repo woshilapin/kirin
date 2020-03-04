@@ -28,7 +28,7 @@ Kirin property | COTS object | Comment/Mapping rule
 --- | --- | ---
 connector |  | Fixed value `cots`.
 raw_data | _Complete received feed_ |
-contributor |  | Fixed value specified in the configuration of Kirin.
+contributor_id |  | `contributor.id`: fixed value to only cots contributor defined.
 trip_updates |  | List of trip updates information, see `TripUpdates` below.
 
 ### TripUpdate
@@ -39,7 +39,7 @@ Kirin property | COTS object | Comment/Mapping rule
 vj_id |  | Id of the `VehicleJourney` in Navitia updated by this `TripUpdate`. See below for the mapping method.
 status | *nouvelleVersion/statutOperationnel* | Status is set to `add` when value is `AJOUTEE`, `delete` when value is `SUPPRIMEE`, and `update` in every other case.
 message | *nouvelleVersion/idMotifInterneReference* | Reference to the field `labelExt` of the *parametreLIV* feed having the same `id`. If no matching `id` is found, the message is left empty.
-contributor |  | Fixed value specified in the configuration of Kirin.
+contributor_id |  | `contributor.id`: fixed value to only cots contributor defined.
 company_id | *nouvelleVersion/codeCompagnieTransporteur* | Id of the transport operator that runs the `VehicleJourney` in Navitia. If no associated operator is found in Navitia, then the id of the SNCF is used by default. See below for the mapping method.
 stop_time_updates |  | List of arrival/departure time updates at stops for this trip, see `StopTimeUpdates` below.
 effect |  | See below for the mapping method.

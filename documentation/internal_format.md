@@ -15,7 +15,7 @@ In db, it is linked to a referent coverage and contains configuration informatio
 
 Property | Type | Description
 --- | --- | ---
-id | String, Required | Unique code of the contributor
+id | String, Required | Unique code of the contributor. It must be known by Kraken that consumes the output (internal component of (navitia)[https://github.com/CanalTP/navitia]).
 navitia_coverage | String, Required | Navitia coverage to be used while calling navitia to retrieve corresponding element
 navitia_token | String, Optional | Navitia token to be used while calling navitia to retrieve corresponding element
 feed_url | String, Optional | Url to retrieve the realtime information feed (for polled sources)
@@ -32,7 +32,7 @@ connector | Enum, Required | Source of the data. See below for an available sour
 status | Enum, Required | Processing status of the received data (Possible values are `OK`, `KO` or `pending`)
 error | String, Optional | Description of the error (if any)
 raw_data | String, Optional | Content of the received raw data
-contributor | String, Optional | Identifier of the realtime connector. It must be known by Kraken (internal component of (navitia)[https://github.com/CanalTP/navitia].
+contributor_id | String, Required | `contributor.id` of the RT data producer.
 trip_updates | List | List of `TripUpdate` provided by this bloc of data
 
 **Connector field possible values**
@@ -49,7 +49,7 @@ id | UUID |
 vj_id | UUID | id of the VehicleJourney being updated
 status | Enum, Required | Modification type for this trip (Possible values are `add`, `delete`, `update` or `none`)
 message | String, Optional | Text to be displayed in Navitia for the `VehicleJourney`
-contributor | String, Optional | Identifier of the realtime connector. It must be known by Kraken.
+contributor_id | String, Required | `contributor.id` of the RT data producer.
 company_id | String, Optional | Identifier of the transport operator found in Navitia for this trip.
 stop_time_updates | List | List of `StopTimeUpdate` provided by this bloc of data
 effect | Enum, optional | Effect to be displayed in navitia (Possible values are `NO_SERVICE`, `REDUCED_SERVICE`, `SIGNIFICANT_DELAYS`, `DETOUR`, `ADDITIONAL_SERVICE`, `MODIFIED_SERVICE`, `OTHER_EFFECT`, `UNKNOWN_EFFECT`, `STOP_MOVED`)
