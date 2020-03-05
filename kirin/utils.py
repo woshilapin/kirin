@@ -223,7 +223,7 @@ def manage_db_no_new(connector, contributor):
 
 def can_connect_to_navitia():
     try:
-        response = requests.head(current_app.config[str("NAVITIA_URL")])
+        response = requests.head(current_app.config[str("NAVITIA_URL")], timeout=1)
         return response.status_code == 200
     except Exception:
         return False
