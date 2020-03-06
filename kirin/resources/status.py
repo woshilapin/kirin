@@ -50,7 +50,7 @@ class Status(Resource):
         res["db_pool_status"] = get_database_pool_status()
         res["db_version"] = get_database_version()
         res["navitia_url"] = current_app.config[str("NAVITIA_URL")]
-        res["rabbitmq_info"] = kirin.rabbitmq_handler.info()
+        res["rabbitmq_info"] = kirin.rmq_handler.info()
         res["navitia_connection"] = "OK" if can_connect_to_navitia() else "KO"
         res["db_connection"] = "OK" if can_connect_to_database() else "KO"
 

@@ -107,7 +107,7 @@ logger.info("Configs: %s", app.config)
 
 from kirin.rabbitmq_handler import RabbitMQHandler
 
-rabbitmq_handler = RabbitMQHandler(app.config[str("RABBITMQ_CONNECTION_STRING")], app.config[str("EXCHANGE")])
+rmq_handler = RabbitMQHandler(app.config[str("RABBITMQ_CONNECTION_STRING")], app.config[str("EXCHANGE")])
 
 import kirin.api
 from kirin import utils
