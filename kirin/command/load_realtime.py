@@ -39,6 +39,6 @@ def load_realtime():
     """
     Launch the server that serve realtime updates to starting kraken
     """
-    kirin.rabbitmq_handler.listen_load_realtime(
+    kirin.rmq_handler.listen_load_realtime(
         kirin.app.config[str("LOAD_REALTIME_QUEUE")], kirin.app.config[str("MAX_RETRIES")]
     )

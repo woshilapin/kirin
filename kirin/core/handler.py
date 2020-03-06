@@ -653,7 +653,7 @@ def publish(feed, contributor):
     send RT feed to navitia
     """
     try:
-        kirin.rabbitmq_handler.publish(feed, contributor)
+        kirin.rmq_handler.publish(feed, contributor)
 
     except socket.error:
         logging.getLogger(__name__).exception(
