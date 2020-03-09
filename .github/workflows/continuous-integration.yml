@@ -20,7 +20,7 @@ jobs:
             - name: Install Python Dependencies
               run: pip install --upgrade --requirement requirements_dev.txt --requirement requirements_pre-commit.txt
             - name: Install Protobuf Dependencies
-              run: sudo apt install --yes protobuf-compiler=3.6.1.3-2
+              run: sudo apt install --yes protobuf-compiler
             - name: Build Protobuf
               run: python setup.py build_pbf
             - name: Setup pre-commit
@@ -54,7 +54,7 @@ jobs:
             - name: Install Python Dependencies
               run: pip install --upgrade --requirement requirements_dev.txt pytest-cov
             - name: Install Protobuf Dependencies
-              run: sudo apt install --yes protobuf-compiler=3.6.1.3-2
+              run: sudo apt install --yes protobuf-compiler
             - name: Build Protobuf
               run: python setup.py build_pbf
             - name: Build Version
