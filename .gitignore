@@ -2,3 +2,14 @@
 *.pyc
 *_pb2.py
 kirin/version.py
+!kirin/default_settings.py
+!kirin/test_settings.py
+kirin/*_settings.py
+# pytest generated files
+pytest_kirin.xml
+.pytest_cache/
+# coverage generated files
+.coverage
+coverage.xml
+# mypy generated files
+.mypy_cache/
