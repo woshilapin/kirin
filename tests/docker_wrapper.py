@@ -105,7 +105,7 @@ class DockerWrapper(object):
                 raise
 
         self.container = self.docker_client.containers.create(
-            self.image_name, name=self.container_name, environment=self.env_vars, mounts=self.mounts,
+            self.image_name, name=self.container_name, environment=self.env_vars, mounts=self.mounts
         )
         logger.info("docker id is {}".format(self.container.id))
         logger.info("starting the temporary docker")
@@ -205,7 +205,7 @@ class PostgresDockerWrapper(DockerWrapper):
         """
         return DbParams(self.ip_addr, self.db_name, self.db_user, self.db_password)
 
-    @retry(stop_max_delay=10000, wait_fixed=100, retry_on_exception=lambda e: isinstance(e, Exception))
+    @retry(stop_max_delay=30000, wait_fixed=100, retry_on_exception=lambda e: isinstance(e, Exception))
     def test_db_cnx(self):
         # type: () -> None
         """
@@ -244,7 +244,7 @@ class RedisDockerWrapper(DockerWrapper):
         # type: () -> ConnectionPool
         return ConnectionPool(host=self.ip_addr)
 
-    @retry(stop_max_delay=10000, wait_fixed=100, retry_on_exception=lambda e: isinstance(e, Exception))
+    @retry(stop_max_delay=30000, wait_fixed=100, retry_on_exception=lambda e: isinstance(e, Exception))
     def test_redis_cnx(self):
         # type: () -> None
         """
@@ -283,7 +283,7 @@ class RabbitMQDockerWrapper(DockerWrapper):
     ):
         # type: (...) -> None
         super(RabbitMQDockerWrapper, self).__init__(
-            image_name, container_name, dockerfile_obj, dockerfile_path, env_vars, mounts,
+            image_name, container_name, dockerfile_obj, dockerfile_path, env_vars, mounts
         )
         protocol = "pyamqp"
         username = "guest"
@@ -295,7 +295,7 @@ class RabbitMQDockerWrapper(DockerWrapper):
         # type: () -> RabbitMQHandler
         return self.handler
 
-    @retry(stop_max_delay=10000, wait_fixed=100, retry_on_exception=lambda e: isinstance(e, Exception))
+    @retry(stop_max_delay=30000, wait_fixed=100, retry_on_exception=lambda e: isinstance(e, Exception))
     def test_rabbitmq_handler(self):
         self.handler.connect()
 

@@ -60,6 +60,11 @@ The feeds can be of the following type:
 
 
 ## Setup
+This describes a "classic" setup.
+
+A "dockerized" local setup is also demonstrated in fab_kirin, see
+[instructions](https://github.com/CanalTP/fab_kirin/demo/README.md).
+
 Kirin supports Python 2.7.
 
  - Install dependencies with
