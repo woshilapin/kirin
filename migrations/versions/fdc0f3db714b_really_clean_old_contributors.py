@@ -5,7 +5,7 @@ This migration was in 57860080e5d6, but it was too soon (see comments in migrati
 As it was applied already for some platforms, removal is conditional (IF EXISTS).
 
 Revision ID: fdc0f3db714b
-Revises: ab44c0f366df
+Revises: 1911dab5a030
 Create Date: 2020-02-25 14:12:48.880949
 
 """
@@ -13,7 +13,7 @@ from __future__ import absolute_import, print_function, unicode_literals, divisi
 
 # revision identifiers, used by Alembic.
 revision = "fdc0f3db714b"
-down_revision = "ab44c0f366df"
+down_revision = "1911dab5a030"
 
 from alembic import op
 import sqlalchemy as sa
