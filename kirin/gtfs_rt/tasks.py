@@ -127,20 +127,20 @@ def gtfs_poller(self, config):
     func_name = "gtfs_poller"
     logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": config["contributor"]})
 
-    contributor = config["contributor"]
+    contributor = config.get("contributor")
     lock_name = make_kirin_lock_name(func_name, contributor)
     with get_lock(logger, lock_name, app.config[str("REDIS_LOCK_TIMEOUT_POLLER")]) as locked:
-        if not locked or not config["feed_url"]:
+        if not locked or not config.get("feed_url"):
             new_relic.ignore_transaction()
             return
 
-        retrieval_interval = config["retrieval_interval"] or 10
+        retrieval_interval = config.get("retrieval_interval", 10)
         if _is_last_call_too_recent(func_name, contributor, retrieval_interval):
             # do nothing if the last call is too recent
             new_relic.ignore_transaction()
             return
 
-        logger.debug("polling of %s", config["feed_url"])
+        logger.debug("polling of %s", config.get("feed_url"))
 
         # We do a HEAD request at the very beginning of polling and we compare it with the previous one to check if
         # the gtfs-rt is changed.
