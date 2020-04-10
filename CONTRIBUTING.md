@@ -145,6 +145,37 @@ If you use pgAdmin, you can increase massively the number of characters per colu
 (as the feed is big):
 `File/preferences` then `Request editor/Request editor/Maximum number of characters per column`
 
+##### Search and replay a RealTime update feed
+
+Each time kirin poller consumes a realtime feed, it is saved in the
+database (`real_time_update.raw_data`).
+
+Find the concerned RealTime Updates in the table `real_time_update`, save it as a
+CSV file and use the file to analyze any presence of errors.  
+When logged in to the concerned kirin database:
+```
+COPY (SELECT raw_data FROM real_time_update WHERE id = 'f24eedf4-9b05-4503-a701-35439ed6571a')
+To '/var/tmp/real_time_update.csv' With CSV;
+```
+
+It is also possible to re-inject (POST) the RealTime Updates of the file to Kirin's API after
+some modifications.
+
+If the feed is COTS, post the file directly to `/cots`.
+
+For a GTFS-RT, follow these steps to post the real_time_update.csv file into the
+service `/gtfs_rt`:
+- Modify some lines in the file /kirin/gtfs_rt/gtfs_rt.py:  
+    add `import google.protobuf.text_format` after the
+    line `proto = gtfs_realtime_pb2.FeedMessage()`  
+    replace `proto.ParseFromString(raw_proto)` by
+    `google.protobuf.text_format.Parse(raw_proto, proto)`
+- Make some adjustments in the file previously saved: replace all `""` by `"` and
+  delete the first and last `"` in the file
+- Launch kirin after some adjustments in default_settings: `honcho start`
+- Post the file to kirin:  
+  `http POST http://server kirin/gtfs_rt @/dest_path/real_time_update.csv`
+
 
 ## Release
 
