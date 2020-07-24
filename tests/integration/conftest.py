@@ -64,7 +64,6 @@ def bdd(init_flask_db):
         flask_migrate.downgrade(revision="base", directory=migration_dir)
 
 
-@pytest.fixture(scope="function", autouse=True)
 def clean_db():
     """
     before all tests the database is cleared
@@ -88,6 +87,11 @@ def clean_db():
             ]
         )
         db.session.commit()
+
+
+@pytest.fixture(scope="function", autouse=True)
+def clean_db_fixture():
+    clean_db()
 
 
 @pytest.fixture(scope="function")

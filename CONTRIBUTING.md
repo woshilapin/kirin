@@ -130,7 +130,7 @@ At least one per polled provider is recommended.
 ## Tests
 
 Most tests are implemented in `/tests` directory.  
-Please read [tests readme](https://github.com/CanalTP/kirin/blob/master/tests/readme.md) for more information.
+Please read [tests readme](tests/readme.md) for more information.
 
 
 ## Troubleshooting
