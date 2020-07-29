@@ -1,18 +1,22 @@
-# Run
+# Tests
+
+## Run
 
 To run the tests, please setup dependencies described in [main README](../readme.md#setup).
 Then you can use the makefile available:
-```bash
+
+```sh
 make test
 ```
 
 For information, this runs py.test (after updating dependencies) in the kirin
 root directory as would:
-```bash
+
+```sh
 KIRIN_CONFIG_FILE=test_settings.py py.test --doctest-modules
 ```
 
-# Test with a database
+## Test with a database
 
 To be able to correctly test kirin, a database is needed.
 To have a brand new database, a docker with a db is set up once for each test session.

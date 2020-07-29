@@ -1,16 +1,19 @@
 # GTFS-RT Connector
 
 ## Overview
+
 This document describes how a [GTFS-RT](https://gtfs.org/reference/realtime/v2/) feed is read in Kirin.
 
 Currently, the connector can only read TripUpdate messages with arrival/departure delays (no added/deleted trip/stop).
 
 ## Connector description
+
 For the sake of simplicity, only the relevant input fields are described below.
 The fields of the internal model that are managed by Kirin without reading input
 are left aside.
 
 ### RealTimeUpdate
+
 Kirin property | GTFS-RT object | Comment/Mapping rule
 --- | --- | ---
 connector |  | Fixed value `gtfs-rt`.
@@ -19,6 +22,7 @@ contributor_id |  | Id of the contributor producing the data.
 trip_updates |  | List of trip updates information, see `TripUpdates` below.
 
 ### TripUpdate
+
 Kirin property | GTFS-RT object | Comment/Mapping rule
 --- | --- | ---
 vj_id | trip_update.trip.trip_id (indirectly) | The id of the Navitia `VehicleJourney` being updated by the `TripUpdate`. See the mapping method below.
@@ -28,6 +32,7 @@ stop_time_updates |  | List of arrival/departure time updates at stops for this 
 effect |  | Effect is set to `SIGNIFICANT_DELAYS` if at least one of the trip's stops is updated and `UNKNOWN_EFFECT` otherwise.
 
 ### VehicleJourney
+
 The right Navitia trip that is impacted by a given realtime update is retrieved
 through a call to Navitia. The call should search for the `VehicleJourney` that has
 a code of type `source` with a value matching the input trip_id.
@@ -40,6 +45,7 @@ navitia_trip_id | trip_update.trip.trip_id (indirectly) | `trip_id` of the `Vehi
 start_timestamp | header.timestamp | Start datetime of the `VehicleJourney` in Navitia.
 
 ### StopTimeUpdate
+
 Once the right Navitia trip is identified, the timing information for each `stop_time` is updated.
 The whole resulting trip is stored, including the unchanged stop_times.
 
