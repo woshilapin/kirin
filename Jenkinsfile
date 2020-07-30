@@ -6,8 +6,7 @@ node {
     }
     try {
         stage ('Tests') {
-            sh 'docker run --rm --volume /var/run/docker.sock:/var/run/docker.sock --volume "${PWD}":/tmp/workspace --workdir /tmp/workspace python:2.7.18 sh -c \
-            "make setup_for_test && make test"'
+            sh 'make test_in_context'
         }
     } catch (err) {
         echo "Caught: ${err}"
