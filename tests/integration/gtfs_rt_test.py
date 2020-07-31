@@ -365,7 +365,6 @@ def test_gtfs_rt_purge(basic_gtfs_rt_data, mock_rabbitmq):
         assert len(RealTimeUpdate.query.all()) == 0
 
 
-@pytest.fixture()
 def pass_midnight_gtfs_rt_data():
     feed = gtfs_realtime_pb2.FeedMessage()
 
@@ -411,7 +410,7 @@ def pass_midnight_gtfs_rt_data():
     return feed
 
 
-def test_gtfs_pass_midnight_model_builder(pass_midnight_gtfs_rt_data):
+def test_gtfs_pass_midnight_model_builder():
     """
     test the model builder with a pass-midnight gtfs-rt
     """
@@ -419,7 +418,7 @@ def test_gtfs_pass_midnight_model_builder(pass_midnight_gtfs_rt_data):
         data = ""
         rt_update = make_rt_update(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
         trip_updates = gtfs_rt.KirinModelBuilder(dumb_nav_wrapper(), contributor=GTFS_CONTRIBUTOR).build(
-            rt_update, pass_midnight_gtfs_rt_data
+            rt_update, pass_midnight_gtfs_rt_data()
         )
 
         # we associate the trip_update manually for sqlalchemy to make the links
@@ -475,7 +474,7 @@ def test_gtfs_pass_midnight_model_builder(pass_midnight_gtfs_rt_data):
         assert feed.entity[0].trip_update.trip.start_date == "20120616"  # must be UTC start date
 
 
-def test_gtfs_rt_pass_midnight(pass_midnight_gtfs_rt_data, mock_rabbitmq):
+def test_gtfs_rt_pass_midnight(mock_rabbitmq):
     """
     test the gtfs-rt post with a pass-midnight gtfs-rt
 
@@ -485,7 +484,7 @@ def test_gtfs_rt_pass_midnight(pass_midnight_gtfs_rt_data, mock_rabbitmq):
     """
     tester = app.test_client()
     resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=pass_midnight_gtfs_rt_data.SerializeToString()
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=pass_midnight_gtfs_rt_data().SerializeToString()
     )
     assert resp.status_code == 200
 
@@ -554,7 +553,6 @@ def test_gtfs_rt_pass_midnight(pass_midnight_gtfs_rt_data, mock_rabbitmq):
         assert fourth_stop.message is None
 
 
-@pytest.fixture()
 def pass_midnight_utc_gtfs_rt_data():
     """
     Port tests for pass-midnight UTC also
@@ -566,7 +564,7 @@ def pass_midnight_utc_gtfs_rt_data():
     return feed
 
 
-def test_gtfs_pass_midnight_utc_model_builder(pass_midnight_utc_gtfs_rt_data):
+def test_gtfs_pass_midnight_utc_model_builder():
     """
     test the model builder with a pass-midnight UTC gtfs-rt
     """
@@ -574,7 +572,7 @@ def test_gtfs_pass_midnight_utc_model_builder(pass_midnight_utc_gtfs_rt_data):
         data = ""
         rt_update = make_rt_update(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
         trip_updates = gtfs_rt.KirinModelBuilder(dumb_nav_wrapper(), contributor=GTFS_CONTRIBUTOR).build(
-            rt_update, pass_midnight_utc_gtfs_rt_data
+            rt_update, pass_midnight_utc_gtfs_rt_data()
         )
 
         # we associate the trip_update manually for sqlalchemy to make the links
@@ -630,7 +628,7 @@ def test_gtfs_pass_midnight_utc_model_builder(pass_midnight_utc_gtfs_rt_data):
         assert feed.entity[0].trip_update.trip.start_date == "20120615"  # must be UTC start date
 
 
-def test_gtfs_rt_pass_midnight_utc(pass_midnight_utc_gtfs_rt_data, mock_rabbitmq):
+def test_gtfs_rt_pass_midnight_utc(mock_rabbitmq):
     """
     test the gtfs-rt post with a pass-midnight UTC gtfs-rt
 
@@ -640,7 +638,7 @@ def test_gtfs_rt_pass_midnight_utc(pass_midnight_utc_gtfs_rt_data, mock_rabbitmq
     """
     tester = app.test_client()
     resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=pass_midnight_utc_gtfs_rt_data.SerializeToString()
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=pass_midnight_utc_gtfs_rt_data().SerializeToString()
     )
     assert resp.status_code == 200
 
@@ -1674,7 +1672,6 @@ with a vehicle_journey having first stop_time at mid-night localtime (5h UTC)
 """
 
 
-@pytest.fixture()
 def gtfs_rt_data_with_vj_starting_at_midnight():
     feed = gtfs_realtime_pb2.FeedMessage()
 
@@ -1711,14 +1708,14 @@ def gtfs_rt_data_with_vj_starting_at_midnight():
     return feed
 
 
-def test_gtfs_start_midnight_model_builder_with_post(gtfs_rt_data_with_vj_starting_at_midnight):
+def test_gtfs_start_midnight_model_builder_with_post():
     """
     test the model builder with vehicle_journey having first stop_time at midnight
     """
     tester = app.test_client()
     resp = tester.post(
         "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR),
-        data=gtfs_rt_data_with_vj_starting_at_midnight.SerializeToString(),
+        data=gtfs_rt_data_with_vj_starting_at_midnight().SerializeToString(),
     )
     assert resp.status_code == 200
 
@@ -1988,7 +1985,6 @@ def test_manage_db_with_http_error_with_insert():
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().created_at != created_at
 
 
-@pytest.fixture()
 def pass_midnight_negative_delay_utc_gtfs_rt_data():
     """
     Add tests for pass-midnight UTC on an early passing VJ (negative delay)
@@ -2004,14 +2000,14 @@ def pass_midnight_negative_delay_utc_gtfs_rt_data():
     return feed
 
 
-def test_gtfs_pass_midnight_negative_delay_utc_model_builder(pass_midnight_negative_delay_utc_gtfs_rt_data):
+def test_gtfs_pass_midnight_negative_delay_utc_model_builder():
     """
     test the model builder with a pass-midnight UTC gtfs-rt
     """
     tester = app.test_client()
     resp = tester.post(
         "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR),
-        data=pass_midnight_negative_delay_utc_gtfs_rt_data.SerializeToString(),
+        data=pass_midnight_negative_delay_utc_gtfs_rt_data().SerializeToString(),
     )
     assert resp.status_code == 200
 

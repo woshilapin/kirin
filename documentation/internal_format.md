@@ -1,15 +1,19 @@
 # Kirin internal format
 
 ## Overview
+
 Kirin's internal model is derived from GTFS-realtime `Trip updates` (specifications)[http://gtfs.org/realtime/#message-tripupdate].
 It is composed of several objects :
+
 - VehicleJourney
 - RealTimeUpdate
 - TripUpdate
 - StopTimeUpdate
 
 ## Model details
+
 ### Contributor
+
 A contributor is a provider of a realtime service.
 In db, it is linked to a referent coverage and contains configuration information.
 
@@ -23,6 +27,7 @@ connector_type | Enum, Required | Type of connector (possible values are `cots`,
 is_active | Boolean, Optional | Used to activate/deactivate the kirin service for the contributor (default value `true`)
 
 ### RealTimeUpdate
+
 Received raw data from a Real Time Update.
 
 Property | TYpe | Description
@@ -35,12 +40,15 @@ raw_data | String, Optional | Content of the received raw data
 contributor_id | String, Required | `contributor.id` of the RT data producer.
 trip_updates | List | List of `TripUpdate` provided by this bloc of data
 
-**Connector field possible values**
+#### Connector field possible values
+
 The `connector` field is restricted to the following values:
+
 - `ire`: realtime informations of the SNCF long distance trains
 - `gtfs-rt`: realtime informations from the `TripUpdate` format of GTFS-realtime
 
 ### TripUpdate
+
 Update information about a VehicleJourney.
 
 Property | TYpe | Description
@@ -56,6 +64,7 @@ effect | Enum, optional | Effect to be displayed in navitia (Possible values are
 physical_mode_id | String, Optional | Identifier of the physical mode found in Navitia for this trip
 
 ### VehicleJourney
+
 Property | TYpe | Description
 --- | --- | ---
 id | UUID | Unique identifier
@@ -63,6 +72,7 @@ navitia_trip_id | String, Required | Identifier of Navitia's trip_id
 start_timestamp | DateTime, Required | Start date and time of the VehicleJourney (UTC) in base_schedule (ie. without any realtime info)
 
 ### StopTimeUpdate
+
 Property | TYpe | Description
 --- | --- | ---
 id | UUID |

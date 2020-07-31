@@ -3,6 +3,7 @@ logilab-common==1.0.2
 nose==1.3.7
 pylint==1.8.2
 pytest==3.7.2
+pytest-cov==2.9.0
 docker==3.5.0
 mock==2.0.0
 pbr==4.2.0
