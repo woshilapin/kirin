@@ -79,6 +79,7 @@ class ConnectorType(Enum):
     """
 
     cots = "cots"
+    piv = "piv"
     gtfs_rt = "gtfs-rt"
 
     @staticmethod

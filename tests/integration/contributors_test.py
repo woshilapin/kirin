@@ -502,3 +502,24 @@ def test_purge_contributor(test_client, basic_gtfs_rt_data, mock_rabbitmq):
         purge_contributor("rt.vroumvroum_db")
     test_contributor_count(3)
     test_rt_data()
+
+
+def test_piv_contributor(test_client):
+    new_contrib = {
+        "id": "realtime.sncf.piv",
+        "navitia_coverage": "sncf",
+        "navitia_token": "blablablabla",
+        "feed_url": "no_url",
+        "connector_type": "piv",
+        "retrieval_interval": 30,
+    }
+    resp = test_client.post("/contributors", json=new_contrib)
+    assert resp.status_code == 201
+
+    contrib = db.session.query(model.Contributor).filter(model.Contributor.id == "realtime.sncf.piv").first()
+    assert contrib.id == "realtime.sncf.piv"
+    assert contrib.navitia_coverage == "sncf"
+    assert contrib.connector_type == "piv"
+    assert contrib.navitia_token == "blablablabla"
+    assert contrib.feed_url == "no_url"
+    assert contrib.retrieval_interval == 30

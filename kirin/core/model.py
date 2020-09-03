@@ -133,7 +133,7 @@ class VehicleJourney(db.Model):  # type: ignore
         if "trip" in navitia_vj and "id" in navitia_vj["trip"]:
             self.navitia_trip_id = navitia_vj["trip"]["id"]
 
-        # For an added trip, we use vj_start_dt as in flux cots where as for existing one
+        # For an added trip, we use vj_start_dt as in flux cots whereas for an existing one
         # compute start_timestamp (in UTC) from first stop_time, to be the closest AFTER provided since_dt.
         if not navitia_vj.get("stop_times", None) and vj_start_dt:
             self.start_timestamp = vj_start_dt
