@@ -41,7 +41,7 @@ from sqlalchemy.exc import IntegrityError
 def purge_rt(nb_day_to_keep, connector):
     """
     purge table real_time_update and associate_realtimeupdate_tripupdate
-    for connector 'cots' or 'gtfs-rt' with nb_day_to_keep of history
+    for given connector with nb_day_to_keep of history
     """
     logger = logging.getLogger(__name__)
     until = datetime.date.today() - datetime.timedelta(days=int(nb_day_to_keep))

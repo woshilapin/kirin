@@ -43,6 +43,7 @@ import datetime
 from kirin.core.model import TripUpdate, RealTimeUpdate
 from kirin.utils import should_retry_exception, make_kirin_lock_name, get_lock
 from kirin.gtfs_rt.gtfs_rt import get_gtfsrt_contributors
+from kirin.piv.piv import get_piv_contributors
 from kirin.cots.cots import get_cots_contributor
 
 TASK_STOP_MAX_DELAY = app.config[str("TASK_STOP_MAX_DELAY")]
@@ -148,6 +149,29 @@ def purge_gtfs_rt_update(self):
     This task will remove realtime update
     """
     config = {"nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_RT_UPDATE")), "connector": "gtfs-rt"}
+    purge_rt_update.delay(config)
+
+
+@celery.task(bind=True)
+def purge_piv_trip_update(self):
+    """
+    This task will remove ONLY TripUpdate, StoptimeUpdate and VehicleJourney that are created by piv but the
+    RealTimeUpdate are kept so that we can replay it for debug purpose. RealTimeUpdate will be remove by another task
+    """
+    for contributor in get_piv_contributors(include_deactivated=True):
+        config = {
+            "contributor": contributor.id,
+            "nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_TRIP_UPDATE")),
+        }
+        purge_trip_update.delay(config)
+
+
+@celery.task(bind=True)
+def purge_piv_rt_update(self):
+    """
+    This task will remove realtime update
+    """
+    config = {"nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_RT_UPDATE")), "connector": "piv"}
     purge_rt_update.delay(config)
 
 

@@ -182,6 +182,16 @@ CELERYBEAT_SCHEDULE = {
         "schedule": schedules.crontab(hour="3", minute="15"),
         "options": {"expires": timedelta(hours=1).total_seconds()},
     },
+    "purge_piv_trip_update": {
+        "task": "kirin.tasks.purge_piv_trip_update",
+        "schedule": schedules.crontab(hour="3", minute="30"),
+        "options": {"expires": timedelta(hours=1).total_seconds()},
+    },
+    "purge_piv_rt_update": {
+        "task": "kirin.tasks.purge_piv_rt_update",
+        "schedule": schedules.crontab(hour="3", minute="45"),
+        "options": {"expires": timedelta(hours=1).total_seconds()},
+    },
     "purge_cots_trip_update": {
         "task": "kirin.tasks.purge_cots_trip_update",
         "schedule": schedules.crontab(hour="4", minute="0"),
