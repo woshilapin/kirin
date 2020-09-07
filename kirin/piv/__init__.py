@@ -1,6 +1,6 @@
 # coding=utf-8
 
-# Copyright (c) 2001-2015, Canal TP and/or its affiliates. All rights reserved.
+# Copyright (c) 2001-2020, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
 #     the software to build cool stuff with public transport.
@@ -30,16 +30,3 @@
 # www.navitia.io
 
 from __future__ import absolute_import, print_function, unicode_literals, division
-from flask_restful import Resource, url_for
-
-
-class Index(Resource):
-    def get(self):
-        response = {
-            "health": {"href": url_for("health", _external=True)},
-            "status": {"href": url_for("status", _external=True)},
-            "cots": {"href": url_for("cots", _external=True)},
-            "piv": {"href": url_for("piv_index", _external=True)},
-            "contributors": {"href": url_for("contributors", _external=True)},
-        }
-        return response, 200

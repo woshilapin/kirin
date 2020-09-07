@@ -69,7 +69,7 @@ def navitia(monkeypatch):
 @pytest.fixture(scope="function")
 def mock_rabbitmq(monkeypatch):
     """
-    Mock all calls to navitia for this fixture
+    Mock all publishes to navitia for this fixture
     """
     from mock import MagicMock
 
