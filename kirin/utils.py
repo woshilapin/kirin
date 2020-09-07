@@ -153,13 +153,13 @@ def allow_reprocess_same_data(contributor):
 def set_rtu_status_ko(rtu, error, is_reprocess_same_data_allowed):
     # type: (RealTimeUpdate, unicode, bool) -> None
     """
-        Set RealTimeUpdate's status to KO, handling all in one
-        except commit and logs
-        :param rtu: RealTimeUpdate object to amend
-        :param error: error message to associate to RTU
-        :param is_reprocess_same_data_allowed: If the same input is provided next time, should we
-        reprocess it (hoping a happier ending)
-        """
+    Set RealTimeUpdate's status to KO, handling all in one
+    except commit and logs
+    :param rtu: RealTimeUpdate object to amend
+    :param error: error message to associate to RTU
+    :param is_reprocess_same_data_allowed: If the same input is provided next time, should we
+    reprocess it (hoping a happier ending)
+    """
     if is_reprocess_same_data_allowed:
         allow_reprocess_same_data(rtu.contributor_id)
 

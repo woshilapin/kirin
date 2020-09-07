@@ -206,8 +206,7 @@ class KirinModelBuilder(object):
         return trip_updates
 
     def __repr__(self):
-        """ Allow this class to be cacheable
-        """
+        """Allow this class to be cacheable"""
         return "{}.{}.{}".format(self.__class__, self.navitia.url, self.instance_data_pub_date)
 
     @app.cache.memoize(timeout=1200)

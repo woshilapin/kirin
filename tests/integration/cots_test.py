@@ -1475,8 +1475,8 @@ def test_cots_for_added_trip_chain_type_3():
 
 def test_cots_add_same_trip_more_than_once():
     """
-     1. A simple trip add with 5 stop_times all existing in navitia
-     2. add the same trip as above
+    1. A simple trip add with 5 stop_times all existing in navitia
+    2. add the same trip as above
     """
     cots_add_file = get_fixture_data("cots_train_151515_added_trip.json")
     res = api_post("/cots", data=cots_add_file)
@@ -1493,10 +1493,10 @@ def test_cots_add_same_trip_more_than_once():
 
 def test_cots_delete_added_trip_more_than_once():
     """
-     1. A simple trip add with 5 stop_times all existing in navitia
-     2. delete the trip recently added
-     3. re-delete the trip recently added and then deleted
-     4. Adding back the same trip after the delete
+    1. A simple trip add with 5 stop_times all existing in navitia
+    2. delete the trip recently added
+    3. re-delete the trip recently added and then deleted
+    4. Adding back the same trip after the delete
     """
     cots_add_file = get_fixture_data("cots_train_151515_added_trip.json")
     res = api_post("/cots", data=cots_add_file)
@@ -1533,7 +1533,7 @@ def test_cots_delete_added_trip_more_than_once():
 
 def test_cots_add_trip_in_coach():
     """
-     1. A simple trip add with 5 stop_times all existing in navitia with "indicateurFer": "ROUTIER"
+    1. A simple trip add with 5 stop_times all existing in navitia with "indicateurFer": "ROUTIER"
     """
     cots_add_file = get_fixture_data("cots_train_151515_added_trip_in_coach.json")
     res = api_post("/cots", data=cots_add_file)
@@ -1553,8 +1553,8 @@ def test_cots_add_trip_in_coach():
 
 def test_cots_add_trip_with_unknown_mode():
     """
-     1. A simple trip add with 5 stop_times all existing in navitia with "indicateurFer": "TOTO"
-     kirin uses physical_mode:LongDistanceTrain as default physical_mode if it exists in kraken
+    1. A simple trip add with 5 stop_times all existing in navitia with "indicateurFer": "TOTO"
+    kirin uses physical_mode:LongDistanceTrain as default physical_mode if it exists in kraken
     """
     cots_add_file = get_fixture_data("cots_train_151515_added_trip_with_unknown_mode.json")
     res = api_post("/cots", data=cots_add_file)
