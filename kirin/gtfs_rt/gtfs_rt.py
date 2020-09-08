@@ -25,7 +25,7 @@
 #
 # Stay tuned using
 # twitter @navitia
-# IRC #navitia on freenode
+# [matrix] channel #navitia:matrix.org (https://app.element.io/#/room/#navitia:matrix.org)
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
@@ -109,7 +109,11 @@ class GtfsRT(Resource):
         if id is None:
             abort(400, message="Contributor's id is missing")
 
-        contributor = model.Contributor.query_existing().filter_by(id=id).first()
+        contributor = (
+            model.Contributor.query_existing()
+            .filter_by(id=id, connector_type=ConnectorType.gtfs_rt.value)
+            .first()
+        )
         if not contributor:
             abort(404, message="Contributor '{}' not found".format(id))
 

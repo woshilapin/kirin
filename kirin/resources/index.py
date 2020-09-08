@@ -25,7 +25,7 @@
 #
 # Stay tuned using
 # twitter @navitia
-# IRC #navitia on freenode
+# [matrix] channel #navitia:matrix.org (https://app.element.io/#/room/#navitia:matrix.org)
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
@@ -39,6 +39,7 @@ class Index(Resource):
             "health": {"href": url_for("health", _external=True)},
             "status": {"href": url_for("status", _external=True)},
             "cots": {"href": url_for("cots", _external=True)},
+            "piv": {"href": url_for("piv_index", _external=True)},
             "contributors": {"href": url_for("contributors", _external=True)},
         }
         return response, 200

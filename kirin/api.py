@@ -25,7 +25,7 @@
 #
 # Stay tuned using
 # twitter @navitia
-# IRC #navitia on freenode
+# [matrix] channel #navitia:matrix.org (https://app.element.io/#/room/#navitia:matrix.org)
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 from __future__ import absolute_import, print_function, unicode_literals, division
@@ -36,6 +36,7 @@ import flask_restful
 from flask import request
 from werkzeug.exceptions import HTTPException
 from kirin import resources
+from kirin.piv import piv
 from kirin.gtfs_rt import gtfs_rt
 from kirin.cots import cots
 from kirin import app
@@ -50,6 +51,8 @@ api.app.url_map.strict_slashes = False
 api.add_resource(resources.Index, "/", endpoint=str("index"))
 api.add_resource(resources.Status, "/status", endpoint=str("status"))
 api.add_resource(cots.Cots, "/cots", endpoint=str("cots"))
+api.add_resource(piv.PivIndex, "/piv", endpoint=str("piv_index"))
+api.add_resource(piv.Piv, "/piv/<string:id>", endpoint=str("piv"))
 api.add_resource(gtfs_rt.GtfsRTIndex, "/gtfs_rt", endpoint=str("gtfs_rt_index"))
 api.add_resource(gtfs_rt.GtfsRT, "/gtfs_rt/<string:id>", endpoint=str("gtfs_rt"))
 api.add_resource(

@@ -25,7 +25,7 @@
 #
 # Stay tuned using
 # twitter @navitia
-# IRC #navitia on freenode
+# [matrix] channel #navitia:matrix.org (https://app.element.io/#/room/#navitia:matrix.org)
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 from __future__ import absolute_import, print_function, unicode_literals, division
@@ -39,8 +39,10 @@ import pytest
 import flask_migrate
 
 COTS_CONTRIBUTOR = "rt.tchoutchou"
+PIV_CONTRIBUTOR = "rt.piv"
 GTFS_CONTRIBUTOR = "rt.vroumvroum"
 COTS_CONTRIBUTOR_DB = "rt.tchoutchou_db"
+PIV_CONTRIBUTOR_DB = "rt.piv_db"
 GTFS_CONTRIBUTOR_DB = "rt.vroumvroum_db"
 
 
@@ -73,14 +75,16 @@ def clean_db():
         db.session.execute("TRUNCATE {} CASCADE;".format(", ".join(tables)))
         db.session.commit()
 
-        # Add two contributors in the table
+        # Add two contributors of each in the table
         db.session.add_all(
             [
                 model.Contributor(COTS_CONTRIBUTOR, "sncf", "cots", "cots_token", "cots_feed_url", 10, True),
+                model.Contributor(PIV_CONTRIBUTOR, "sncf_piv", "piv", "piv_token", "piv_feed_url", 10, True),
                 model.Contributor(
                     GTFS_CONTRIBUTOR, "sherbrooke", "gtfs-rt", "gtfs-rt_token", "gtfs-rt_feed_url", 1, True
                 ),
                 model.Contributor(COTS_CONTRIBUTOR_DB, "idfm", "cots", "cots_db_token", "cots_db_feed_url"),
+                model.Contributor(PIV_CONTRIBUTOR_DB, "tn", "piv", "piv_db_token", "piv_db_feed_url"),
                 model.Contributor(
                     GTFS_CONTRIBUTOR_DB, "laval", "gtfs-rt", "gtfs-rt_db_token", "gtfs-rt_db_feed_url", 30
                 ),

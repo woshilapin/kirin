@@ -1,6 +1,6 @@
 # coding=utf-8
-#
-# Copyright (c) 2001-2018, Canal TP and/or its affiliates. All rights reserved.
+
+# Copyright (c) 2001-2020, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
 #     the software to build cool stuff with public transport.
@@ -30,16 +30,3 @@
 # www.navitia.io
 
 from __future__ import absolute_import, print_function, unicode_literals, division
-from tests.mock_navitia import navitia_response
-
-response = navitia_response.NavitiaResponse()
-
-response.queries = ['companies/?filter=company.has_code("RefProd", "1180")&count=1']
-
-response.response_code = 200
-
-response.json_response = """
-{
-"companies": []
-}
-"""

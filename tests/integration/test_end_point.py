@@ -25,10 +25,12 @@
 #
 # Stay tuned using
 # twitter @navitia
-# IRC #navitia on freenode
+# [matrix] channel #navitia:matrix.org (https://app.element.io/#/room/#navitia:matrix.org)
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 from __future__ import absolute_import, print_function, unicode_literals, division
+
+from flask import json
 
 from kirin.utils import make_rt_update, save_rt_data_with_error
 from tests.check_utils import api_get
@@ -37,8 +39,10 @@ from kirin import app
 from datetime import datetime, time
 from tests.integration.conftest import (
     COTS_CONTRIBUTOR,
+    PIV_CONTRIBUTOR,
     COTS_CONTRIBUTOR_DB,
     GTFS_CONTRIBUTOR,
+    PIV_CONTRIBUTOR_DB,
     GTFS_CONTRIBUTOR_DB,
 )
 import pytest
@@ -52,6 +56,12 @@ def test_end_point():
     assert "cots" in resp
     assert "contributors" in resp
     assert "health" in resp
+    assert "piv" in resp
+
+    # test that the contributors endpoints are listed in piv POST endpoint
+    resp = api_get("/piv")
+    assert "/piv/{}".format(PIV_CONTRIBUTOR) in resp[PIV_CONTRIBUTOR]["href"]
+    assert "/piv/{}".format(PIV_CONTRIBUTOR_DB) in resp[PIV_CONTRIBUTOR_DB]["href"]
 
 
 def test_status(setup_database):

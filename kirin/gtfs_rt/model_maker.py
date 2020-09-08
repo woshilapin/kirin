@@ -25,7 +25,7 @@
 #
 # Stay tuned using
 # twitter @navitia
-# IRC #navitia on freenode
+# [matrix] channel #navitia:matrix.org (https://app.element.io/#/room/#navitia:matrix.org)
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 from __future__ import absolute_import, print_function, unicode_literals, division
@@ -206,8 +206,7 @@ class KirinModelBuilder(object):
         return trip_updates
 
     def __repr__(self):
-        """ Allow this class to be cacheable
-        """
+        """Allow this class to be cacheable"""
         return "{}.{}.{}".format(self.__class__, self.navitia.url, self.instance_data_pub_date)
 
     @app.cache.memoize(timeout=1200)

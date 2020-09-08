@@ -25,7 +25,7 @@
 #
 # Stay tuned using
 # twitter @navitia
-# IRC #navitia on freenode
+# [matrix] channel #navitia:matrix.org (https://app.element.io/#/room/#navitia:matrix.org)
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
@@ -464,12 +464,13 @@ def test_purge_contributor(test_client, basic_gtfs_rt_data, mock_rabbitmq):
         with app.app_context():
             return len(RealTimeUpdate.query.filter_by(contributor_id=contributor_id).all()) > 0
 
-    # We have 4 contributors and all are active:
-    test_contributor_count(4)
+    # We have 6 contributors and all are active:
+    test_contributor_count(6)
     with app.app_context():
         contributors = Contributor.query.all()
         contributors_id = [c.id for c in contributors]
         assert "rt.tchoutchou" in contributors_id
+        assert "rt.piv" in contributors_id
         assert "rt.vroumvroum" in contributors_id
         for c in contributors:
             assert c.is_active is True
@@ -482,7 +483,7 @@ def test_purge_contributor(test_client, basic_gtfs_rt_data, mock_rabbitmq):
     # As all the contributors are active, purge_contributor won't do anything
     with app.app_context():
         purge_contributor("rt.vroumvroum")
-    test_contributor_count(4)
+    test_contributor_count(6)
     test_rt_data()
 
     # We deactivate a contributor "rt.tchoutchou" with rt data and use purge_contributor
@@ -491,7 +492,7 @@ def test_purge_contributor(test_client, basic_gtfs_rt_data, mock_rabbitmq):
     assert has_rt_data("rt.vroumvroum") is True
     with app.app_context():
         purge_contributor("rt.vroumvroum")
-    test_contributor_count(4)
+    test_contributor_count(6)
     test_rt_data()
 
     # We deactivate another contributor "rt.vroumvroum_db" without any rt data. purge_contributor will simply
@@ -500,5 +501,26 @@ def test_purge_contributor(test_client, basic_gtfs_rt_data, mock_rabbitmq):
     assert has_rt_data("rt.vroumvroum_db") is False
     with app.app_context():
         purge_contributor("rt.vroumvroum_db")
-    test_contributor_count(3)
+    test_contributor_count(5)
     test_rt_data()
+
+
+def test_piv_contributor(test_client):
+    new_contrib = {
+        "id": "realtime.sncf.piv",
+        "navitia_coverage": "sncf",
+        "navitia_token": "blablablabla",
+        "feed_url": "no_url",
+        "connector_type": "piv",
+        "retrieval_interval": 30,
+    }
+    resp = test_client.post("/contributors", json=new_contrib)
+    assert resp.status_code == 201
+
+    contrib = db.session.query(model.Contributor).filter(model.Contributor.id == "realtime.sncf.piv").first()
+    assert contrib.id == "realtime.sncf.piv"
+    assert contrib.navitia_coverage == "sncf"
+    assert contrib.connector_type == "piv"
+    assert contrib.navitia_token == "blablablabla"
+    assert contrib.feed_url == "no_url"
+    assert contrib.retrieval_interval == 30
