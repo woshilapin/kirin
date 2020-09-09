@@ -14,6 +14,7 @@ RUN apt-get update \
         postgresql-client \
         git && \
     sed -i -e '/protobuf/d' requirements.txt && \
+    pip install --no-cache-dir -U setuptools && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir gunicorn && \
     pip install --no-cache-dir newrelic && \
