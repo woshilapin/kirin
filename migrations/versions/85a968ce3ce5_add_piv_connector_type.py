@@ -15,17 +15,9 @@ down_revision = "fdc0f3db714b"
 
 
 def upgrade():
-    # create new type, then switch type, finally remove old type
-    op.execute("ALTER TYPE connector_type RENAME TO connector_type_tmp")
-    op.execute("CREATE TYPE connector_type AS ENUM('piv', 'cots', 'gtfs-rt')")  # add 'piv' here
-    op.execute(
-        "ALTER TABLE real_time_update ALTER COLUMN connector TYPE connector_type USING connector::text::connector_type"
-    )
-    op.execute(
-        "ALTER TABLE contributor ALTER COLUMN connector_type \
-            TYPE connector_type USING connector_type::text::connector_type"
-    )
-    op.execute("DROP TYPE connector_type_tmp")
+    op.execute("COMMIT")  # end previous transaction (automatically started by alembic)
+    op.execute("ALTER TYPE connector_type ADD VALUE 'piv'")  # only possible outside of a transaction
+    op.execute("BEGIN")  # start new transaction (automatically ended by alembic)
 
 
 def downgrade():
@@ -49,11 +41,21 @@ def downgrade():
     # delete type 'piv'
     op.execute("ALTER TYPE connector_type RENAME TO connector_type_tmp")
     op.execute("CREATE TYPE connector_type AS ENUM('cots', 'gtfs-rt')")  # no more 'piv'
+    # switch both tables to the "old" enum
     op.execute(
         "ALTER TABLE real_time_update ALTER COLUMN connector TYPE connector_type USING connector::text::connector_type"
     )
+
+    # isolate "ALTER contributor" in a separate transaction and add a lock on real_time_update that is implicated
+    # because of a foreign_key constraint (avoid deadlock with insert that may happen at the same time)
+    op.execute("COMMIT")  # end previous transaction (automatically started by alembic)
+    op.execute("BEGIN")  # start new transaction
+    op.execute("LOCK TABLE real_time_update")
     op.execute(
         "ALTER TABLE contributor ALTER COLUMN connector_type \
             TYPE connector_type USING connector_type::text::connector_type"
     )
+    op.execute("COMMIT")  # end previous transaction
+    op.execute("BEGIN")  # start new transaction (automatically ended by alembic)
+
     op.execute("DROP TYPE connector_type_tmp")

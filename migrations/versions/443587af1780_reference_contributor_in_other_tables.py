@@ -64,9 +64,11 @@ def downgrade():
     op.drop_index("realtime_update_contributor_id_and_created_at", table_name="real_time_update")
     op.drop_index("contributor_id_idx", table_name="trip_update")
 
-    # Drop foreignKey constraints
-    op.drop_constraint("fk_trip_update_contributor_id", "trip_update", type_="foreignkey")
-    op.drop_constraint("fk_real_time_update_contributor_id", "real_time_update", type_="foreignkey")
+    # Drop foreignKey constraints (lock required to avoid deadlock from Kirin's work on the side)
+    op.execute("LOCK TABLE trip_update; ALTER TABLE trip_update DROP CONSTRAINT fk_trip_update_contributor_id")
+    op.execute(
+        "LOCK TABLE real_time_update; ALTER TABLE real_time_update DROP CONSTRAINT fk_real_time_update_contributor_id"
+    )
 
     # Delete contributor_id in real_time_update and trip_update
     op.drop_column("trip_update", "contributor_id")

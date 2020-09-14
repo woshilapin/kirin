@@ -20,5 +20,8 @@ def upgrade():
 
 
 def downgrade():
-    op.execute("UPDATE real_time_update SET received_at = created_at WHERE received_at IS NULL;")
-    op.execute("ALTER TABLE real_time_update ALTER COLUMN received_at SET NOT NULL;")
+    op.execute(
+        "LOCK TABLE real_time_update; \
+        UPDATE real_time_update SET received_at = created_at WHERE received_at IS NULL; \
+        ALTER TABLE real_time_update ALTER COLUMN received_at SET NOT NULL;"
+    )
