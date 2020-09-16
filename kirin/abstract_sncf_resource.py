@@ -48,7 +48,7 @@ class AbstractSNCFResource(Resource):
         self.contributor = contributor
         self.builder = builder
 
-    def process_post(self, input_raw, contributor_type, is_new_complete=False):
+    def process_post(self, input_raw, contributor_type):
         start_datetime = datetime.utcnow()
         rt_update = None
         log_dict = {"contributor": self.contributor}
@@ -62,9 +62,7 @@ class AbstractSNCFResource(Resource):
 
             # raw_input is interpreted
             trip_updates = self.builder(self.navitia_wrapper, self.contributor).build(rt_update)
-            _, handler_log_dict = core.handle(
-                rt_update, trip_updates, self.contributor, is_new_complete=is_new_complete
-            )
+            _, handler_log_dict = core.handle(rt_update, trip_updates, self.contributor, is_new_complete=True)
             log_dict.update(handler_log_dict)
 
         except Exception as e:
