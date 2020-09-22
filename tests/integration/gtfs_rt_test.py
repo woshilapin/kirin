@@ -37,7 +37,7 @@ import pytest
 from kirin.core.model import RealTimeUpdate, db, TripUpdate, StopTimeUpdate, VehicleJourney
 from kirin.core.populate_pb import to_posix_time, convert_to_gtfsrt
 from kirin import gtfs_rt, redis_client
-from kirin.core.types import TripEffect
+from kirin.core.types import TripEffect, ConnectorType
 from kirin.tasks import purge_trip_update, purge_rt_update
 from tests import mock_navitia
 from tests.check_utils import dumb_nav_wrapper, api_post, api_get
@@ -333,6 +333,11 @@ def test_gtfs_rt_purge(basic_gtfs_rt_data, mock_rabbitmq):
     with app.app_context():
         # Check there's really something before purge
         assert len(RealTimeUpdate.query.all()) == 1
+
+        # Put an old (realistic) date to RealTimeUpdate object so that RTU purge affects it
+        rtu = RealTimeUpdate.query.all()[0]
+        rtu.created_at = datetime.datetime(2012, 6, 15, 15, 33)
+
         assert len(TripUpdate.query.all()) == 1
         assert len(VehicleJourney.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 4
@@ -351,11 +356,10 @@ def test_gtfs_rt_purge(basic_gtfs_rt_data, mock_rabbitmq):
         assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 0
         assert len(RealTimeUpdate.query.all()) == 1  # keeping RTU longer for potential debug need
 
-        # Put an old (realistic) date to RealTimeUpdate object so that RTU purge affects it
-        rtu = RealTimeUpdate.query.all()[0]
-        rtu.created_at = datetime.datetime(2012, 6, 15, 15, 33)
-
-        config = {"nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_RT_UPDATE")), "connector": "gtfs-rt"}
+        config = {
+            "nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_RT_UPDATE")),
+            "connector": ConnectorType.gtfs_rt.value,
+        }
         purge_rt_update(config)
 
         assert len(TripUpdate.query.all()) == 0
