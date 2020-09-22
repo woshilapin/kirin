@@ -52,6 +52,7 @@ import calendar
 
 
 def handle(proto, navitia_wrapper, contributor):
+    # TODO: use abstract_builder.wrap_build to mutualize error/logger/newrelic management
     start_datetime = datetime.datetime.utcnow()
     rt_update = None
     log_dict = {"contributor": contributor}
