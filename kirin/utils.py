@@ -213,7 +213,8 @@ def manage_db_error(data, connector, contributor, error, is_reprocess_same_data_
         if is_reprocess_same_data_allowed:
             allow_reprocess_same_data(contributor)
     else:
-        save_rt_data_with_error(data, connector, contributor, error, is_reprocess_same_data_allowed)
+        last = save_rt_data_with_error(data, connector, contributor, error, is_reprocess_same_data_allowed)
+    return last
 
 
 def manage_db_no_new(connector, contributor):

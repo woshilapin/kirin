@@ -33,16 +33,15 @@ from __future__ import absolute_import, print_function, unicode_literals, divisi
 import flask
 from flask import url_for
 from flask.globals import current_app
-from flask_restful import Resource, marshal, abort
-from google.protobuf.message import DecodeError
+from flask_restful import Resource, abort
+
+from kirin.core.abstract_builder import wrap_build
 from kirin.exceptions import InvalidArguments
 import navitia_wrapper
-from kirin.gtfs_rt import model_maker
+from kirin.gtfs_rt import KirinModelBuilder
 from kirin import redis_client
-from kirin.utils import manage_db_error
 from kirin.core import model
 from kirin.core.types import ConnectorType
-from kirin.resources.contributors import contributor_fields
 
 
 def get_gtfsrt_contributors(include_deactivated=False):
@@ -119,22 +118,5 @@ class GtfsRT(Resource):
 
         raw_proto = _get_gtfs_rt(flask.globals.request)
 
-        from kirin import gtfs_realtime_pb2
-
-        # create a raw gtfs-rt obj, save the raw protobuf into the db
-        proto = gtfs_realtime_pb2.FeedMessage()
-        try:
-            proto.ParseFromString(raw_proto)
-        except DecodeError:
-            # We save the non-decodable flux gtfs-rt
-            manage_db_error(
-                proto,
-                "gtfs-rt",
-                contributor=contributor.id,
-                error="Decode Error",
-                is_reprocess_same_data_allowed=False,
-            )
-            raise InvalidArguments("invalid protobuf")
-        else:
-            model_maker.handle(proto, make_navitia_wrapper(contributor), contributor.id)
-            return {"message": "GTFS-RT feed processed"}, 200
+        wrap_build(KirinModelBuilder(contributor), raw_proto)
+        return {"message": "GTFS-RT feed processed"}, 200

@@ -36,7 +36,9 @@ from datetime import datetime
 import requests
 import six
 
-from kirin import gtfs_realtime_pb2
+from kirin.core import model
+from kirin.core.abstract_builder import wrap_build
+from kirin.core.types import ConnectorType
 from kirin.cots.model_maker import as_duration
 
 from kirin.tasks import celery
@@ -50,12 +52,10 @@ from kirin.utils import (
     record_input_retrieval,
     make_kirin_last_call_dt_name,
 )
-from kirin.gtfs_rt import model_maker
+from kirin.gtfs_rt import KirinModelBuilder
 from retrying import retry
 from kirin import app, redis_client
 from kirin import new_relic
-from google.protobuf.message import DecodeError
-import navitia_wrapper
 
 
 TASK_STOP_MAX_DELAY = app.config[str("TASK_STOP_MAX_DELAY")]
@@ -125,17 +125,22 @@ def _retrieve_gtfsrt(config):
 @retry(stop_max_delay=TASK_STOP_MAX_DELAY, wait_fixed=TASK_WAIT_FIXED, retry_on_exception=should_retry_exception)
 def gtfs_poller(self, config):
     func_name = "gtfs_poller"
-    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": config["contributor"]})
+    contributor = (
+        model.Contributor.query_existing()
+        .filter_by(id=config.get("contributor"), connector_type=ConnectorType.gtfs_rt.value)
+        .first()
+    )
 
-    contributor = config.get("contributor")
-    lock_name = make_kirin_lock_name(func_name, contributor)
+    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": contributor.id})
+
+    lock_name = make_kirin_lock_name(func_name, contributor.id)
     with get_lock(logger, lock_name, app.config[str("REDIS_LOCK_TIMEOUT_POLLER")]) as locked:
         if not locked or not config.get("feed_url"):
             new_relic.ignore_transaction()
             return
 
         retrieval_interval = config.get("retrieval_interval", 10)
-        if _is_last_call_too_recent(func_name, contributor, retrieval_interval):
+        if _is_last_call_too_recent(func_name, contributor.id, retrieval_interval):
             # do nothing if the last call is too recent
             new_relic.ignore_transaction()
             return
@@ -147,7 +152,7 @@ def gtfs_poller(self, config):
         # If the HEAD request or Redis get/set fail, we just ignore this part and do the polling anyway
         if not _is_newer(config):
             new_relic.ignore_transaction()
-            manage_db_no_new(connector="gtfs-rt", contributor=contributor)
+            manage_db_no_new(connector="gtfs-rt", contributor=contributor.id)
             return
 
         try:
@@ -157,34 +162,12 @@ def gtfs_poller(self, config):
             manage_db_error(
                 data="",
                 connector="gtfs-rt",
-                contributor=contributor,
+                contributor=contributor.id,
                 error="Http Error",
                 is_reprocess_same_data_allowed=True,
             )
             logger.debug(six.text_type(e))
             return
 
-        nav = navitia_wrapper.Navitia(
-            url=config["navitia_url"],
-            token=config["token"],
-            timeout=app.config.get(str("NAVITIA_TIMEOUT"), 5),
-            cache=redis_client,
-            query_timeout=app.config.get(str("NAVITIA_QUERY_CACHE_TIMEOUT"), 600),
-            pubdate_timeout=app.config.get(str("NAVITIA_PUBDATE_CACHE_TIMEOUT"), 600),
-        ).instance(config["coverage"])
-
-        proto = gtfs_realtime_pb2.FeedMessage()
-        try:
-            proto.ParseFromString(response.content)
-        except DecodeError:
-            manage_db_error(
-                proto,
-                "gtfs-rt",
-                contributor=contributor,
-                error="Decode Error",
-                is_reprocess_same_data_allowed=False,
-            )
-            logger.debug("invalid protobuf")
-        else:
-            model_maker.handle(proto, nav, contributor)
-            logger.info("%s for %s is finished", func_name, contributor)
+        wrap_build(KirinModelBuilder(contributor), response.content)
+        logger.info("%s for %s is finished", func_name, contributor.id)
