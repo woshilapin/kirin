@@ -38,6 +38,7 @@ import pytest
 import jsonschema
 from kirin.core.model import RealTimeUpdate, db, TripUpdate, VehicleJourney, StopTimeUpdate, Contributor
 from kirin.command.purge_rt import purge_contributor
+from kirin.core.types import ConnectorType
 from tests.integration.gtfs_rt_test import basic_gtfs_rt_data, mock_rabbitmq, navitia
 
 
@@ -60,9 +61,13 @@ def with_custom_contributors():
 
     db.session.add_all(
         [
-            model.Contributor("realtime.sherbrooke", "ca", "gtfs-rt", "my_token", "http://feed.url", 5),
-            model.Contributor("realtime.paris", "idf", "gtfs-rt", "my_other_token", "http://otherfeed.url"),
-            model.Contributor("realtime.london", "gb", "cots"),
+            model.Contributor(
+                "realtime.sherbrooke", "ca", ConnectorType.gtfs_rt.value, "my_token", "http://feed.url", 5
+            ),
+            model.Contributor(
+                "realtime.paris", "idf", ConnectorType.gtfs_rt.value, "my_other_token", "http://otherfeed.url"
+            ),
+            model.Contributor("realtime.london", "gb", ConnectorType.cots.value),
         ]
     )
     db.session.commit()
@@ -90,7 +95,7 @@ def test_get_contributors_with_specific_id(test_client, with_custom_contributors
     assert len(contrib) == 1
     assert contrib[0]["id"] == "realtime.paris"
     assert contrib[0]["navitia_coverage"] == "idf"
-    assert contrib[0]["connector_type"] == "gtfs-rt"
+    assert contrib[0]["connector_type"] == ConnectorType.gtfs_rt.value
     assert contrib[0]["navitia_token"] == "my_other_token"
     assert contrib[0]["feed_url"] == "http://otherfeed.url"
     assert contrib[0]["retrieval_interval"] == 10
@@ -105,7 +110,7 @@ def test_get_contributors_with_specific_retrieval_interval(test_client, with_cus
     assert len(contrib) == 1
     assert contrib[0]["id"] == "realtime.sherbrooke"
     assert contrib[0]["navitia_coverage"] == "ca"
-    assert contrib[0]["connector_type"] == "gtfs-rt"
+    assert contrib[0]["connector_type"] == ConnectorType.gtfs_rt.value
     assert contrib[0]["navitia_token"] == "my_token"
     assert contrib[0]["feed_url"] == "http://feed.url"
     assert contrib[0]["retrieval_interval"] == 5
@@ -141,7 +146,7 @@ def test_post_new_contributor(test_client):
         "navitia_coverage": "jp",
         "navitia_token": "blablablabla",
         "feed_url": "http://nihongo.jp",
-        "connector_type": "gtfs-rt",
+        "connector_type": ConnectorType.gtfs_rt.value,
         "retrieval_interval": 30,
     }
     resp = test_client.post("/contributors", json=new_contrib)
@@ -150,21 +155,25 @@ def test_post_new_contributor(test_client):
     contrib = db.session.query(model.Contributor).filter(model.Contributor.id == "realtime.tokyo").first()
     assert contrib.id == "realtime.tokyo"
     assert contrib.navitia_coverage == "jp"
-    assert contrib.connector_type == "gtfs-rt"
+    assert contrib.connector_type == ConnectorType.gtfs_rt.value
     assert contrib.navitia_token == "blablablabla"
     assert contrib.feed_url == "http://nihongo.jp"
     assert contrib.retrieval_interval == 30
 
 
 def test_post_new_partial_contributor(test_client):
-    new_contrib = {"id": "realtime.tokyo", "navitia_coverage": "jp", "connector_type": "gtfs-rt"}
+    new_contrib = {
+        "id": "realtime.tokyo",
+        "navitia_coverage": "jp",
+        "connector_type": ConnectorType.gtfs_rt.value,
+    }
     resp = test_client.post("/contributors", json=new_contrib)
     assert resp.status_code == 201
 
     contrib = db.session.query(model.Contributor).filter(model.Contributor.id == "realtime.tokyo").first()
     assert contrib.id == "realtime.tokyo"
     assert contrib.navitia_coverage == "jp"
-    assert contrib.connector_type == "gtfs-rt"
+    assert contrib.connector_type == ConnectorType.gtfs_rt.value
     assert contrib.navitia_token is None
     assert contrib.feed_url is None
     assert contrib.retrieval_interval == 10
@@ -177,7 +186,8 @@ def test_post_empty_contributor_should_fail(test_client):
 
 def test_post_with_id_in_the_resource_path(test_client):
     resp = test_client.post(
-        "/contributors/realtime.test", json={"navitia_coverage": "jp", "connector_type": "gtfs-rt"}
+        "/contributors/realtime.test",
+        json={"navitia_coverage": "jp", "connector_type": ConnectorType.gtfs_rt.value},
     )
     assert resp.status_code == 201
 
@@ -188,7 +198,7 @@ def test_post_with_id_in_the_resource_path(test_client):
 def test_post_with_id_in_the_resource_path_and_data(test_client):
     resp = test_client.post(
         "/contributors/the_real_id",
-        json={"id": "overridden_id", "navitia_coverage": "jp", "connector_type": "gtfs-rt"},
+        json={"id": "overridden_id", "navitia_coverage": "jp", "connector_type": ConnectorType.gtfs_rt.value},
     )
     assert resp.status_code == 201
 
@@ -204,10 +214,12 @@ def test_post_contributor_with_wrong_connector_type(test_client):
 
 def test_post_2_contributors_with_same_id_should_fail(test_client):
     resp = test_client.post(
-        "/contributors", json={"id": "realtime.test", "navitia_coverage": "jp", "connector_type": "gtfs-rt"}
+        "/contributors",
+        json={"id": "realtime.test", "navitia_coverage": "jp", "connector_type": ConnectorType.gtfs_rt.value},
     )
     resp = test_client.post(
-        "/contributors", json={"id": "realtime.test", "navitia_coverage": "fr", "connector_type": "cots"}
+        "/contributors",
+        json={"id": "realtime.test", "navitia_coverage": "fr", "connector_type": ConnectorType.cots.value},
     )
     assert resp.status_code == 400
 
@@ -227,7 +239,7 @@ def test_post_new_valid_contributor_with_unknown_parameter_should_work(test_clie
             "UNKNOWN_PARAM": "gibberish",
             "id": "realtime.tokyo",
             "navitia_coverage": "jp",
-            "connector_type": "gtfs-rt",
+            "connector_type": ConnectorType.gtfs_rt.value,
         },
     )
     assert resp.status_code == 201
@@ -238,7 +250,7 @@ def test_put_contributor_with_id(test_client):
         model.Contributor(
             id="SaintMeuMeu",
             navitia_coverage="ca",
-            connector_type="cots",
+            connector_type=ConnectorType.cots.value,
             navitia_token="this_is_a_token",
             feed_url="http://feed.url",
         )
@@ -249,7 +261,7 @@ def test_put_contributor_with_id(test_client):
         "/contributors/SaintMeuMeu",
         json={
             "navitia_coverage": "qb",
-            "connector_type": "gtfs-rt",
+            "connector_type": ConnectorType.gtfs_rt.value,
             "navitia_token": "new_token",
             "feed_url": "http://new.feed",
             "retrieval_interval": 50,
@@ -260,7 +272,7 @@ def test_put_contributor_with_id(test_client):
 
     contrib = db.session.query(model.Contributor).filter(model.Contributor.id == "SaintMeuMeu").first()
     assert contrib.navitia_coverage == "qb"
-    assert contrib.connector_type == "gtfs-rt"
+    assert contrib.connector_type == ConnectorType.gtfs_rt.value
     assert contrib.navitia_token == "new_token"
     assert contrib.feed_url == "http://new.feed"
     assert contrib.retrieval_interval == 50
@@ -271,7 +283,7 @@ def test_put_partial_contributor(test_client):
         model.Contributor(
             id="SaintMeuMeu",
             navitia_coverage="ca",
-            connector_type="cots",
+            connector_type=ConnectorType.cots.value,
             navitia_token="this_is_a_token",
             feed_url="http://feed.url",
         )
@@ -293,7 +305,7 @@ def test_put_contributor_with_no_data(test_client):
         model.Contributor(
             id="SaintMeuMeu",
             navitia_coverage="ca",
-            connector_type="cots",
+            connector_type=ConnectorType.cots.value,
             navitia_token="this_is_a_token",
             feed_url="http://feed.url",
         )
@@ -325,7 +337,7 @@ def test_post_get_put_to_ensure_API_consitency(test_client):
         "navitia_coverage": "jp",
         "navitia_token": "blablablabla",
         "feed_url": "http://nihongo.jp",
-        "connector_type": "gtfs-rt",
+        "connector_type": ConnectorType.gtfs_rt.value,
         "retrieval_interval": 180,
         "is_active": True,
     }
@@ -388,7 +400,7 @@ def test_activate_contributor(test_client):
         "navitia_coverage": "jp",
         "navitia_token": "blablablabla",
         "feed_url": "http://nihongo.jp",
-        "connector_type": "gtfs-rt",
+        "connector_type": ConnectorType.gtfs_rt.value,
         "is_active": False,
     }
     test_client.post("/contributors", json=new_contrib)
@@ -511,7 +523,7 @@ def test_piv_contributor(test_client):
         "navitia_coverage": "sncf",
         "navitia_token": "blablablabla",
         "feed_url": "no_url",
-        "connector_type": "piv",
+        "connector_type": ConnectorType.piv.value,
         "retrieval_interval": 30,
     }
     resp = test_client.post("/contributors", json=new_contrib)
@@ -520,7 +532,7 @@ def test_piv_contributor(test_client):
     contrib = db.session.query(model.Contributor).filter(model.Contributor.id == "realtime.sncf.piv").first()
     assert contrib.id == "realtime.sncf.piv"
     assert contrib.navitia_coverage == "sncf"
-    assert contrib.connector_type == "piv"
+    assert contrib.connector_type == ConnectorType.piv.value
     assert contrib.navitia_token == "blablablabla"
     assert contrib.feed_url == "no_url"
     assert contrib.retrieval_interval == 30

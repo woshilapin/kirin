@@ -35,6 +35,8 @@ from kirin.core import model
 
 
 from celery.signals import task_postrun, setup_logging
+
+from kirin.core.types import ConnectorType
 from kirin.helper import make_celery
 
 from retrying import retry
@@ -148,7 +150,10 @@ def purge_gtfs_rt_update(self):
     """
     This task will remove realtime update
     """
-    config = {"nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_RT_UPDATE")), "connector": "gtfs-rt"}
+    config = {
+        "nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_RT_UPDATE")),
+        "connector": ConnectorType.gtfs_rt.value,
+    }
     purge_rt_update.delay(config)
 
 
@@ -171,7 +176,10 @@ def purge_piv_rt_update(self):
     """
     This task will remove realtime update
     """
-    config = {"nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_RT_UPDATE")), "connector": "piv"}
+    config = {
+        "nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_RT_UPDATE")),
+        "connector": ConnectorType.piv.value,
+    }
     purge_rt_update.delay(config)
 
 
@@ -191,5 +199,5 @@ def purge_cots_rt_update(self):
     """
     This task will remove realtime update
     """
-    config = {"nb_days_to_keep": 100, "connector": "cots"}
+    config = {"nb_days_to_keep": 100, "connector": ConnectorType.cots.value}
     purge_rt_update.delay(config)

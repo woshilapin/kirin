@@ -1825,7 +1825,7 @@ def test_save_gtfs_rt_with_error():
         redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR), "firstETag")  # set ETag key as if it was polled
         save_rt_data_with_error(
             "toto",
-            "gtfs-rt",
+            ConnectorType.gtfs_rt.value,
             contributor=GTFS_CONTRIBUTOR,
             error="invalid protobuf",
             is_reprocess_same_data_allowed=False,
@@ -1845,7 +1845,7 @@ def test_manage_db_with_http_error_without_insert():
     with app.app_context():
         manage_db_error(
             "toto",
-            "gtfs-rt",
+            ConnectorType.gtfs_rt.value,
             contributor=GTFS_CONTRIBUTOR,
             error="Http Error",
             is_reprocess_same_data_allowed=True,
@@ -1862,7 +1862,7 @@ def test_manage_db_with_http_error_without_insert():
 
         manage_db_error(
             "toto",
-            "gtfs-rt",
+            ConnectorType.gtfs_rt.value,
             contributor=GTFS_CONTRIBUTOR,
             error="Http Error",
             is_reprocess_same_data_allowed=True,
@@ -1880,7 +1880,7 @@ def test_manage_db_with_http_error_without_insert():
 
         manage_db_error(
             "toto",
-            "gtfs-rt",
+            ConnectorType.gtfs_rt.value,
             contributor=GTFS_CONTRIBUTOR,
             error="Http Error",
             is_reprocess_same_data_allowed=True,
@@ -1902,7 +1902,7 @@ def test_manage_db_with_http_error_with_insert():
         redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR), "firstETag")  # set ETag key as if it was polled
         manage_db_error(
             "toto",
-            "gtfs-rt",
+            ConnectorType.gtfs_rt.value,
             contributor=GTFS_CONTRIBUTOR,
             error="Http Error",
             is_reprocess_same_data_allowed=True,
@@ -1922,7 +1922,7 @@ def test_manage_db_with_http_error_with_insert():
         )  # set ETag key as if it was polled
         manage_db_error(
             "",
-            "gtfs-rt",
+            ConnectorType.gtfs_rt.value,
             contributor=GTFS_CONTRIBUTOR,
             error="invalid protobuf",
             is_reprocess_same_data_allowed=False,
@@ -1938,7 +1938,7 @@ def test_manage_db_with_http_error_with_insert():
         redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR), "thirdETag")  # set ETag key as if it was polled
         manage_db_error(
             "toto",
-            "gtfs-rt",
+            ConnectorType.gtfs_rt.value,
             contributor=GTFS_CONTRIBUTOR,
             error="Http Error",
             is_reprocess_same_data_allowed=True,

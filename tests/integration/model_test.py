@@ -31,6 +31,8 @@
 
 from __future__ import absolute_import, print_function, unicode_literals, division
 
+from sqlalchemy.orm.exc import FlushError
+
 from kirin.core.model import VehicleJourney, TripUpdate, StopTimeUpdate, Contributor
 from kirin.core.types import ConnectorType
 from kirin.utils import make_rt_update
@@ -38,7 +40,6 @@ from tests.integration.conftest import COTS_CONTRIBUTOR, GTFS_CONTRIBUTOR
 from kirin import db, app
 import datetime
 import pytest
-import sqlalchemy
 
 
 def create_trip_update(vj_id, trip_id, circulation_date, contributor=COTS_CONTRIBUTOR):
@@ -117,7 +118,7 @@ def test_find_activate():
         create_real_time_update(
             "70866ce8-0638-4fa1-8556-1ddfa22d09d3",
             COTS_CONTRIBUTOR,
-            "cots",
+            ConnectorType.cots.value,
             "70866ce8-0638-4fa1-8556-1ddfa22d09d3",
             "vj1",
             datetime.date(2015, 9, 8),
@@ -125,7 +126,7 @@ def test_find_activate():
         create_real_time_update(
             "70866ce8-0638-4fa1-8556-1ddfa22d09d4",
             COTS_CONTRIBUTOR,
-            "cots",
+            ConnectorType.cots.value,
             "70866ce8-0638-4fa1-8556-1ddfa22d09d4",
             "vj2",
             datetime.date(2015, 9, 10),
@@ -133,7 +134,7 @@ def test_find_activate():
         create_real_time_update(
             "70866ce8-0638-4fa1-8556-1ddfa22d09d5",
             COTS_CONTRIBUTOR,
-            "cots",
+            ConnectorType.cots.value,
             "70866ce8-0638-4fa1-8556-1ddfa22d09d5",
             "vj3",
             datetime.date(2015, 9, 12),
@@ -142,7 +143,7 @@ def test_find_activate():
         create_real_time_update(
             "70866ce8-0638-4fa1-8556-1ddfa22d09d6",
             GTFS_CONTRIBUTOR,
-            "cots",
+            ConnectorType.cots.value,
             "70866ce8-0638-4fa1-8556-1ddfa22d09d6",
             "vj4",
             datetime.date(2015, 9, 12),
@@ -454,7 +455,7 @@ def test_contributor_creation():
 
         contrib_with_same_id = Contributor("realtime.george", "another-coverage", ConnectorType.cots.value)
 
-        with pytest.raises(sqlalchemy.orm.exc.FlushError):
+        with pytest.raises(FlushError):
             """
             Adding a second contributor with the same id should fail
             """

@@ -36,6 +36,7 @@ from kirin.core.populate_pb import convert_to_gtfsrt, to_posix_time, fill_stop_t
 import datetime
 from kirin import app, db
 from kirin import gtfs_realtime_pb2, kirin_pb2
+from kirin.core.types import ConnectorType
 from kirin.cots.model_maker import make_navitia_empty_vj
 from kirin.utils import make_rt_update
 from tests.check_utils import _dt
@@ -70,7 +71,9 @@ def test_populate_pb_with_one_stop_time():
         )
         trip_update = TripUpdate(vj=vj, contributor=COTS_CONTRIBUTOR)
         st = StopTimeUpdate({"id": "sa:1"}, departure=_dt("8:15"), arrival=None)
-        real_time_update = make_rt_update(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
+        real_time_update = make_rt_update(
+            raw_data=None, connector=ConnectorType.cots.value, contributor=COTS_CONTRIBUTOR
+        )
         real_time_update.trip_updates.append(trip_update)
         trip_update.stop_time_updates.append(st)
 
@@ -121,7 +124,9 @@ def test_populate_pb_with_two_stop_time():
             navitia_vj, datetime.datetime(2015, 9, 8, 5, 10, 0), datetime.datetime(2015, 9, 8, 8, 10, 0)
         )
         trip_update = TripUpdate(vj=vj, contributor=COTS_CONTRIBUTOR)
-        real_time_update = make_rt_update(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
+        real_time_update = make_rt_update(
+            raw_data=None, connector=ConnectorType.cots.value, contributor=COTS_CONTRIBUTOR
+        )
         real_time_update.trip_updates.append(trip_update)
         st = StopTimeUpdate(
             {"id": "sa:1"}, departure=_dt("8:15"), departure_delay=timedelta(minutes=5), arrival=None
@@ -224,7 +229,9 @@ def test_populate_pb_with_deleted_stop_time():
             navitia_vj, datetime.datetime(2015, 9, 8, 5, 11, 0), datetime.datetime(2015, 9, 8, 10, 10, 0)
         )
         trip_update = TripUpdate(vj=vj, contributor=COTS_CONTRIBUTOR)
-        real_time_update = make_rt_update(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
+        real_time_update = make_rt_update(
+            raw_data=None, connector=ConnectorType.cots.value, contributor=COTS_CONTRIBUTOR
+        )
         real_time_update.trip_updates.append(trip_update)
         st = StopTimeUpdate(
             {"id": "sa:1"}, departure=_dt("8:15"), departure_delay=timedelta(minutes=5), arrival=None
@@ -358,7 +365,9 @@ def test_populate_pb_with_cancelation():
         trip_update.vj = vj
         trip_update.status = "delete"
         trip_update.message = "Message Test"
-        real_time_update = make_rt_update(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
+        real_time_update = make_rt_update(
+            raw_data=None, connector=ConnectorType.cots.value, contributor=COTS_CONTRIBUTOR
+        )
         trip_update.company_id = "sncf"
         trip_update.effect = "REDUCED_SERVICE"
         real_time_update.trip_updates.append(trip_update)
@@ -401,7 +410,9 @@ def test_populate_pb_with_full_dataset():
         trip_update = TripUpdate(vj=vj, contributor=COTS_CONTRIBUTOR)
         trip_update.status = "delete"
         trip_update.message = "Message Test"
-        real_time_update = make_rt_update(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
+        real_time_update = make_rt_update(
+            raw_data=None, connector=ConnectorType.cots.value, contributor=COTS_CONTRIBUTOR
+        )
         trip_update.company_id = "keolis"
         trip_update.effect = "DETOUR"
         real_time_update.trip_updates.append(trip_update)
@@ -500,7 +511,9 @@ def test_populate_pb_for_added_trip():
         trip_update.status = "add"
         trip_update.effect = "ADDITIONAL_SERVICE"
         trip_update.physical_mode_id = "physical_mode:LongDistanceTrain"
-        real_time_update = make_rt_update(raw_data=None, connector="cots", contributor=COTS_CONTRIBUTOR)
+        real_time_update = make_rt_update(
+            raw_data=None, connector=ConnectorType.cots.value, contributor=COTS_CONTRIBUTOR
+        )
         real_time_update.trip_updates.append(trip_update)
         st = StopTimeUpdate(
             {"id": "sa:1"},

@@ -30,8 +30,7 @@
 # www.navitia.io
 from __future__ import absolute_import, print_function, unicode_literals, division
 
-from flask import json
-
+from kirin.core.types import ConnectorType
 from kirin.utils import make_rt_update, save_rt_data_with_error
 from tests.check_utils import api_get
 from kirin.core import model
@@ -198,8 +197,8 @@ def test_status_with_database_ko(setup_database):
         assert len(resp["last_update"]) == 0
         assert len(resp["last_update_error"]) == 0
         assert len(resp["last_valid_update"]) == 0
-        resp["db_pool_status"] is None
-        resp["db_version"] is None
+        assert resp["db_pool_status"] is None
+        assert resp["db_version"] is None
         assert "navitia_url" in resp
 
 
@@ -220,8 +219,8 @@ def test_status_with_database_and_navitia_ko(setup_database):
         assert len(resp["last_update"]) == 0
         assert len(resp["last_update_error"]) == 0
         assert len(resp["last_valid_update"]) == 0
-        resp["db_pool_status"] is None
-        resp["db_version"] is None
+        assert resp["db_pool_status"] is None
+        assert resp["db_version"] is None
         assert "navitia_url" in resp
 
 
@@ -265,18 +264,18 @@ def setup_database():
         tu1 = model.TripUpdate(vj1, contributor=COTS_CONTRIBUTOR)
         tu2 = model.TripUpdate(vj2, contributor=COTS_CONTRIBUTOR)
         tu3 = model.TripUpdate(vj3, contributor=GTFS_CONTRIBUTOR)
-        rtu1 = make_rt_update(None, "cots", COTS_CONTRIBUTOR)
+        rtu1 = make_rt_update(None, ConnectorType.cots.value, COTS_CONTRIBUTOR)
         rtu1.created_at = datetime(2015, 11, 4, 6, 32)
         rtu1.updated_at = datetime(2015, 11, 4, 6, 32)  # mock creation, no update done
         rtu1.trip_updates.append(tu1)
         model.db.session.add(rtu1)
-        rtu2 = make_rt_update(None, "cots", contributor=COTS_CONTRIBUTOR)
+        rtu2 = make_rt_update(None, ConnectorType.cots.value, contributor=COTS_CONTRIBUTOR)
         rtu2.created_at = datetime(2015, 11, 4, 7, 32)
         rtu2.updated_at = datetime(2015, 11, 4, 7, 32)
         rtu2.trip_updates.append(tu2)
         model.db.session.add(rtu2)
 
-        rtu3 = make_rt_update(None, "gtfs-rt", contributor=GTFS_CONTRIBUTOR)
+        rtu3 = make_rt_update(None, ConnectorType.gtfs_rt.value, contributor=GTFS_CONTRIBUTOR)
         rtu3.created_at = datetime(2015, 11, 4, 7, 42)
         rtu3.updated_at = datetime(2015, 11, 4, 7, 42)
         rtu3.trip_updates.append(tu3)
@@ -284,7 +283,7 @@ def setup_database():
 
         rtu4 = save_rt_data_with_error(
             None,
-            connector="gtfs-rt",
+            connector=ConnectorType.gtfs_rt.value,
             contributor=GTFS_CONTRIBUTOR,
             error="No new information destined to navitia for this gtfs-rt",
             is_reprocess_same_data_allowed=False,
@@ -293,12 +292,12 @@ def setup_database():
         rtu4.updated_at = datetime(2015, 11, 4, 7, 52)
         model.db.session.add(rtu4)
 
-        rtu5 = make_rt_update(None, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR_DB)
+        rtu5 = make_rt_update(None, connector=ConnectorType.gtfs_rt.value, contributor=GTFS_CONTRIBUTOR_DB)
         rtu5.created_at = datetime(2015, 11, 4, 8, 2)
         rtu5.updated_at = datetime(2015, 11, 4, 8, 2)
         model.db.session.add(rtu5)
 
-        rtu6 = make_rt_update(None, connector="cots", contributor=COTS_CONTRIBUTOR_DB)
+        rtu6 = make_rt_update(None, connector=ConnectorType.cots.value, contributor=COTS_CONTRIBUTOR_DB)
         rtu6.created_at = datetime(2015, 11, 4, 8, 12)
         rtu6.updated_at = datetime(2015, 11, 4, 8, 12)
         model.db.session.add(rtu6)

@@ -33,6 +33,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
+from kirin.core.types import ConnectorType
 from tests.check_utils import api_post, api_get
 from kirin import app
 from tests import mock_navitia
@@ -128,7 +129,7 @@ def test_cots_simple_post(mock_rabbitmq):
         assert rtu.status == "OK"
         assert rtu.error is None
         assert rtu.contributor_id == COTS_CONTRIBUTOR
-        assert rtu.connector == "cots"
+        assert rtu.connector == ConnectorType.cots.value
         assert "listePointDeParcours" in rtu.raw_data
     assert mock_rabbitmq.call_count == 1
 

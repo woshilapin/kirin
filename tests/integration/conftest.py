@@ -38,6 +38,8 @@ from kirin.core import model
 import pytest
 import flask_migrate
 
+from kirin.core.types import ConnectorType
+
 COTS_CONTRIBUTOR = "rt.tchoutchou"
 PIV_CONTRIBUTOR = "rt.piv"
 GTFS_CONTRIBUTOR = "rt.vroumvroum"
@@ -78,15 +80,34 @@ def clean_db():
         # Add two contributors of each in the table
         db.session.add_all(
             [
-                model.Contributor(COTS_CONTRIBUTOR, "sncf", "cots", "cots_token", "cots_feed_url", 10, True),
-                model.Contributor(PIV_CONTRIBUTOR, "sncf_piv", "piv", "piv_token", "piv_feed_url", 10, True),
                 model.Contributor(
-                    GTFS_CONTRIBUTOR, "sherbrooke", "gtfs-rt", "gtfs-rt_token", "gtfs-rt_feed_url", 1, True
+                    COTS_CONTRIBUTOR, "sncf", ConnectorType.cots.value, "cots_token", "cots_feed_url", 10, True
                 ),
-                model.Contributor(COTS_CONTRIBUTOR_DB, "idfm", "cots", "cots_db_token", "cots_db_feed_url"),
-                model.Contributor(PIV_CONTRIBUTOR_DB, "tn", "piv", "piv_db_token", "piv_db_feed_url"),
                 model.Contributor(
-                    GTFS_CONTRIBUTOR_DB, "laval", "gtfs-rt", "gtfs-rt_db_token", "gtfs-rt_db_feed_url", 30
+                    PIV_CONTRIBUTOR, "sncf_piv", ConnectorType.piv.value, "piv_token", "piv_feed_url", 10, True
+                ),
+                model.Contributor(
+                    GTFS_CONTRIBUTOR,
+                    "sherbrooke",
+                    ConnectorType.gtfs_rt.value,
+                    "gtfs-rt_token",
+                    "gtfs-rt_feed_url",
+                    1,
+                    True,
+                ),
+                model.Contributor(
+                    COTS_CONTRIBUTOR_DB, "idfm", ConnectorType.cots.value, "cots_db_token", "cots_db_feed_url"
+                ),
+                model.Contributor(
+                    PIV_CONTRIBUTOR_DB, "tn", ConnectorType.piv.value, "piv_db_token", "piv_db_feed_url"
+                ),
+                model.Contributor(
+                    GTFS_CONTRIBUTOR_DB,
+                    "laval",
+                    ConnectorType.gtfs_rt.value,
+                    "gtfs-rt_db_token",
+                    "gtfs-rt_db_feed_url",
+                    30,
                 ),
             ]
         )
