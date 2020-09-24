@@ -34,6 +34,7 @@ from __future__ import absolute_import, print_function, unicode_literals, divisi
 import logging
 from abc import ABCMeta
 from datetime import datetime
+from typing import Tuple, List, Dict, Any
 
 import navitia_wrapper
 import six
@@ -41,6 +42,7 @@ from flask import current_app
 
 from kirin import core, redis_client
 from kirin.core import model
+from kirin.core.model import Contributor, RealTimeUpdate, TripUpdate
 from kirin.exceptions import KirinException
 from kirin.new_relic import is_invalid_input_exception, record_custom_parameter
 from kirin.utils import set_rtu_status_ko, allow_reprocess_same_data, record_call
@@ -115,6 +117,7 @@ class AbstractKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
     """
 
     def __init__(self, contributor, is_new_complete):
+        # type: (Contributor, bool) -> None
         self.navitia = navitia_wrapper.Navitia(
             url=current_app.config.get(str("NAVITIA_URL")),
             token=contributor.navitia_token,
@@ -127,13 +130,19 @@ class AbstractKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
         self.is_new_complete = is_new_complete
 
     def build_rt_update(self, input_raw):
-        """Create a wrapping object around the feed received to store it"""
-        rt_update = None
-        log_dict = {}
-        return rt_update, log_dict
+        # type: (Any) -> Tuple[RealTimeUpdate, Dict[unicode, unicode]]
+        """
+        Create a wrapping object around the feed received to store it
+        :return rt_update: RealTimeUpdate ORM object containing stored input_raw
+        :return log_dict: dict of (k,v) to be displayed in logs and newrelic
+        """
+        raise NotImplementedError("Please implement this method")
 
     def build_trip_updates(self, rt_update):
-        """Convert realtime information into Kirin's internal model"""
-        trip_updates = []
-        log_dict = {}
-        return trip_updates, log_dict
+        # type: (RealTimeUpdate) -> Tuple[List[TripUpdate], Dict[unicode, unicode]]
+        """
+        Convert realtime information into Kirin's internal model
+        :return trip_updates: list of TripUpdates ORM objects obtained from the processing of given rt_update
+        :return log_dict: dict of (k,v) to be displayed in logs and newrelic
+        """
+        raise NotImplementedError("Please implement this method")
