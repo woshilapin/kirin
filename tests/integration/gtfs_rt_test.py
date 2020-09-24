@@ -34,15 +34,19 @@ from copy import deepcopy
 from datetime import timedelta
 import datetime
 import pytest
+
+from kirin.core import model
+from kirin.core.abstract_builder import wrap_build
 from kirin.core.model import RealTimeUpdate, db, TripUpdate, StopTimeUpdate, VehicleJourney
 from kirin.core.populate_pb import to_posix_time, convert_to_gtfsrt
-from kirin import gtfs_rt, redis_client
+from kirin import redis_client
 from kirin.core.types import TripEffect, ConnectorType
+from kirin.gtfs_rt import KirinModelBuilder
 from kirin.tasks import purge_trip_update, purge_rt_update
 from tests import mock_navitia
-from tests.check_utils import dumb_nav_wrapper, api_post, api_get
+from tests.check_utils import api_post, api_get
 from kirin import gtfs_realtime_pb2, app
-from kirin.utils import save_rt_data_with_error, manage_db_error, build_redis_etag_key, make_rt_update
+from kirin.utils import save_rt_data_with_error, manage_db_error, build_redis_etag_key
 from tests.integration.conftest import GTFS_CONTRIBUTOR
 import time
 from sqlalchemy import desc
@@ -99,7 +103,7 @@ def basic_gtfs_rt_data():
     stu.stop_sequence = 4
     stu.stop_id = "Code-StopR4"
 
-    return feed
+    return feed.SerializeToString()
 
 
 @pytest.fixture()
@@ -119,7 +123,7 @@ def basic_gtfs_rt_data_without_delays():
     stu.stop_sequence = 4
     stu.stop_id = "Code-StopR4"
 
-    return feed
+    return feed.SerializeToString()
 
 
 def test_get_gtfs_rt_contributors():
@@ -147,6 +151,8 @@ def test_wrong_gtfs_rt_post():
     Post wrong GTFS-RT data
     """
     redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR), "firstETag")  # set ETag key as if it was polled
+    api_post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), check=False, data="bob")
+    # POST twice to check that it's stored only once for errors when feed is identical
     res, status = api_post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), check=False, data="bob")
 
     assert (
@@ -194,16 +200,14 @@ def test_gtfs_model_builder(basic_gtfs_rt_data, basic_gtfs_rt_data_without_delay
     Note: The trip_update stop list is a strict ending sublist of of stops list of navitia_vj
     """
     with app.app_context():
-        data = ""
-        rt_update = make_rt_update(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
-        trip_updates = gtfs_rt.KirinModelBuilder(dumb_nav_wrapper(), contributor=GTFS_CONTRIBUTOR).build(
-            rt_update, basic_gtfs_rt_data
+        contributor = model.Contributor(
+            id=GTFS_CONTRIBUTOR, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
         )
+        builder = KirinModelBuilder(contributor)
+        wrap_build(builder, basic_gtfs_rt_data)
 
-        # we associate the trip_update manually for sqlalchemy to make the links
-        rt_update.trip_updates = trip_updates
-        db.session.add(rt_update)
-        db.session.commit()
+        rt_update = RealTimeUpdate.query.first()
+        trip_updates = TripUpdate.query.all()
 
         assert rt_update.contributor_id == GTFS_CONTRIBUTOR
         assert len(trip_updates) == 1
@@ -215,8 +219,8 @@ def test_gtfs_model_builder(basic_gtfs_rt_data, basic_gtfs_rt_data_without_delay
         first_stop = trip_updates[0].stop_time_updates[0]
         assert first_stop.stop_id == "StopR1"
         assert first_stop.arrival_status == "none"
-        assert first_stop.arrival_delay is None
-        assert first_stop.departure_delay is None
+        assert first_stop.arrival_delay == timedelta(minutes=0)
+        assert first_stop.departure_delay == timedelta(minutes=0)
         assert first_stop.departure_status == "none"
         assert first_stop.message is None
 
@@ -224,7 +228,7 @@ def test_gtfs_model_builder(basic_gtfs_rt_data, basic_gtfs_rt_data_without_delay
         assert second_stop.stop_id == "StopR2"
         assert second_stop.arrival_status == "update"
         assert second_stop.arrival_delay == timedelta(minutes=1)
-        assert second_stop.departure_delay is None
+        assert second_stop.departure_delay == timedelta(minutes=1)
         assert second_stop.departure_status == "none"
         assert second_stop.message is None
 
@@ -232,7 +236,7 @@ def test_gtfs_model_builder(basic_gtfs_rt_data, basic_gtfs_rt_data_without_delay
         assert fourth_stop.stop_id == "StopR4"
         assert fourth_stop.arrival_status == "update"
         assert fourth_stop.arrival_delay == timedelta(minutes=3)
-        assert fourth_stop.departure_delay is None
+        assert fourth_stop.departure_delay == timedelta(minutes=3)
         assert fourth_stop.departure_status == "none"
         assert fourth_stop.message is None
 
@@ -240,10 +244,7 @@ def test_gtfs_model_builder(basic_gtfs_rt_data, basic_gtfs_rt_data_without_delay
         assert feed.entity[0].trip_update.trip.start_date == "20120615"  # must be UTC start date
 
         # if there is no delay field (delay is optional in StopTimeEvent), effect = 'UNKNOWN_EFFECT'
-        rt_update = make_rt_update(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
-        trip_updates = gtfs_rt.KirinModelBuilder(dumb_nav_wrapper(), contributor=GTFS_CONTRIBUTOR).build(
-            rt_update, basic_gtfs_rt_data_without_delays
-        )
+        wrap_build(builder, basic_gtfs_rt_data_without_delays)
         assert len(trip_updates) == 1
         assert trip_updates[0].effect == "UNKNOWN_EFFECT"
 
@@ -259,7 +260,7 @@ def test_gtfs_rt_simple_delay(basic_gtfs_rt_data, mock_rabbitmq):
     """
     redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR), "firstETag")  # set ETag key as if it was polled
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=basic_gtfs_rt_data.SerializeToString())
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=basic_gtfs_rt_data)
     assert (
         redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR)) == "firstETag"
     )  # all OK: remember it's processed
@@ -327,7 +328,7 @@ def test_gtfs_rt_purge(basic_gtfs_rt_data, mock_rabbitmq):
     POST a simple gtfs-rt, then test the purge
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=basic_gtfs_rt_data.SerializeToString())
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=basic_gtfs_rt_data)
     assert resp.status_code == 200
 
     with app.app_context():
@@ -369,7 +370,7 @@ def test_gtfs_rt_purge(basic_gtfs_rt_data, mock_rabbitmq):
         assert len(RealTimeUpdate.query.all()) == 0
 
 
-def pass_midnight_gtfs_rt_data():
+def pass_midnight_gtfs_rt_proto():
     feed = gtfs_realtime_pb2.FeedMessage()
 
     feed.header.gtfs_realtime_version = "1.0"
@@ -414,21 +415,23 @@ def pass_midnight_gtfs_rt_data():
     return feed
 
 
-def test_gtfs_pass_midnight_model_builder():
+@pytest.fixture()
+def pass_midnight_gtfs_rt_data():
+    return pass_midnight_gtfs_rt_proto().SerializeToString()
+
+
+def test_gtfs_pass_midnight_model_builder(pass_midnight_gtfs_rt_data):
     """
     test the model builder with a pass-midnight gtfs-rt
     """
     with app.app_context():
-        data = ""
-        rt_update = make_rt_update(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
-        trip_updates = gtfs_rt.KirinModelBuilder(dumb_nav_wrapper(), contributor=GTFS_CONTRIBUTOR).build(
-            rt_update, pass_midnight_gtfs_rt_data()
+        contributor = model.Contributor(
+            id=GTFS_CONTRIBUTOR, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
         )
+        builder = KirinModelBuilder(contributor)
+        wrap_build(builder, pass_midnight_gtfs_rt_data)
 
-        # we associate the trip_update manually for sqlalchemy to make the links
-        rt_update.trip_updates = trip_updates
-        db.session.add(rt_update)
-        db.session.commit()
+        trip_updates = TripUpdate.query.all()
 
         assert len(trip_updates) == 1
         assert len(trip_updates[0].stop_time_updates) == 5
@@ -478,7 +481,7 @@ def test_gtfs_pass_midnight_model_builder():
         assert feed.entity[0].trip_update.trip.start_date == "20120616"  # must be UTC start date
 
 
-def test_gtfs_rt_pass_midnight(mock_rabbitmq):
+def test_gtfs_rt_pass_midnight(pass_midnight_gtfs_rt_data, mock_rabbitmq):
     """
     test the gtfs-rt post with a pass-midnight gtfs-rt
 
@@ -487,9 +490,7 @@ def test_gtfs_rt_pass_midnight(mock_rabbitmq):
     after the merge, we should have 5 stops properly delayed
     """
     tester = app.test_client()
-    resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=pass_midnight_gtfs_rt_data().SerializeToString()
-    )
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=pass_midnight_gtfs_rt_data)
     assert resp.status_code == 200
 
     with app.app_context():
@@ -557,32 +558,30 @@ def test_gtfs_rt_pass_midnight(mock_rabbitmq):
         assert fourth_stop.message is None
 
 
+@pytest.fixture()
 def pass_midnight_utc_gtfs_rt_data():
     """
     Port tests for pass-midnight UTC also
     """
-    feed = deepcopy(pass_midnight_gtfs_rt_data())
+    feed = deepcopy(pass_midnight_gtfs_rt_proto())
     feed.header.timestamp = to_posix_time(datetime.datetime(year=2012, month=6, day=16, hour=1))
     feed.entity[0].trip_update.trip.trip_id = "Code-pass-midnight-UTC"
 
-    return feed
+    return feed.SerializeToString()
 
 
-def test_gtfs_pass_midnight_utc_model_builder():
+def test_gtfs_pass_midnight_utc_model_builder(pass_midnight_utc_gtfs_rt_data):
     """
     test the model builder with a pass-midnight UTC gtfs-rt
     """
     with app.app_context():
-        data = ""
-        rt_update = make_rt_update(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
-        trip_updates = gtfs_rt.KirinModelBuilder(dumb_nav_wrapper(), contributor=GTFS_CONTRIBUTOR).build(
-            rt_update, pass_midnight_utc_gtfs_rt_data()
+        contributor = model.Contributor(
+            id=GTFS_CONTRIBUTOR, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
         )
+        builder = KirinModelBuilder(contributor)
+        wrap_build(builder, pass_midnight_utc_gtfs_rt_data)
 
-        # we associate the trip_update manually for sqlalchemy to make the links
-        rt_update.trip_updates = trip_updates
-        db.session.add(rt_update)
-        db.session.commit()
+        trip_updates = TripUpdate.query.all()
 
         assert len(trip_updates) == 1
         assert len(trip_updates[0].stop_time_updates) == 5
@@ -632,7 +631,7 @@ def test_gtfs_pass_midnight_utc_model_builder():
         assert feed.entity[0].trip_update.trip.start_date == "20120615"  # must be UTC start date
 
 
-def test_gtfs_rt_pass_midnight_utc(mock_rabbitmq):
+def test_gtfs_rt_pass_midnight_utc(pass_midnight_utc_gtfs_rt_data, mock_rabbitmq):
     """
     test the gtfs-rt post with a pass-midnight UTC gtfs-rt
 
@@ -641,9 +640,7 @@ def test_gtfs_rt_pass_midnight_utc(mock_rabbitmq):
     after the merge, we should have 5 stops properly delayed
     """
     tester = app.test_client()
-    resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=pass_midnight_utc_gtfs_rt_data().SerializeToString()
-    )
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=pass_midnight_utc_gtfs_rt_data)
     assert resp.status_code == 200
 
     with app.app_context():
@@ -739,7 +736,7 @@ def partial_update_gtfs_rt_data_1():
     stu.stop_sequence = 4
     stu.stop_id = "Code-StopR4"
 
-    return feed
+    return feed.SerializeToString()
 
 
 @pytest.fixture()
@@ -775,7 +772,7 @@ def partial_update_gtfs_rt_data_2():
     stu.stop_sequence = 4
     stu.stop_id = "Code-StopR4"
 
-    return feed
+    return feed.SerializeToString()
 
 
 @pytest.fixture()
@@ -840,7 +837,7 @@ def partial_update_gtfs_rt_data_3():
     stu.stop_sequence = 4
     stu.stop_id = "Code-StopR4"
 
-    return feed
+    return feed.SerializeToString()
 
 
 @pytest.fixture()
@@ -864,7 +861,7 @@ def partial_update_gtfs_rt_code_r_jv1_last_stop_normal():
     stu.stop_sequence = 4
     stu.stop_id = "Code-StopR4"
 
-    return feed
+    return feed.SerializeToString()
 
 
 def test_gtfs_rt_partial_update_same_feed(partial_update_gtfs_rt_data_1):
@@ -873,9 +870,7 @@ def test_gtfs_rt_partial_update_same_feed(partial_update_gtfs_rt_data_1):
     new trip updates nor new stop time updates
     """
     tester = app.test_client()
-    resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_1.SerializeToString()
-    )
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_1)
     assert resp.status_code == 200
 
     def check(nb_rt_update):
@@ -905,9 +900,7 @@ def test_gtfs_rt_partial_update_same_feed(partial_update_gtfs_rt_data_1):
     # which increment the nb of RealTimeUpdate, but the rest remains the same that means....
     # 1. There will not be any trip_updates in the data base related to the last real_time_update
     # 2. with real_time_update.status = 'KO' and real_time_update.error = 'No new Information...'
-    resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_1.SerializeToString()
-    )
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_1)
     assert resp.status_code == 200
 
     check(nb_rt_update=2)
@@ -918,9 +911,7 @@ def test_gtfs_rt_partial_update_diff_feed_1(partial_update_gtfs_rt_data_1, parti
     In this test, we will send the two different gtfs-rt
     """
     tester = app.test_client()
-    resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_1.SerializeToString()
-    )
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_1)
     assert resp.status_code == 200
 
     with app.app_context():
@@ -937,9 +928,7 @@ def test_gtfs_rt_partial_update_diff_feed_1(partial_update_gtfs_rt_data_1, parti
 
     # Now we apply another gtfs-rt, the new gtfs-rt will be save into the db and
     # increments the nb of real_time_updates
-    resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_2.SerializeToString()
-    )
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_2)
     assert resp.status_code == 200
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) == 2
@@ -960,9 +949,7 @@ def test_gtfs_rt_partial_update_diff_feed_2(partial_update_gtfs_rt_data_2, parti
     containing two trip_updates
     """
     tester = app.test_client()
-    resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_2.SerializeToString()
-    )
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_2)
     assert resp.status_code == 200
 
     with app.app_context():
@@ -979,9 +966,7 @@ def test_gtfs_rt_partial_update_diff_feed_2(partial_update_gtfs_rt_data_2, parti
         assert len(trip_update.real_time_updates) == 1
 
     tester = app.test_client()
-    resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_3.SerializeToString()
-    )
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_3)
     assert resp.status_code == 200
 
     with app.app_context():
@@ -1015,9 +1000,7 @@ def test_gtfs_rt_partial_update_last_stop_back_normal(
     supposed to be complete (stops not provided are served on time)
     """
     tester = app.test_client()
-    resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_2.SerializeToString()
-    )
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_2)
     assert resp.status_code == 200
 
     with app.app_context():
@@ -1035,8 +1018,7 @@ def test_gtfs_rt_partial_update_last_stop_back_normal(
 
     tester = app.test_client()
     resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR),
-        data=partial_update_gtfs_rt_code_r_jv1_last_stop_normal.SerializeToString(),
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_code_r_jv1_last_stop_normal
     )
     assert resp.status_code == 200
 
@@ -1128,7 +1110,7 @@ def lollipop_gtfs_rt_data():
     stu.stop_sequence = 5
     stu.stop_id = "Code-StopR4"
 
-    return feed
+    return feed.SerializeToString()
 
 
 def test_gtfs_lollipop_model_builder(lollipop_gtfs_rt_data):
@@ -1136,16 +1118,13 @@ def test_gtfs_lollipop_model_builder(lollipop_gtfs_rt_data):
     test the model builder with a lollipop gtfs-rt
     """
     with app.app_context():
-        data = ""
-        rt_update = make_rt_update(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
-        trip_updates = gtfs_rt.KirinModelBuilder(dumb_nav_wrapper(), contributor=GTFS_CONTRIBUTOR).build(
-            rt_update, lollipop_gtfs_rt_data
+        contributor = model.Contributor(
+            id=GTFS_CONTRIBUTOR, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
         )
+        builder = KirinModelBuilder(contributor)
+        wrap_build(builder, lollipop_gtfs_rt_data)
 
-        # we associate the trip_update manually for sqlalchemy to make the links
-        rt_update.trip_updates = trip_updates
-        db.session.add(rt_update)
-        db.session.commit()
+        trip_updates = TripUpdate.query.all()
 
         assert len(trip_updates) == 1
         assert len(trip_updates[0].stop_time_updates) == 5
@@ -1177,17 +1156,17 @@ def test_gtfs_lollipop_model_builder(lollipop_gtfs_rt_data):
         fourth_stop = trip_updates[0].stop_time_updates[3]
         assert fourth_stop.stop_id == "StopR2"
         assert fourth_stop.arrival_status == "none"
-        assert fourth_stop.arrival_delay is None
+        assert fourth_stop.arrival_delay == timedelta(minutes=0)
         assert fourth_stop.departure_status == "none"
-        assert fourth_stop.departure_delay is None
+        assert fourth_stop.departure_delay == timedelta(minutes=0)
         assert fourth_stop.message is None
 
         fifth_stop = trip_updates[0].stop_time_updates[4]
         assert fifth_stop.stop_id == "StopR4"
         assert fifth_stop.arrival_status == "none"
-        assert fifth_stop.arrival_delay is None
+        assert fifth_stop.arrival_delay == timedelta(minutes=0)
         assert fifth_stop.departure_status == "none"
-        assert fifth_stop.departure_delay is None
+        assert fifth_stop.departure_delay == timedelta(minutes=0)
         assert fifth_stop.message is None
 
         feed = convert_to_gtfsrt(trip_updates)
@@ -1254,7 +1233,7 @@ def bad_ordered_gtfs_rt_data():
     stu.stop_sequence = 6
     stu.stop_id = "Code-StopR6"
 
-    return feed
+    return feed.SerializeToString()
 
 
 def test_gtfs_bad_order_model_builder(bad_ordered_gtfs_rt_data):
@@ -1262,16 +1241,13 @@ def test_gtfs_bad_order_model_builder(bad_ordered_gtfs_rt_data):
     test the model builder with stops absent or not matching order in gtfs-rt
     """
     with app.app_context():
-        data = ""
-        rt_update = make_rt_update(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
-        trip_updates = gtfs_rt.KirinModelBuilder(dumb_nav_wrapper(), contributor=GTFS_CONTRIBUTOR).build(
-            rt_update, bad_ordered_gtfs_rt_data
+        contributor = model.Contributor(
+            id=GTFS_CONTRIBUTOR, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
         )
+        builder = KirinModelBuilder(contributor)
+        wrap_build(builder, bad_ordered_gtfs_rt_data)
 
-        # we associate the trip_update manually for sqlalchemy to make the links
-        rt_update.trip_updates = trip_updates
-        db.session.add(rt_update)
-        db.session.commit()
+        trip_updates = TripUpdate.query.all()
 
         assert len(trip_updates) == 0
         assert len(RealTimeUpdate.query.all()) == 1
@@ -1289,7 +1265,7 @@ def test_gtfs_bad_order_model_builder_with_post(bad_ordered_gtfs_rt_data):
 
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=bad_ordered_gtfs_rt_data.SerializeToString())
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=bad_ordered_gtfs_rt_data)
     assert resp.status_code == 200
 
     def check(nb_rt_update):
@@ -1306,7 +1282,7 @@ def test_gtfs_bad_order_model_builder_with_post(bad_ordered_gtfs_rt_data):
 
     # Now we apply exactly the same gtfs-rt, the new gtfs-rt will be saved into the db,
     # but the trip update won't be saved
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=bad_ordered_gtfs_rt_data.SerializeToString())
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=bad_ordered_gtfs_rt_data)
     assert resp.status_code == 200
     check(nb_rt_update=2)
 
@@ -1320,7 +1296,7 @@ def test_gtfs_lollipop_model_builder_with_post(lollipop_gtfs_rt_data):
     Since the gtfs-rt.stop list is a strict ending sublist of vj.stop_times we merge
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=lollipop_gtfs_rt_data.SerializeToString())
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=lollipop_gtfs_rt_data)
     assert resp.status_code == 200
 
     def check(nb_rt_update):
@@ -1390,7 +1366,7 @@ def test_gtfs_lollipop_model_builder_with_post(lollipop_gtfs_rt_data):
 
     # Now we apply exactly the same gtfs-rt, the new gtfs-rt will be save into the db,
     # which increment the nb of RealTimeUpdate, but every else remains the same
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=lollipop_gtfs_rt_data.SerializeToString())
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=lollipop_gtfs_rt_data)
     assert resp.status_code == 200
     check(nb_rt_update=2)
 
@@ -1438,7 +1414,7 @@ def lollipop_gtfs_rt_from_second_passage_data():
     stu.stop_sequence = 5
     stu.stop_id = "Code-StopR4"
 
-    return feed
+    return feed.SerializeToString()
 
 
 def test_gtfs_lollipop_for_second_passage_model_builder(lollipop_gtfs_rt_from_second_passage_data):
@@ -1446,16 +1422,13 @@ def test_gtfs_lollipop_for_second_passage_model_builder(lollipop_gtfs_rt_from_se
     test the model builder with a lollipop gtfs-rt
     """
     with app.app_context():
-        data = ""
-        rt_update = make_rt_update(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
-        trip_updates = gtfs_rt.KirinModelBuilder(dumb_nav_wrapper(), contributor=GTFS_CONTRIBUTOR).build(
-            rt_update, lollipop_gtfs_rt_from_second_passage_data
+        contributor = model.Contributor(
+            id=GTFS_CONTRIBUTOR, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
         )
+        builder = KirinModelBuilder(contributor)
+        wrap_build(builder, lollipop_gtfs_rt_from_second_passage_data)
 
-        # we associate the trip_update manually for sqlalchemy to make the links
-        rt_update.trip_updates = trip_updates
-        db.session.add(rt_update)
-        db.session.commit()
+        trip_updates = TripUpdate.query.all()
 
         assert len(trip_updates) == 1
         assert len(trip_updates[0].stop_time_updates) == 5
@@ -1463,25 +1436,25 @@ def test_gtfs_lollipop_for_second_passage_model_builder(lollipop_gtfs_rt_from_se
         first_stop = trip_updates[0].stop_time_updates[0]
         assert first_stop.stop_id == "StopR1"
         assert first_stop.arrival_status == "none"
-        assert first_stop.arrival_delay is None
+        assert first_stop.arrival_delay == timedelta(minutes=0)
         assert first_stop.departure_status == "none"
-        assert first_stop.departure_delay is None
+        assert first_stop.departure_delay == timedelta(minutes=0)
         assert first_stop.message is None
 
         second_stop = trip_updates[0].stop_time_updates[1]
         assert second_stop.stop_id == "StopR2"
         assert second_stop.arrival_status == "none"
-        assert second_stop.arrival_delay is None
+        assert second_stop.arrival_delay == timedelta(minutes=0)
         assert second_stop.departure_status == "none"
-        assert second_stop.departure_delay is None
+        assert second_stop.departure_delay == timedelta(minutes=0)
         assert second_stop.message is None
 
         third_stop = trip_updates[0].stop_time_updates[2]
         assert third_stop.stop_id == "StopR3"
         assert third_stop.arrival_status == "none"
-        assert third_stop.arrival_delay is None
+        assert third_stop.arrival_delay == timedelta(minutes=0)
         assert third_stop.departure_status == "none"
-        assert third_stop.departure_delay is None
+        assert third_stop.departure_delay == timedelta(minutes=0)
         assert third_stop.message is None
 
         fourth_stop = trip_updates[0].stop_time_updates[3]
@@ -1495,9 +1468,9 @@ def test_gtfs_lollipop_for_second_passage_model_builder(lollipop_gtfs_rt_from_se
         fifth_stop = trip_updates[0].stop_time_updates[4]
         assert fifth_stop.stop_id == "StopR4"
         assert fifth_stop.arrival_status == "none"
-        assert fifth_stop.arrival_delay is None
+        assert fifth_stop.arrival_delay == timedelta(minutes=0)
         assert fifth_stop.departure_status == "none"
-        assert fifth_stop.departure_delay is None
+        assert fifth_stop.departure_delay == timedelta(minutes=0)
         assert fifth_stop.message is None
 
         feed = convert_to_gtfsrt(trip_updates)
@@ -1512,10 +1485,7 @@ def test_gtfs_lollipop_with_second_passage_model_builder_with_post(lollipop_gtfs
 
     """
     tester = app.test_client()
-    resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR),
-        data=lollipop_gtfs_rt_from_second_passage_data.SerializeToString(),
-    )
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=lollipop_gtfs_rt_from_second_passage_data)
     assert resp.status_code == 200
 
     def check(nb_rt_update):
@@ -1584,10 +1554,7 @@ def test_gtfs_lollipop_with_second_passage_model_builder_with_post(lollipop_gtfs
 
     # Now we apply exactly the same gtfs-rt, the new gtfs-rt will be save into the db,
     # which increment the nb of RealTimeUpdate, but every else remains the same
-    resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR),
-        data=lollipop_gtfs_rt_from_second_passage_data.SerializeToString(),
-    )
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=lollipop_gtfs_rt_from_second_passage_data)
     assert resp.status_code == 200
     check(nb_rt_update=2)
 
@@ -1630,7 +1597,7 @@ def gtfs_rt_data_with_more_stops():
     stu.stop_sequence = 4
     stu.stop_id = "Code-StopR4"
 
-    return feed
+    return feed.SerializeToString()
 
 
 def test_gtfs_more_stops_model_builder(gtfs_rt_data_with_more_stops):
@@ -1638,15 +1605,13 @@ def test_gtfs_more_stops_model_builder(gtfs_rt_data_with_more_stops):
     test the model builder with gtfs-rt having more stops than in vj
     """
     with app.app_context():
-        data = ""
-        rt_update = make_rt_update(data, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR)
-        trip_updates = gtfs_rt.KirinModelBuilder(dumb_nav_wrapper(), contributor=GTFS_CONTRIBUTOR).build(
-            rt_update, gtfs_rt_data_with_more_stops
+        contributor = model.Contributor(
+            id=GTFS_CONTRIBUTOR, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
         )
+        builder = KirinModelBuilder(contributor)
+        wrap_build(builder, gtfs_rt_data_with_more_stops)
 
-        rt_update.trip_updates = trip_updates
-        db.session.add(rt_update)
-        db.session.commit()
+        trip_updates = TripUpdate.query.all()
 
         assert len(trip_updates) == 0
 
@@ -1676,7 +1641,7 @@ with a vehicle_journey having first stop_time at mid-night localtime (5h UTC)
 """
 
 
-def gtfs_rt_data_with_vj_starting_at_midnight():
+def gtfs_rt_data_with_vj_starting_at_midnight_proto():
     feed = gtfs_realtime_pb2.FeedMessage()
 
     feed.header.gtfs_realtime_version = "1.0"
@@ -1712,15 +1677,17 @@ def gtfs_rt_data_with_vj_starting_at_midnight():
     return feed
 
 
-def test_gtfs_start_midnight_model_builder_with_post():
+@pytest.fixture()
+def gtfs_rt_data_with_vj_starting_at_midnight():
+    return gtfs_rt_data_with_vj_starting_at_midnight_proto().SerializeToString()
+
+
+def test_gtfs_start_midnight_model_builder_with_post(gtfs_rt_data_with_vj_starting_at_midnight):
     """
     test the model builder with vehicle_journey having first stop_time at midnight
     """
     tester = app.test_client()
-    resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR),
-        data=gtfs_rt_data_with_vj_starting_at_midnight().SerializeToString(),
-    )
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=gtfs_rt_data_with_vj_starting_at_midnight)
     assert resp.status_code == 200
 
     def check(nb_rt_update):
@@ -1773,11 +1740,11 @@ def gtfs_rt_data_with_vj_starting_at_midnight_utc():
     """
     Port test for start-midnight UTC also
     """
-    feed = deepcopy(gtfs_rt_data_with_vj_starting_at_midnight())
+    feed = deepcopy(gtfs_rt_data_with_vj_starting_at_midnight_proto())
     feed.header.timestamp = to_posix_time(datetime.datetime(year=2017, month=12, day=11, hour=20, minute=17))
     feed.entity[0].trip_update.trip.trip_id = "Code-midnight-UTC"
 
-    return feed
+    return feed.SerializeToString()
 
 
 def test_gtfs_start_midnight_utc_model_builder_with_post(gtfs_rt_data_with_vj_starting_at_midnight_utc):
@@ -1786,8 +1753,7 @@ def test_gtfs_start_midnight_utc_model_builder_with_post(gtfs_rt_data_with_vj_st
     """
     tester = app.test_client()
     resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR),
-        data=gtfs_rt_data_with_vj_starting_at_midnight_utc.SerializeToString(),
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=gtfs_rt_data_with_vj_starting_at_midnight_utc
     )
     assert resp.status_code == 200
 
@@ -1838,9 +1804,7 @@ def test_gtfs_start_midnight_utc_model_builder_with_post(gtfs_rt_data_with_vj_st
 
 def test_gtfs_rt_api_with_decode_error(basic_gtfs_rt_data):
     tester = app.test_client()
-    resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=basic_gtfs_rt_data.SerializeToString() + str(">toto")
-    )
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=basic_gtfs_rt_data + str(">toto"))
     assert resp.status_code == 400
 
     def check(nb_rt_update):
@@ -1848,7 +1812,7 @@ def test_gtfs_rt_api_with_decode_error(basic_gtfs_rt_data):
             assert len(RealTimeUpdate.query.all()) == nb_rt_update
             assert len(TripUpdate.query.all()) == 0
             assert RealTimeUpdate.query.first().status == "KO"
-            assert RealTimeUpdate.query.first().error == "Decode Error"
+            assert RealTimeUpdate.query.first().error == "invalid protobuf"
 
     check(nb_rt_update=1)
 
@@ -1863,7 +1827,7 @@ def test_save_gtfs_rt_with_error():
             "toto",
             "gtfs-rt",
             contributor=GTFS_CONTRIBUTOR,
-            error="Decode Error",
+            error="invalid protobuf",
             is_reprocess_same_data_allowed=False,
         )
         assert (
@@ -1871,7 +1835,7 @@ def test_save_gtfs_rt_with_error():
         )  # error in feed: remember it's processed
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().status == "KO"
-        assert RealTimeUpdate.query.first().error == "Decode Error"
+        assert RealTimeUpdate.query.first().error == "invalid protobuf"
 
 
 def test_manage_db_with_http_error_without_insert():
@@ -1960,7 +1924,7 @@ def test_manage_db_with_http_error_with_insert():
             "",
             "gtfs-rt",
             contributor=GTFS_CONTRIBUTOR,
-            error="Decode Error",
+            error="invalid protobuf",
             is_reprocess_same_data_allowed=False,
         )
         assert (
@@ -1968,7 +1932,7 @@ def test_manage_db_with_http_error_with_insert():
         )  # error in feed: remember it's processed
         assert len(RealTimeUpdate.query.all()) == 2
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().status == "KO"
-        assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().error == "Decode Error"
+        assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().error == "invalid protobuf"
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().created_at > created_at
 
         redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR), "thirdETag")  # set ETag key as if it was polled
@@ -1989,11 +1953,12 @@ def test_manage_db_with_http_error_with_insert():
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().created_at != created_at
 
 
+@pytest.fixture()
 def pass_midnight_negative_delay_utc_gtfs_rt_data():
     """
     Add tests for pass-midnight UTC on an early passing VJ (negative delay)
     """
-    feed = deepcopy(pass_midnight_gtfs_rt_data())
+    feed = deepcopy(pass_midnight_gtfs_rt_proto())
     feed.header.timestamp = to_posix_time(datetime.datetime(year=2012, month=6, day=16, hour=1))
     feed.entity[0].trip_update.trip.trip_id = "Code-pass-midnight-UTC"
 
@@ -2001,17 +1966,16 @@ def pass_midnight_negative_delay_utc_gtfs_rt_data():
         stu.arrival.delay = -60
         stu.departure.delay = -60
 
-    return feed
+    return feed.SerializeToString()
 
 
-def test_gtfs_pass_midnight_negative_delay_utc_model_builder():
+def test_gtfs_pass_midnight_negative_delay_utc_model_builder(pass_midnight_negative_delay_utc_gtfs_rt_data):
     """
     test the model builder with a pass-midnight UTC gtfs-rt
     """
     tester = app.test_client()
     resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR),
-        data=pass_midnight_negative_delay_utc_gtfs_rt_data().SerializeToString(),
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=pass_midnight_negative_delay_utc_gtfs_rt_data
     )
     assert resp.status_code == 200
 

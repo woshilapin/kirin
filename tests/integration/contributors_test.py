@@ -476,7 +476,7 @@ def test_purge_contributor(test_client, basic_gtfs_rt_data, mock_rabbitmq):
             assert c.is_active is True
 
     # Post a simple gtfs-rt for contributor "rt.vroumvroum" in configuration file.
-    resp = test_client.post("/gtfs_rt/rt.vroumvroum", data=basic_gtfs_rt_data.SerializeToString())
+    resp = test_client.post("/gtfs_rt/rt.vroumvroum", data=basic_gtfs_rt_data)
     assert resp.status_code == 200
     test_rt_data()
 
