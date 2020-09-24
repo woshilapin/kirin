@@ -168,7 +168,7 @@ def find_st_in_vj(st_id, vj_sts):
     return next((vj_st for vj_st in vj_sts if vj_st.get("stop_point", {}).get("id") == st_id), None)
 
 
-def handle(real_time_update, trip_updates, contributor_id, is_new_complete=False):
+def handle(real_time_update, trip_updates, contributor_id, is_new_complete):
     """
     receive a RealTimeUpdate with at least one TripUpdate filled with the data received
     by the connector. each TripUpdate is associated with the VehicleJourney returned by jormungandr
@@ -414,7 +414,7 @@ def make_fake_realtime_stop_time(order, sp_id, new_stu, db_trip_update):
     }
 
 
-def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=False):
+def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete):
     """
     We need to merge the info from 3 sources:
         * the navitia base schedule
