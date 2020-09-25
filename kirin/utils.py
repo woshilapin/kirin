@@ -87,11 +87,13 @@ def to_navitia_utc_str(naive_utc_dt):
     return naive_utc_dt.strftime("%Y%m%dT%H%M%SZ")
 
 
-def make_rt_update(raw_data, connector, contributor, status="OK"):
+def make_rt_update(raw_data, connector_type, contributor_id, status="OK"):
     """
     Create an RealTimeUpdate object for the query and persist it
     """
-    rt_update = model.RealTimeUpdate(raw_data, connector=connector, contributor=contributor, status=status)
+    rt_update = model.RealTimeUpdate(
+        raw_data, connector_type=connector_type, contributor_id=contributor_id, status=status
+    )
     new_relic.record_custom_parameter("real_time_update_id", rt_update.id)
 
     model.db.session.add(rt_update)
@@ -167,18 +169,18 @@ def set_rtu_status_ko(rtu, error, is_reprocess_same_data_allowed):
     rtu.error = error
 
 
-def save_rt_data_with_error(data, connector, contributor, error, is_reprocess_same_data_allowed):
+def save_rt_data_with_error(data, connector_type, contributor_id, error, is_reprocess_same_data_allowed):
     """
     Create and save RTU using given data, connector, contributor with a status KO
     :param data: realtime input
-    :param connector: connector type
-    :param contributor: contributor id
+    :param connector_type: connector type
+    :param contributor_id: contributor id
     :param error: error message to associate to RTU
     :param is_reprocess_same_data_allowed: If the same input is provided next time, should we
     reprocess it (hoping a happier ending)
     """
     raw_data = six.binary_type(data)
-    rt_update = make_rt_update(raw_data, connector=connector, contributor=contributor)
+    rt_update = make_rt_update(raw_data, connector_type=connector_type, contributor_id=contributor_id)
     set_rtu_status_ko(rt_update, error, is_reprocess_same_data_allowed)
     model.db.session.add(rt_update)
     model.db.session.commit()
@@ -197,7 +199,7 @@ def poke_updated_at(rtu):
         model.db.session.commit()
 
 
-def manage_db_error(data, connector, contributor, error, is_reprocess_same_data_allowed):
+def manage_db_error(data, connector_type, contributor_id, error, is_reprocess_same_data_allowed):
     """
     If the last RTUpdate contains the same error (and data, status) we just change updated_at:
     This way, we know we had this error between created_at and updated_at, but we don't get extra rows in db
@@ -207,18 +209,20 @@ def manage_db_error(data, connector, contributor, error, is_reprocess_same_data_
     :param is_reprocess_same_data_allowed: If the same input is provided next time, should we
     reprocess it (hoping a happier ending)
     """
-    last = model.RealTimeUpdate.get_last_rtu(connector, contributor)
+    last = model.RealTimeUpdate.get_last_rtu(connector_type, contributor_id)
     if last and last.status == "KO" and last.error == error and last.raw_data == six.binary_type(data):
         poke_updated_at(last)
         if is_reprocess_same_data_allowed:
-            allow_reprocess_same_data(contributor)
+            allow_reprocess_same_data(contributor_id)
     else:
-        last = save_rt_data_with_error(data, connector, contributor, error, is_reprocess_same_data_allowed)
+        last = save_rt_data_with_error(
+            data, connector_type, contributor_id, error, is_reprocess_same_data_allowed
+        )
     return last
 
 
-def manage_db_no_new(connector, contributor):
-    last = model.RealTimeUpdate.get_last_rtu(connector, contributor)
+def manage_db_no_new(connector_type, contributor_id):
+    last = model.RealTimeUpdate.get_last_rtu(connector_type, contributor_id)
     poke_updated_at(last)
 
 

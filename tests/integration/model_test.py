@@ -36,13 +36,13 @@ from sqlalchemy.orm.exc import FlushError
 from kirin.core.model import VehicleJourney, TripUpdate, StopTimeUpdate, Contributor
 from kirin.core.types import ConnectorType
 from kirin.utils import make_rt_update
-from tests.integration.conftest import COTS_CONTRIBUTOR, GTFS_CONTRIBUTOR
+from tests.integration.conftest import COTS_CONTRIBUTOR_ID, GTFS_CONTRIBUTOR_ID
 from kirin import db, app
 import datetime
 import pytest
 
 
-def create_trip_update(vj_id, trip_id, circulation_date, contributor=COTS_CONTRIBUTOR):
+def create_trip_update(vj_id, trip_id, circulation_date, contributor_id=COTS_CONTRIBUTOR_ID):
     vj = VehicleJourney(
         {
             "trip": {"id": trip_id},
@@ -54,18 +54,18 @@ def create_trip_update(vj_id, trip_id, circulation_date, contributor=COTS_CONTRI
         datetime.datetime.combine(circulation_date, datetime.time(9, 0)),
     )
     vj.id = vj_id
-    trip_update = TripUpdate(vj=vj, contributor=contributor)
+    trip_update = TripUpdate(vj=vj, contributor_id=contributor_id)
 
     db.session.add(vj)
     db.session.add(trip_update)
     return trip_update
 
 
-def create_real_time_update(id, contributor, connector, vj_id, trip_id, circulation_date):
-    rtu = make_rt_update("", connector, contributor=contributor)
+def create_real_time_update(id, contributor_id, connector_type, vj_id, trip_id, circulation_date):
+    rtu = make_rt_update("", connector_type, contributor_id=contributor_id)
     rtu.id = id
     trip_update = create_trip_update(vj_id, trip_id, circulation_date)
-    trip_update.contributor_id = contributor
+    trip_update.contributor_id = contributor_id
     rtu.trip_updates.append(trip_update)
 
 
@@ -117,7 +117,7 @@ def test_find_activate():
     with app.app_context():
         create_real_time_update(
             "70866ce8-0638-4fa1-8556-1ddfa22d09d3",
-            COTS_CONTRIBUTOR,
+            COTS_CONTRIBUTOR_ID,
             ConnectorType.cots.value,
             "70866ce8-0638-4fa1-8556-1ddfa22d09d3",
             "vj1",
@@ -125,7 +125,7 @@ def test_find_activate():
         )
         create_real_time_update(
             "70866ce8-0638-4fa1-8556-1ddfa22d09d4",
-            COTS_CONTRIBUTOR,
+            COTS_CONTRIBUTOR_ID,
             ConnectorType.cots.value,
             "70866ce8-0638-4fa1-8556-1ddfa22d09d4",
             "vj2",
@@ -133,7 +133,7 @@ def test_find_activate():
         )
         create_real_time_update(
             "70866ce8-0638-4fa1-8556-1ddfa22d09d5",
-            COTS_CONTRIBUTOR,
+            COTS_CONTRIBUTOR_ID,
             ConnectorType.cots.value,
             "70866ce8-0638-4fa1-8556-1ddfa22d09d5",
             "vj3",
@@ -142,7 +142,7 @@ def test_find_activate():
 
         create_real_time_update(
             "70866ce8-0638-4fa1-8556-1ddfa22d09d6",
-            GTFS_CONTRIBUTOR,
+            GTFS_CONTRIBUTOR_ID,
             ConnectorType.cots.value,
             "70866ce8-0638-4fa1-8556-1ddfa22d09d6",
             "vj4",
@@ -158,7 +158,7 @@ def test_find_activate():
         request date            20150906    |                               |                       |
         """
 
-        rtu = TripUpdate.find_by_contributor_period([COTS_CONTRIBUTOR], datetime.date(2015, 9, 6))
+        rtu = TripUpdate.find_by_contributor_period([COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 6))
         assert len(rtu) == 3
         assert rtu[0].vj_id == "70866ce8-0638-4fa1-8556-1ddfa22d09d3"
         assert rtu[1].vj_id == "70866ce8-0638-4fa1-8556-1ddfa22d09d4"
@@ -171,7 +171,7 @@ def test_find_activate():
                                             |                               |                       |
         request date                    20150908                            |                       |
         """
-        rtu = TripUpdate.find_by_contributor_period([COTS_CONTRIBUTOR], datetime.date(2015, 9, 8))
+        rtu = TripUpdate.find_by_contributor_period([COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 8))
         assert len(rtu) == 3
 
         """
@@ -181,7 +181,7 @@ def test_find_activate():
                                             |                               |                       |
         request date                        |   20150909                    |                       |
         """
-        rtu = TripUpdate.find_by_contributor_period([COTS_CONTRIBUTOR], datetime.date(2015, 9, 9))
+        rtu = TripUpdate.find_by_contributor_period([COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 9))
         assert len(rtu) == 2
         assert rtu[0].vj_id == "70866ce8-0638-4fa1-8556-1ddfa22d09d4"
         assert rtu[1].vj_id == "70866ce8-0638-4fa1-8556-1ddfa22d09d5"
@@ -194,7 +194,7 @@ def test_find_activate():
         request date                        |                            20150910                   |
         """
 
-        rtu = TripUpdate.find_by_contributor_period([COTS_CONTRIBUTOR], datetime.date(2015, 9, 10))
+        rtu = TripUpdate.find_by_contributor_period([COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 10))
         assert len(rtu) == 2
 
         """
@@ -205,7 +205,7 @@ def test_find_activate():
         request date                        |                               |   20150911            |
         """
 
-        rtu = TripUpdate.find_by_contributor_period([COTS_CONTRIBUTOR], datetime.date(2015, 9, 11))
+        rtu = TripUpdate.find_by_contributor_period([COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 11))
         assert len(rtu) == 1
         assert rtu[0].vj_id == "70866ce8-0638-4fa1-8556-1ddfa22d09d5"
 
@@ -217,7 +217,7 @@ def test_find_activate():
         request date                        |                               |                    20150912
         """
 
-        rtu = TripUpdate.find_by_contributor_period([COTS_CONTRIBUTOR], datetime.date(2015, 9, 12))
+        rtu = TripUpdate.find_by_contributor_period([COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 12))
         assert len(rtu) == 1
 
         """
@@ -228,7 +228,7 @@ def test_find_activate():
         request date                        |                               |                       |   20150913
         """
 
-        rtu = TripUpdate.find_by_contributor_period([COTS_CONTRIBUTOR], datetime.date(2015, 9, 13))
+        rtu = TripUpdate.find_by_contributor_period([COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 13))
         assert len(rtu) == 0
 
         """
@@ -241,7 +241,7 @@ def test_find_activate():
         """
 
         rtu = TripUpdate.find_by_contributor_period(
-            [COTS_CONTRIBUTOR], datetime.date(2015, 9, 5), datetime.date(2015, 9, 6)
+            [COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 5), datetime.date(2015, 9, 6)
         )
         assert len(rtu) == 0
 
@@ -255,7 +255,7 @@ def test_find_activate():
         """
 
         rtu = TripUpdate.find_by_contributor_period(
-            [COTS_CONTRIBUTOR], datetime.date(2015, 9, 5), datetime.date(2015, 9, 8)
+            [COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 5), datetime.date(2015, 9, 8)
         )
         assert len(rtu) == 1
 
@@ -269,7 +269,7 @@ def test_find_activate():
         """
 
         rtu = TripUpdate.find_by_contributor_period(
-            [COTS_CONTRIBUTOR], datetime.date(2015, 9, 5), datetime.date(2015, 9, 9)
+            [COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 5), datetime.date(2015, 9, 9)
         )
         assert len(rtu) == 1
 
@@ -283,7 +283,7 @@ def test_find_activate():
         """
 
         rtu = TripUpdate.find_by_contributor_period(
-            [COTS_CONTRIBUTOR], datetime.date(2015, 9, 5), datetime.date(2015, 9, 10)
+            [COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 5), datetime.date(2015, 9, 10)
         )
         assert len(rtu) == 2
 
@@ -297,7 +297,7 @@ def test_find_activate():
         """
 
         rtu = TripUpdate.find_by_contributor_period(
-            [COTS_CONTRIBUTOR], datetime.date(2015, 9, 5), datetime.date(2015, 9, 11)
+            [COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 5), datetime.date(2015, 9, 11)
         )
         assert len(rtu) == 2
 
@@ -311,7 +311,7 @@ def test_find_activate():
         """
 
         rtu = TripUpdate.find_by_contributor_period(
-            [COTS_CONTRIBUTOR], datetime.date(2015, 9, 5), datetime.date(2015, 9, 12)
+            [COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 5), datetime.date(2015, 9, 12)
         )
         assert len(rtu) == 3
 
@@ -325,7 +325,7 @@ def test_find_activate():
         """
 
         rtu = TripUpdate.find_by_contributor_period(
-            [COTS_CONTRIBUTOR], datetime.date(2015, 9, 5), datetime.date(2015, 9, 14)
+            [COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 5), datetime.date(2015, 9, 14)
         )
         assert len(rtu) == 3
 
@@ -339,7 +339,7 @@ def test_find_activate():
         """
 
         rtu = TripUpdate.find_by_contributor_period(
-            [COTS_CONTRIBUTOR], datetime.date(2015, 9, 8), datetime.date(2015, 9, 14)
+            [COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 8), datetime.date(2015, 9, 14)
         )
         assert len(rtu) == 3
 
@@ -353,7 +353,7 @@ def test_find_activate():
         """
 
         rtu = TripUpdate.find_by_contributor_period(
-            [COTS_CONTRIBUTOR], datetime.date(2015, 9, 9), datetime.date(2015, 9, 14)
+            [COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 9), datetime.date(2015, 9, 14)
         )
         assert len(rtu) == 2
 
@@ -367,7 +367,7 @@ def test_find_activate():
         """
 
         rtu = TripUpdate.find_by_contributor_period(
-            [COTS_CONTRIBUTOR], datetime.date(2015, 9, 10), datetime.date(2015, 9, 14)
+            [COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 10), datetime.date(2015, 9, 14)
         )
         assert len(rtu) == 2
 
@@ -381,7 +381,7 @@ def test_find_activate():
         """
 
         rtu = TripUpdate.find_by_contributor_period(
-            [COTS_CONTRIBUTOR], datetime.date(2015, 9, 11), datetime.date(2015, 9, 14)
+            [COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 11), datetime.date(2015, 9, 14)
         )
         assert len(rtu) == 1
 
@@ -395,7 +395,7 @@ def test_find_activate():
         """
 
         rtu = TripUpdate.find_by_contributor_period(
-            [COTS_CONTRIBUTOR], datetime.date(2015, 9, 12), datetime.date(2015, 9, 14)
+            [COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 12), datetime.date(2015, 9, 14)
         )
         assert len(rtu) == 1
 
@@ -409,18 +409,18 @@ def test_find_activate():
         """
 
         rtu = TripUpdate.find_by_contributor_period(
-            [COTS_CONTRIBUTOR], datetime.date(2015, 9, 13), datetime.date(2015, 9, 14)
+            [COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 13), datetime.date(2015, 9, 14)
         )
         assert len(rtu) == 0
 
-        rtu = TripUpdate.find_by_contributor_period([GTFS_CONTRIBUTOR], datetime.date(2015, 9, 6))
+        rtu = TripUpdate.find_by_contributor_period([GTFS_CONTRIBUTOR_ID], datetime.date(2015, 9, 6))
         assert len(rtu) == 1
 
-        rtu = TripUpdate.find_by_contributor_period([GTFS_CONTRIBUTOR], datetime.date(2015, 9, 12))
+        rtu = TripUpdate.find_by_contributor_period([GTFS_CONTRIBUTOR_ID], datetime.date(2015, 9, 12))
         assert len(rtu) == 1
 
         rtu = TripUpdate.find_by_contributor_period(
-            [COTS_CONTRIBUTOR, GTFS_CONTRIBUTOR], datetime.date(2015, 9, 12)
+            [COTS_CONTRIBUTOR_ID, GTFS_CONTRIBUTOR_ID], datetime.date(2015, 9, 12)
         )
         assert len(rtu) == 2
 

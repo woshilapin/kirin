@@ -40,7 +40,7 @@ from kirin.cots import KirinModelBuilder, model_maker
 from kirin.cots.model_maker import ActionOnTrip
 from tests.check_utils import get_fixture_data
 from tests.integration.utils_cots_test import requests_mock_cause_message
-from tests.integration.conftest import clean_db, COTS_CONTRIBUTOR
+from tests.integration.conftest import clean_db, COTS_CONTRIBUTOR_ID
 import json
 
 
@@ -61,7 +61,7 @@ def test_cots_train_delayed(mock_navitia_fixture):
 
     with app.app_context():
         contributor = model.Contributor(
-            id=COTS_CONTRIBUTOR, navitia_coverage=None, connector_type=ConnectorType.cots.value
+            id=COTS_CONTRIBUTOR_ID, navitia_coverage=None, connector_type=ConnectorType.cots.value
         )
         wrap_build(KirinModelBuilder(contributor), input_train_delayed)
 
@@ -125,7 +125,7 @@ def test_cots_train_trip_removal(mock_navitia_fixture):
 
     with app.app_context():
         contributor = model.Contributor(
-            id=COTS_CONTRIBUTOR, navitia_coverage=None, connector_type=ConnectorType.cots.value
+            id=COTS_CONTRIBUTOR_ID, navitia_coverage=None, connector_type=ConnectorType.cots.value
         )
         wrap_build(KirinModelBuilder(contributor), input_train_trip_removed)
 
@@ -163,7 +163,7 @@ def test_get_action_on_trip_add(mock_navitia_fixture):
 
         # Test for add followed by update should be PREVIOUSLY_ADDED
         contributor = model.Contributor(
-            id=COTS_CONTRIBUTOR, navitia_coverage=None, connector_type=ConnectorType.cots.value
+            id=COTS_CONTRIBUTOR_ID, navitia_coverage=None, connector_type=ConnectorType.cots.value
         )
         builder = KirinModelBuilder(contributor)
         wrap_build(builder, input_trip_add)

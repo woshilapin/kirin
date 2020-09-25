@@ -67,7 +67,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
             rt_update = manage_db_error(
                 input_raw.encode("string_escape", "ignore"),  # protect for PostgreSQL "Text" type
                 ConnectorType.gtfs_rt.value,
-                contributor=self.contributor.id,
+                contributor_id=self.contributor.id,
                 error="invalid protobuf",
                 is_reprocess_same_data_allowed=False,
             )
@@ -75,7 +75,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
 
         feed = six.binary_type(proto)  # temp, for the moment, we save the protobuf as text
         rt_update = make_rt_update(
-            feed, connector=self.contributor.connector_type, contributor=self.contributor.id
+            feed, connector_type=self.contributor.connector_type, contributor_id=self.contributor.id
         )
 
         return rt_update, log_dict
@@ -134,7 +134,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         vjs = self._get_navitia_vjs(input_trip_update.trip, input_data_time=input_data_time)
         trip_updates = []
         for vj in vjs:
-            trip_update = model.TripUpdate(vj=vj, contributor=self.contributor.id)
+            trip_update = model.TripUpdate(vj=vj, contributor_id=self.contributor.id)
             highest_st_status = ModificationType.none.name
 
             is_tu_valid = True

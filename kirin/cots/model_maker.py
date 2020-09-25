@@ -373,7 +373,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
 
     def build_rt_update(self, input_raw):
         rt_update = make_rt_update(
-            input_raw, connector=self.contributor.connector_type, contributor=self.contributor.id
+            input_raw, connector_type=self.contributor.connector_type, contributor_id=self.contributor.id
         )
         log_dict = {}
         return rt_update, log_dict
@@ -447,7 +447,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         create the new TripUpdate object
         Following the COTS spec: https://github.com/CanalTP/kirin/blob/master/documentation/cots_connector.md
         """
-        trip_update = model.TripUpdate(vj=vj, contributor=self.contributor.id)
+        trip_update = model.TripUpdate(vj=vj, contributor_id=self.contributor.id)
         trip_message_id = get_value(json_train, "idMotifInterneReference", nullable=True)
         if trip_message_id:
             trip_update.message = self.message_handler.get_message(index=trip_message_id)

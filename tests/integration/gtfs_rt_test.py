@@ -47,7 +47,7 @@ from tests import mock_navitia
 from tests.check_utils import api_post, api_get
 from kirin import gtfs_realtime_pb2, app
 from kirin.utils import save_rt_data_with_error, manage_db_error, build_redis_etag_key
-from tests.integration.conftest import GTFS_CONTRIBUTOR
+from tests.integration.conftest import GTFS_CONTRIBUTOR_ID
 import time
 from sqlalchemy import desc
 
@@ -150,13 +150,13 @@ def test_wrong_gtfs_rt_post():
     """
     Post wrong GTFS-RT data
     """
-    redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR), "firstETag")  # set ETag key as if it was polled
-    api_post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), check=False, data="bob")
+    redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR_ID), "firstETag")  # set ETag key as if it was polled
+    api_post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), check=False, data="bob")
     # POST twice to check that it's stored only once for errors when feed is identical
-    res, status = api_post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), check=False, data="bob")
+    res, status = api_post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), check=False, data="bob")
 
     assert (
-        redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR)) == "firstETag"
+        redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR_ID)) == "firstETag"
     )  # error in feed: remember it's processed
     assert status == 400
     assert "invalid protobuf" in res.get("error")
@@ -187,7 +187,9 @@ def test_gtfs_rt_post_no_data():
             assert len(StopTimeUpdate.query.all()) == 0
 
     post_and_check("/gtfs_rt/", 405, "The method is not allowed for the requested URL.", None)
-    post_and_check("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), 400, "invalid arguments", "no gtfs_rt data provided")
+    post_and_check(
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), 400, "invalid arguments", "no gtfs_rt data provided"
+    )
     post_and_check("/gtfs_rt/unknown_id", 404, "Contributor 'unknown_id' not found", None)
 
 
@@ -201,7 +203,7 @@ def test_gtfs_model_builder(basic_gtfs_rt_data, basic_gtfs_rt_data_without_delay
     """
     with app.app_context():
         contributor = model.Contributor(
-            id=GTFS_CONTRIBUTOR, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
+            id=GTFS_CONTRIBUTOR_ID, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
         )
         builder = KirinModelBuilder(contributor)
         wrap_build(builder, basic_gtfs_rt_data)
@@ -209,11 +211,11 @@ def test_gtfs_model_builder(basic_gtfs_rt_data, basic_gtfs_rt_data_without_delay
         rt_update = RealTimeUpdate.query.first()
         trip_updates = TripUpdate.query.all()
 
-        assert rt_update.contributor_id == GTFS_CONTRIBUTOR
+        assert rt_update.contributor_id == GTFS_CONTRIBUTOR_ID
         assert len(trip_updates) == 1
         assert len(trip_updates[0].stop_time_updates) == 4
         assert trip_updates[0].effect == "SIGNIFICANT_DELAYS"
-        assert trip_updates[0].contributor_id == GTFS_CONTRIBUTOR
+        assert trip_updates[0].contributor_id == GTFS_CONTRIBUTOR_ID
 
         # stop_time_update created with no delay
         first_stop = trip_updates[0].stop_time_updates[0]
@@ -258,11 +260,11 @@ def test_gtfs_rt_simple_delay(basic_gtfs_rt_data, mock_rabbitmq):
 
     after the merge, we should have 4 stops (and only 2 delayed)
     """
-    redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR), "firstETag")  # set ETag key as if it was polled
+    redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR_ID), "firstETag")  # set ETag key as if it was polled
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=basic_gtfs_rt_data)
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=basic_gtfs_rt_data)
     assert (
-        redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR)) == "firstETag"
+        redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR_ID)) == "firstETag"
     )  # all OK: remember it's processed
     assert resp.status_code == 200
 
@@ -328,7 +330,7 @@ def test_gtfs_rt_purge(basic_gtfs_rt_data, mock_rabbitmq):
     POST a simple gtfs-rt, then test the purge
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=basic_gtfs_rt_data)
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=basic_gtfs_rt_data)
     assert resp.status_code == 200
 
     with app.app_context():
@@ -426,7 +428,7 @@ def test_gtfs_pass_midnight_model_builder(pass_midnight_gtfs_rt_data):
     """
     with app.app_context():
         contributor = model.Contributor(
-            id=GTFS_CONTRIBUTOR, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
+            id=GTFS_CONTRIBUTOR_ID, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
         )
         builder = KirinModelBuilder(contributor)
         wrap_build(builder, pass_midnight_gtfs_rt_data)
@@ -490,7 +492,7 @@ def test_gtfs_rt_pass_midnight(pass_midnight_gtfs_rt_data, mock_rabbitmq):
     after the merge, we should have 5 stops properly delayed
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=pass_midnight_gtfs_rt_data)
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=pass_midnight_gtfs_rt_data)
     assert resp.status_code == 200
 
     with app.app_context():
@@ -500,7 +502,7 @@ def test_gtfs_rt_pass_midnight(pass_midnight_gtfs_rt_data, mock_rabbitmq):
         assert RealTimeUpdate.query.first().status == "OK"
 
         trip_update = TripUpdate.find_by_dated_vj("R:vj1", datetime.datetime(2012, 6, 16, 3, 30))
-        assert trip_update.contributor_id == GTFS_CONTRIBUTOR
+        assert trip_update.contributor_id == GTFS_CONTRIBUTOR_ID
         assert trip_update
 
         assert trip_update.vj.start_timestamp == datetime.datetime(2012, 6, 16, 3, 30)
@@ -576,7 +578,7 @@ def test_gtfs_pass_midnight_utc_model_builder(pass_midnight_utc_gtfs_rt_data):
     """
     with app.app_context():
         contributor = model.Contributor(
-            id=GTFS_CONTRIBUTOR, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
+            id=GTFS_CONTRIBUTOR_ID, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
         )
         builder = KirinModelBuilder(contributor)
         wrap_build(builder, pass_midnight_utc_gtfs_rt_data)
@@ -640,7 +642,7 @@ def test_gtfs_rt_pass_midnight_utc(pass_midnight_utc_gtfs_rt_data, mock_rabbitmq
     after the merge, we should have 5 stops properly delayed
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=pass_midnight_utc_gtfs_rt_data)
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=pass_midnight_utc_gtfs_rt_data)
     assert resp.status_code == 200
 
     with app.app_context():
@@ -870,7 +872,7 @@ def test_gtfs_rt_partial_update_same_feed(partial_update_gtfs_rt_data_1):
     new trip updates nor new stop time updates
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_1)
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=partial_update_gtfs_rt_data_1)
     assert resp.status_code == 200
 
     def check(nb_rt_update):
@@ -900,7 +902,7 @@ def test_gtfs_rt_partial_update_same_feed(partial_update_gtfs_rt_data_1):
     # which increment the nb of RealTimeUpdate, but the rest remains the same that means....
     # 1. There will not be any trip_updates in the data base related to the last real_time_update
     # 2. with real_time_update.status = 'KO' and real_time_update.error = 'No new Information...'
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_1)
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=partial_update_gtfs_rt_data_1)
     assert resp.status_code == 200
 
     check(nb_rt_update=2)
@@ -911,7 +913,7 @@ def test_gtfs_rt_partial_update_diff_feed_1(partial_update_gtfs_rt_data_1, parti
     In this test, we will send the two different gtfs-rt
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_1)
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=partial_update_gtfs_rt_data_1)
     assert resp.status_code == 200
 
     with app.app_context():
@@ -928,7 +930,7 @@ def test_gtfs_rt_partial_update_diff_feed_1(partial_update_gtfs_rt_data_1, parti
 
     # Now we apply another gtfs-rt, the new gtfs-rt will be save into the db and
     # increments the nb of real_time_updates
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_2)
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=partial_update_gtfs_rt_data_2)
     assert resp.status_code == 200
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) == 2
@@ -949,7 +951,7 @@ def test_gtfs_rt_partial_update_diff_feed_2(partial_update_gtfs_rt_data_2, parti
     containing two trip_updates
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_2)
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=partial_update_gtfs_rt_data_2)
     assert resp.status_code == 200
 
     with app.app_context():
@@ -966,7 +968,7 @@ def test_gtfs_rt_partial_update_diff_feed_2(partial_update_gtfs_rt_data_2, parti
         assert len(trip_update.real_time_updates) == 1
 
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_3)
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=partial_update_gtfs_rt_data_3)
     assert resp.status_code == 200
 
     with app.app_context():
@@ -1000,7 +1002,7 @@ def test_gtfs_rt_partial_update_last_stop_back_normal(
     supposed to be complete (stops not provided are served on time)
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_data_2)
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=partial_update_gtfs_rt_data_2)
     assert resp.status_code == 200
 
     with app.app_context():
@@ -1018,7 +1020,7 @@ def test_gtfs_rt_partial_update_last_stop_back_normal(
 
     tester = app.test_client()
     resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=partial_update_gtfs_rt_code_r_jv1_last_stop_normal
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=partial_update_gtfs_rt_code_r_jv1_last_stop_normal
     )
     assert resp.status_code == 200
 
@@ -1119,7 +1121,7 @@ def test_gtfs_lollipop_model_builder(lollipop_gtfs_rt_data):
     """
     with app.app_context():
         contributor = model.Contributor(
-            id=GTFS_CONTRIBUTOR, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
+            id=GTFS_CONTRIBUTOR_ID, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
         )
         builder = KirinModelBuilder(contributor)
         wrap_build(builder, lollipop_gtfs_rt_data)
@@ -1242,7 +1244,7 @@ def test_gtfs_bad_order_model_builder(bad_ordered_gtfs_rt_data):
     """
     with app.app_context():
         contributor = model.Contributor(
-            id=GTFS_CONTRIBUTOR, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
+            id=GTFS_CONTRIBUTOR_ID, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
         )
         builder = KirinModelBuilder(contributor)
         wrap_build(builder, bad_ordered_gtfs_rt_data)
@@ -1265,7 +1267,7 @@ def test_gtfs_bad_order_model_builder_with_post(bad_ordered_gtfs_rt_data):
 
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=bad_ordered_gtfs_rt_data)
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=bad_ordered_gtfs_rt_data)
     assert resp.status_code == 200
 
     def check(nb_rt_update):
@@ -1282,7 +1284,7 @@ def test_gtfs_bad_order_model_builder_with_post(bad_ordered_gtfs_rt_data):
 
     # Now we apply exactly the same gtfs-rt, the new gtfs-rt will be saved into the db,
     # but the trip update won't be saved
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=bad_ordered_gtfs_rt_data)
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=bad_ordered_gtfs_rt_data)
     assert resp.status_code == 200
     check(nb_rt_update=2)
 
@@ -1296,7 +1298,7 @@ def test_gtfs_lollipop_model_builder_with_post(lollipop_gtfs_rt_data):
     Since the gtfs-rt.stop list is a strict ending sublist of vj.stop_times we merge
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=lollipop_gtfs_rt_data)
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=lollipop_gtfs_rt_data)
     assert resp.status_code == 200
 
     def check(nb_rt_update):
@@ -1366,7 +1368,7 @@ def test_gtfs_lollipop_model_builder_with_post(lollipop_gtfs_rt_data):
 
     # Now we apply exactly the same gtfs-rt, the new gtfs-rt will be save into the db,
     # which increment the nb of RealTimeUpdate, but every else remains the same
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=lollipop_gtfs_rt_data)
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=lollipop_gtfs_rt_data)
     assert resp.status_code == 200
     check(nb_rt_update=2)
 
@@ -1423,7 +1425,7 @@ def test_gtfs_lollipop_for_second_passage_model_builder(lollipop_gtfs_rt_from_se
     """
     with app.app_context():
         contributor = model.Contributor(
-            id=GTFS_CONTRIBUTOR, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
+            id=GTFS_CONTRIBUTOR_ID, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
         )
         builder = KirinModelBuilder(contributor)
         wrap_build(builder, lollipop_gtfs_rt_from_second_passage_data)
@@ -1485,7 +1487,7 @@ def test_gtfs_lollipop_with_second_passage_model_builder_with_post(lollipop_gtfs
 
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=lollipop_gtfs_rt_from_second_passage_data)
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=lollipop_gtfs_rt_from_second_passage_data)
     assert resp.status_code == 200
 
     def check(nb_rt_update):
@@ -1554,7 +1556,7 @@ def test_gtfs_lollipop_with_second_passage_model_builder_with_post(lollipop_gtfs
 
     # Now we apply exactly the same gtfs-rt, the new gtfs-rt will be save into the db,
     # which increment the nb of RealTimeUpdate, but every else remains the same
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=lollipop_gtfs_rt_from_second_passage_data)
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=lollipop_gtfs_rt_from_second_passage_data)
     assert resp.status_code == 200
     check(nb_rt_update=2)
 
@@ -1606,7 +1608,7 @@ def test_gtfs_more_stops_model_builder(gtfs_rt_data_with_more_stops):
     """
     with app.app_context():
         contributor = model.Contributor(
-            id=GTFS_CONTRIBUTOR, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
+            id=GTFS_CONTRIBUTOR_ID, navitia_coverage=None, connector_type=ConnectorType.gtfs_rt.value
         )
         builder = KirinModelBuilder(contributor)
         wrap_build(builder, gtfs_rt_data_with_more_stops)
@@ -1687,7 +1689,7 @@ def test_gtfs_start_midnight_model_builder_with_post(gtfs_rt_data_with_vj_starti
     test the model builder with vehicle_journey having first stop_time at midnight
     """
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=gtfs_rt_data_with_vj_starting_at_midnight)
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=gtfs_rt_data_with_vj_starting_at_midnight)
     assert resp.status_code == 200
 
     def check(nb_rt_update):
@@ -1753,7 +1755,7 @@ def test_gtfs_start_midnight_utc_model_builder_with_post(gtfs_rt_data_with_vj_st
     """
     tester = app.test_client()
     resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=gtfs_rt_data_with_vj_starting_at_midnight_utc
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=gtfs_rt_data_with_vj_starting_at_midnight_utc
     )
     assert resp.status_code == 200
 
@@ -1804,7 +1806,7 @@ def test_gtfs_start_midnight_utc_model_builder_with_post(gtfs_rt_data_with_vj_st
 
 def test_gtfs_rt_api_with_decode_error(basic_gtfs_rt_data):
     tester = app.test_client()
-    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=basic_gtfs_rt_data + str(">toto"))
+    resp = tester.post("/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=basic_gtfs_rt_data + str(">toto"))
     assert resp.status_code == 400
 
     def check(nb_rt_update):
@@ -1822,16 +1824,18 @@ def test_save_gtfs_rt_with_error():
     test the function "save_gtfs_rt_with_error"
     """
     with app.app_context():
-        redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR), "firstETag")  # set ETag key as if it was polled
+        redis_client.set(
+            build_redis_etag_key(GTFS_CONTRIBUTOR_ID), "firstETag"
+        )  # set ETag key as if it was polled
         save_rt_data_with_error(
             "toto",
             ConnectorType.gtfs_rt.value,
-            contributor=GTFS_CONTRIBUTOR,
+            contributor_id=GTFS_CONTRIBUTOR_ID,
             error="invalid protobuf",
             is_reprocess_same_data_allowed=False,
         )
         assert (
-            redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR)) == "firstETag"
+            redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR_ID)) == "firstETag"
         )  # error in feed: remember it's processed
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().status == "KO"
@@ -1846,7 +1850,7 @@ def test_manage_db_with_http_error_without_insert():
         manage_db_error(
             "toto",
             ConnectorType.gtfs_rt.value,
-            contributor=GTFS_CONTRIBUTOR,
+            contributor_id=GTFS_CONTRIBUTOR_ID,
             error="Http Error",
             is_reprocess_same_data_allowed=True,
         )
@@ -1863,7 +1867,7 @@ def test_manage_db_with_http_error_without_insert():
         manage_db_error(
             "toto",
             ConnectorType.gtfs_rt.value,
-            contributor=GTFS_CONTRIBUTOR,
+            contributor_id=GTFS_CONTRIBUTOR_ID,
             error="Http Error",
             is_reprocess_same_data_allowed=True,
         )
@@ -1881,7 +1885,7 @@ def test_manage_db_with_http_error_without_insert():
         manage_db_error(
             "toto",
             ConnectorType.gtfs_rt.value,
-            contributor=GTFS_CONTRIBUTOR,
+            contributor_id=GTFS_CONTRIBUTOR_ID,
             error="Http Error",
             is_reprocess_same_data_allowed=True,
         )
@@ -1899,16 +1903,18 @@ def test_manage_db_with_http_error_with_insert():
     no gtfs-rt with 'Http Error' inserted since more than 5 seconds
     """
     with app.app_context():
-        redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR), "firstETag")  # set ETag key as if it was polled
+        redis_client.set(
+            build_redis_etag_key(GTFS_CONTRIBUTOR_ID), "firstETag"
+        )  # set ETag key as if it was polled
         manage_db_error(
             "toto",
             ConnectorType.gtfs_rt.value,
-            contributor=GTFS_CONTRIBUTOR,
+            contributor_id=GTFS_CONTRIBUTOR_ID,
             error="Http Error",
             is_reprocess_same_data_allowed=True,
         )
         assert (
-            redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR)) is None
+            redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR_ID)) is None
         )  # external error: forget it was processed and allow reprocess
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().raw_data == "toto"
@@ -1918,33 +1924,35 @@ def test_manage_db_with_http_error_with_insert():
         created_at = RealTimeUpdate.query.first().created_at
 
         redis_client.set(
-            build_redis_etag_key(GTFS_CONTRIBUTOR), "secondETag"
+            build_redis_etag_key(GTFS_CONTRIBUTOR_ID), "secondETag"
         )  # set ETag key as if it was polled
         manage_db_error(
             "",
             ConnectorType.gtfs_rt.value,
-            contributor=GTFS_CONTRIBUTOR,
+            contributor_id=GTFS_CONTRIBUTOR_ID,
             error="invalid protobuf",
             is_reprocess_same_data_allowed=False,
         )
         assert (
-            redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR)) == "secondETag"
+            redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR_ID)) == "secondETag"
         )  # error in feed: remember it's processed
         assert len(RealTimeUpdate.query.all()) == 2
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().status == "KO"
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().error == "invalid protobuf"
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().created_at > created_at
 
-        redis_client.set(build_redis_etag_key(GTFS_CONTRIBUTOR), "thirdETag")  # set ETag key as if it was polled
+        redis_client.set(
+            build_redis_etag_key(GTFS_CONTRIBUTOR_ID), "thirdETag"
+        )  # set ETag key as if it was polled
         manage_db_error(
             "toto",
             ConnectorType.gtfs_rt.value,
-            contributor=GTFS_CONTRIBUTOR,
+            contributor_id=GTFS_CONTRIBUTOR_ID,
             error="Http Error",
             is_reprocess_same_data_allowed=True,
         )
         assert (
-            redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR)) is None
+            redis_client.get(build_redis_etag_key(GTFS_CONTRIBUTOR_ID)) is None
         )  # external error: forget it was processed and allow reprocess
         assert len(RealTimeUpdate.query.all()) == 3
         assert RealTimeUpdate.query.order_by(desc(RealTimeUpdate.created_at)).first().raw_data == "toto"
@@ -1975,7 +1983,7 @@ def test_gtfs_pass_midnight_negative_delay_utc_model_builder(pass_midnight_negat
     """
     tester = app.test_client()
     resp = tester.post(
-        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR), data=pass_midnight_negative_delay_utc_gtfs_rt_data
+        "/gtfs_rt/{}".format(GTFS_CONTRIBUTOR_ID), data=pass_midnight_negative_delay_utc_gtfs_rt_data
     )
     assert resp.status_code == 200
 

@@ -152,7 +152,7 @@ def gtfs_poller(self, config):
         # If the HEAD request or Redis get/set fail, we just ignore this part and do the polling anyway
         if not _is_newer(config):
             new_relic.ignore_transaction()
-            manage_db_no_new(connector=ConnectorType.gtfs_rt.value, contributor=contributor.id)
+            manage_db_no_new(connector_type=ConnectorType.gtfs_rt.value, contributor_id=contributor.id)
             return
 
         try:
@@ -161,8 +161,8 @@ def gtfs_poller(self, config):
         except Exception as e:
             manage_db_error(
                 data="",
-                connector=ConnectorType.gtfs_rt.value,
-                contributor=contributor.id,
+                connector_type=ConnectorType.gtfs_rt.value,
+                contributor_id=contributor.id,
                 error="Http Error",
                 is_reprocess_same_data_allowed=True,
             )

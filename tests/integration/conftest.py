@@ -40,12 +40,12 @@ import flask_migrate
 
 from kirin.core.types import ConnectorType
 
-COTS_CONTRIBUTOR = "rt.tchoutchou"
-PIV_CONTRIBUTOR = "rt.piv"
-GTFS_CONTRIBUTOR = "rt.vroumvroum"
-COTS_CONTRIBUTOR_DB = "rt.tchoutchou_db"
-PIV_CONTRIBUTOR_DB = "rt.piv_db"
-GTFS_CONTRIBUTOR_DB = "rt.vroumvroum_db"
+COTS_CONTRIBUTOR_ID = "rt.tchoutchou"
+PIV_CONTRIBUTOR_ID = "rt.piv"
+GTFS_CONTRIBUTOR_ID = "rt.vroumvroum"
+COTS_CONTRIBUTOR_DB_ID = "rt.tchoutchou_db"
+PIV_CONTRIBUTOR_DB_ID = "rt.piv_db"
+GTFS_CONTRIBUTOR_DB_ID = "rt.vroumvroum_db"
 
 
 @pytest.yield_fixture(scope="module", autouse=True)
@@ -81,13 +81,25 @@ def clean_db():
         db.session.add_all(
             [
                 model.Contributor(
-                    COTS_CONTRIBUTOR, "sncf", ConnectorType.cots.value, "cots_token", "cots_feed_url", 10, True
+                    COTS_CONTRIBUTOR_ID,
+                    "sncf",
+                    ConnectorType.cots.value,
+                    "cots_token",
+                    "cots_feed_url",
+                    10,
+                    True,
                 ),
                 model.Contributor(
-                    PIV_CONTRIBUTOR, "sncf_piv", ConnectorType.piv.value, "piv_token", "piv_feed_url", 10, True
+                    PIV_CONTRIBUTOR_ID,
+                    "sncf_piv",
+                    ConnectorType.piv.value,
+                    "piv_token",
+                    "piv_feed_url",
+                    10,
+                    True,
                 ),
                 model.Contributor(
-                    GTFS_CONTRIBUTOR,
+                    GTFS_CONTRIBUTOR_ID,
                     "sherbrooke",
                     ConnectorType.gtfs_rt.value,
                     "gtfs-rt_token",
@@ -96,13 +108,13 @@ def clean_db():
                     True,
                 ),
                 model.Contributor(
-                    COTS_CONTRIBUTOR_DB, "idfm", ConnectorType.cots.value, "cots_db_token", "cots_db_feed_url"
+                    COTS_CONTRIBUTOR_DB_ID, "idfm", ConnectorType.cots.value, "cots_db_token", "cots_db_feed_url"
                 ),
                 model.Contributor(
-                    PIV_CONTRIBUTOR_DB, "tn", ConnectorType.piv.value, "piv_db_token", "piv_db_feed_url"
+                    PIV_CONTRIBUTOR_DB_ID, "tn", ConnectorType.piv.value, "piv_db_token", "piv_db_feed_url"
                 ),
                 model.Contributor(
-                    GTFS_CONTRIBUTOR_DB,
+                    GTFS_CONTRIBUTOR_DB_ID,
                     "laval",
                     ConnectorType.gtfs_rt.value,
                     "gtfs-rt_db_token",
