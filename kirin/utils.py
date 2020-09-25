@@ -143,11 +143,11 @@ def build_redis_etag_key(contributor):
     return "|".join([contributor, "polling_HEAD"])
 
 
-def allow_reprocess_same_data(contributor):
+def allow_reprocess_same_data(contributor_id):
     # type: (unicode) -> None
     from kirin import redis_client
 
-    redis_client.delete(build_redis_etag_key(contributor))  # wipe previous' ETag memory
+    redis_client.delete(build_redis_etag_key(contributor_id))  # wipe previous' ETag memory
 
 
 def set_rtu_status_ko(rtu, error, is_reprocess_same_data_allowed):
