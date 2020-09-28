@@ -1,3 +1,23 @@
 Generic single-database configuration.
 
-See the main readme of the project for the use of alembic migration files.
+The database schema is maintained using [alembic] and migration files you can
+find in `kirin/migrations/versions`. They each contain an `upgrade()` and a
+`downgrade()` function.
+
+To create a new migration file, you can use the following command from
+`kirin/migrations` folder.
+
+```sh
+PYTHONPATH="../:$PYTHONPATH" alembic revision -m "useful commit description"
+```
+
+This will create a new file in `kirin/migrations/versions` that you can edit to
+express the logic of the migration.
+
+To set up or upgrade your DB to the latest version, you can use.
+
+```sh
+honcho run ./manage.py db upgrade
+```
+
+[alembic]: https://pypi.org/project/alembic/

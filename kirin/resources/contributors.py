@@ -46,6 +46,9 @@ contributor_fields = {
     "connector_type": fields.String,
     "retrieval_interval": fields.Integer,
     "is_active": fields.Boolean,
+    "broker_url": fields.String,
+    "exchange_name": fields.String,
+    "queue_name": fields.String,
 }
 
 contributors_list_fields = {"contributors": fields.List(fields.Nested(contributor_fields))}
@@ -57,11 +60,14 @@ class Contributors(Resource):
     schema_properties = {
         "id": {"type": "string"},
         "navitia_coverage": {"type": "string"},
-        "navitia_token": {"type": "string"},
-        "feed_url": {"type": "string", "format": "uri"},
+        "navitia_token": {"type": ["string", "null"]},
+        "feed_url": {"type": ["string", "null"], "format": "uri"},
         "connector_type": {"type": "string", "enum": ConnectorType.values()},
-        "retrieval_interval": {"type": "integer", "minimum": 1},
+        "retrieval_interval": {"type": ["integer", "null"], "minimum": 1},
         "is_active": {"type": "boolean"},
+        "broker_url": {"type": ["string", "null"], "format": "uri"},
+        "exchange_name": {"type": ["string", "null"]},
+        "queue_name": {"type": ["string", "null"]},
     }
 
     post_data_schema = {
@@ -97,6 +103,25 @@ class Contributors(Resource):
         feed_url = data.get("feed_url", None)
         retrieval_interval = data.get("retrieval_interval", 10)
         is_active = data.get("is_active", True)
+        broker_url = data.get("broker_url", None)
+        exchange_name = data.get("exchange_name", None)
+        queue_name = data.get("queue_name", None)
+        if broker_url:
+            if not exchange_name or not queue_name:
+                abort(
+                    400,
+                    message="When 'broker_url' is given, 'exchange_name' and 'queue_name' must be provided as well but were respectively '{0}' and '{1}'.".format(
+                        exchange_name, queue_name
+                    ),
+                )
+        else:
+            if exchange_name or queue_name:
+                abort(
+                    400,
+                    message="No 'broker_url' provided, expecting 'exchange_name' and 'queue_name' to be empty as well but were '{0}' and '{1}'.".format(
+                        exchange_name, queue_name
+                    ),
+                )
 
         try:
             new_contrib = model.Contributor(
@@ -107,6 +132,9 @@ class Contributors(Resource):
                 feed_url,
                 retrieval_interval,
                 is_active,
+                broker_url,
+                exchange_name,
+                queue_name,
             )
             model.db.session.add(new_contrib)
             model.db.session.commit()

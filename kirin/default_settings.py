@@ -54,6 +54,12 @@ COTS_PAR_IV_REQUEST_TIMEOUT = int(
 )
 
 
+# PIV configuration
+BROKER_CONSUMER_CONFIGURATION_RELOAD_TIMEOUT = int(
+    os.getenv("KIRIN_BROKER_CONSUMER_CONFIGURATION_RELOAD_TIMEOUT", timedelta(minutes=1).total_seconds())
+)
+
+
 # TODO : Remove when conf from db is ready
 NAVITIA_GTFS_RT_INSTANCE = os.getenv("KIRIN_NAVITIA_GTFS_RT_INSTANCE", None)
 NAVITIA_GTFS_RT_TOKEN = os.getenv("KIRIN_NAVITIA_GTFS_RT_TOKEN", None)

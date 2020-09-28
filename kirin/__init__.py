@@ -91,6 +91,7 @@ redis_client = Redis(
 
 # activate a command
 import kirin.command.load_realtime
+import kirin.command.piv_worker
 
 from kirin.core import model
 
