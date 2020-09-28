@@ -77,6 +77,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         rt_update = make_rt_update(
             feed, connector_type=self.contributor.connector_type, contributor_id=self.contributor.id
         )
+        rt_update.proto = proto
 
         return rt_update, log_dict
 
@@ -88,11 +89,11 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         The TripUpdates are not associated with the RealTimeUpdate at this point
         """
         log_dict = {}
-        proto = gtfs_realtime_pb2.FeedMessage()
-        try:
-            ParseProtoText(rt_update.raw_data, proto)
-        except ParseError:
+
+        if not hasattr(rt_update, "proto"):
             raise InvalidArguments("invalid protobuf")
+
+        proto = rt_update.proto
 
         input_data_time = datetime.datetime.utcfromtimestamp(proto.header.timestamp)
         log_dict.update({"input_timestamp": input_data_time})
