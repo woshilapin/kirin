@@ -18,7 +18,7 @@ jobs:
             - name: Upgrade pip
               run: python -m pip install --upgrade pip
             - name: Install Python Dependencies
-              run: pip install --upgrade --requirement requirements_dev.txt --requirement requirements_pre-commit.txt
+              run: pip install --upgrade --requirement requirements_dev.txt
             - name: Install Protobuf Dependencies
               run: sudo apt install --yes protobuf-compiler
             - name: Build Protobuf
