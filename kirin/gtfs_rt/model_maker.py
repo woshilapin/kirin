@@ -33,107 +33,93 @@ import datetime
 import logging
 
 import six
-from kirin import core
+from google.protobuf.text_format import Parse as ParseProtoText, ParseError
+from google.protobuf.message import DecodeError
+
+from kirin import gtfs_realtime_pb2
 from kirin.core import model
-from kirin.core.types import ModificationType, get_higher_status, get_effect_by_stop_time_status
-from kirin.exceptions import KirinException, InternalException
-from kirin.new_relic import record_custom_parameter, allow_apm_logging, is_invalid_input_exception
-from kirin.utils import (
-    make_rt_update,
-    floor_datetime,
-    to_navitia_utc_str,
-    set_rtu_status_ko,
-    allow_reprocess_same_data,
-)
-from kirin.utils import record_internal_failure, record_call
+from kirin.core.abstract_builder import AbstractKirinModelBuilder
+from kirin.core.types import ModificationType, get_higher_status, get_effect_by_stop_time_status, ConnectorType
+from kirin.exceptions import InternalException, InvalidArguments
+from kirin.utils import make_rt_update, floor_datetime, to_navitia_utc_str, set_rtu_status_ko, manage_db_error
+from kirin.utils import record_internal_failure
 from kirin import app
 import itertools
 import calendar
 
 
-def handle(proto, navitia_wrapper, contributor):
-    # TODO: use abstract_builder.wrap_build to mutualize error/logger/newrelic management
-    start_datetime = datetime.datetime.utcnow()
-    rt_update = None
-    log_dict = {"contributor": contributor}
-    status = "OK"
-
-    try:
-        data = six.binary_type(proto)  # temp, for the moment, we save the protobuf as text
-        rt_update = make_rt_update(data, "gtfs-rt", contributor=contributor)
-        log_dict.update({"input_timestamp": datetime.datetime.utcfromtimestamp(proto.header.timestamp)})
-        trip_updates = KirinModelBuilder(navitia_wrapper, contributor).build(rt_update, data=proto)
-        _, handler_log_dict = core.handle(rt_update, trip_updates, contributor)
-        log_dict.update(handler_log_dict)
-
-    except Exception as e:
-        status = "failure"
-        allow_reprocess = True
-        if is_invalid_input_exception(e):
-            status = "warning"  # Kirin did his job correctly if the input is invalid and rejected
-            allow_reprocess = False  # reprocess is useless if input is invalid
-
-        if rt_update is not None:
-            error = e.data["error"] if (isinstance(e, KirinException) and "error" in e.data) else e.message
-            set_rtu_status_ko(rt_update, error, is_reprocess_same_data_allowed=allow_reprocess)
-            model.db.session.add(rt_update)
-            model.db.session.commit()
-        else:
-            # rt_update is not built, make sure reprocess is allowed
-            allow_reprocess_same_data(contributor)
-
-        log_dict.update({"exc_summary": six.text_type(e), "reason": e})
-        if allow_apm_logging(e):
-            record_custom_parameter("reason", e)  # using __str__() here to have complete details
-            raise  # to be visible in APM (auto.)
-
-    finally:
-        log_dict.update({"duration": (datetime.datetime.utcnow() - start_datetime).total_seconds()})
-        record_call(status, **log_dict)
-        if status == "OK":
-            logging.getLogger(__name__).info(status, extra=log_dict)
-        elif status == "warning":
-            logging.getLogger(__name__).warning(status, extra=log_dict)
-        else:
-            logging.getLogger(__name__).error(status, extra=log_dict)
-
-
-class KirinModelBuilder(object):
-    def __init__(self, nav, contributor):
-        self.navitia = nav
-        self.contributor = contributor
-        self.log = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": self.contributor})
-        # TODO better period handling
-        self.period_filter_tolerance = datetime.timedelta(hours=3)
+class KirinModelBuilder(AbstractKirinModelBuilder):
+    def __init__(self, contributor):
+        super(KirinModelBuilder, self).__init__(contributor, is_new_complete=False)
+        self.log = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": self.contributor.id})
+        self.period_filter_tolerance = datetime.timedelta(hours=3)  # TODO better period handling
         self.stop_code_key = "source"  # TODO conf
         self.instance_data_pub_date = self.navitia.get_publication_date()
 
-    def build(self, rt_update, data):
+    def build_rt_update(self, input_raw):
+        # create a raw gtfs-rt obj, save the raw protobuf into the db
+        proto = gtfs_realtime_pb2.FeedMessage()
+        log_dict = {}
+        try:
+            proto.ParseFromString(input_raw)
+        except DecodeError:
+            # We save the non-decodable flux gtfs-rt
+            rt_update = manage_db_error(
+                input_raw.encode("string_escape", "ignore"),  # protect for PostgreSQL "Text" type
+                ConnectorType.gtfs_rt.value,
+                contributor_id=self.contributor.id,
+                error="invalid protobuf",
+                is_reprocess_same_data_allowed=False,
+            )
+            return rt_update, log_dict
+
+        feed = six.binary_type(proto)  # temp, for the moment, we save the protobuf as text
+        rt_update = make_rt_update(
+            feed, connector_type=self.contributor.connector_type, contributor_id=self.contributor.id
+        )
+        rt_update.proto = proto
+
+        return rt_update, log_dict
+
+    def build_trip_updates(self, rt_update):
         """
-        parse the protobuf in the rt_update object
+        parse the gtfs-rt protobuf stored in the rt_update object (in Kirin db)
         and return a list of trip updates
 
-        The TripUpdates are not yet associated with the RealTimeUpdate
+        The TripUpdates are not associated with the RealTimeUpdate at this point
         """
-        input_data_time = datetime.datetime.utcfromtimestamp(data.header.timestamp)
+        log_dict = {}
+
+        if not hasattr(rt_update, "proto"):
+            # GOTCHA: should match error message from build_rt_update(), as it will override it.
+            # It allows manage_db_error() to work as expected.
+            # TODO: improve that, but things are quite intricate for error/log management here.
+            raise InvalidArguments("invalid protobuf")
+
+        proto = rt_update.proto
+
+        input_data_time = datetime.datetime.utcfromtimestamp(proto.header.timestamp)
+        log_dict.update({"input_timestamp": input_data_time})
+
         self.log.debug(
-            "Start processing GTFS-rt: timestamp = {} ({})".format(data.header.timestamp, input_data_time)
+            "Start processing GTFS-rt: timestamp = {} ({})".format(proto.header.timestamp, input_data_time)
         )
 
         trip_updates = []
 
-        for entity in data.entity:
+        for entity in proto.entity:
             if not entity.trip_update:
                 continue
             tu = self._make_trip_updates(entity.trip_update, input_data_time=input_data_time)
             trip_updates.extend(tu)
 
         if not trip_updates:
-            msg = "No information for this gtfs-rt with timestamp: {}".format(data.header.timestamp)
+            msg = "No information for this gtfs-rt with timestamp: {}".format(proto.header.timestamp)
             set_rtu_status_ko(rt_update, msg, is_reprocess_same_data_allowed=False)
             self.log.warning(msg)
 
-        return trip_updates
+        log_dict = {}
+        return trip_updates, log_dict
 
     def _get_stop_code(self, nav_stop):
         for c in nav_stop.get("codes", []):
@@ -152,7 +138,7 @@ class KirinModelBuilder(object):
         vjs = self._get_navitia_vjs(input_trip_update.trip, input_data_time=input_data_time)
         trip_updates = []
         for vj in vjs:
-            trip_update = model.TripUpdate(vj=vj, contributor=self.contributor)
+            trip_update = model.TripUpdate(vj=vj, contributor_id=self.contributor.id)
             highest_st_status = ModificationType.none.name
 
             is_tu_valid = True
@@ -200,7 +186,7 @@ class KirinModelBuilder(object):
                     )
                 )
                 record_internal_failure(
-                    "stop_time_update do not match with stops in navitia", contributor=self.contributor
+                    "stop_time_update do not match with stops in navitia", contributor=self.contributor.id
                 )
                 del trip_update.stop_time_updates[:]
 
@@ -235,7 +221,7 @@ class KirinModelBuilder(object):
             self.log.info(
                 "impossible to find vj {t} on [{s}, {u}]".format(t=vj_source_code, s=since_dt, u=until_dt)
             )
-            record_internal_failure("missing vj", contributor=self.contributor)
+            record_internal_failure("missing vj", contributor=self.contributor.id)
             return []
 
         if len(navitia_vjs) > 1:
@@ -245,7 +231,7 @@ class KirinModelBuilder(object):
                     t=vj_source_code, s=since_dt, u=until_dt, ids=vj_ids
                 )
             )
-            record_internal_failure("duplicate vjs", contributor=self.contributor)
+            record_internal_failure("duplicate vjs", contributor=self.contributor.id)
             return []
 
         nav_vj = navitia_vjs[0]
@@ -255,7 +241,7 @@ class KirinModelBuilder(object):
             return [vj]
         except Exception as e:
             self.log.exception("Error while creating kirin VJ of {}: {}".format(nav_vj.get("id"), e))
-            record_internal_failure("Error while creating kirin VJ", contributor=self.contributor)
+            record_internal_failure("Error while creating kirin VJ", contributor=self.contributor.id)
             return []
 
     def _get_navitia_vjs(self, trip, input_data_time):

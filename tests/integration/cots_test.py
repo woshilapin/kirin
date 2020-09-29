@@ -33,13 +33,14 @@ from datetime import datetime, timedelta
 
 import pytest
 
+from kirin.core.types import ConnectorType
 from tests.check_utils import api_post, api_get
 from kirin import app
 from tests import mock_navitia
 from tests.check_utils import get_fixture_data
 from kirin.core.model import RealTimeUpdate, TripUpdate, StopTimeUpdate
 from tests.integration.utils_cots_test import requests_mock_cause_message
-from tests.integration.conftest import COTS_CONTRIBUTOR
+from tests.integration.conftest import COTS_CONTRIBUTOR_ID
 from tests.integration.utils_sncf_test import (
     check_db_96231_delayed,
     check_db_john_trip_removal,
@@ -127,8 +128,8 @@ def test_cots_simple_post(mock_rabbitmq):
         assert rtu.created_at
         assert rtu.status == "OK"
         assert rtu.error is None
-        assert rtu.contributor_id == COTS_CONTRIBUTOR
-        assert rtu.connector == "cots"
+        assert rtu.contributor_id == COTS_CONTRIBUTOR_ID
+        assert rtu.connector == ConnectorType.cots.value
         assert "listePointDeParcours" in rtu.raw_data
     assert mock_rabbitmq.call_count == 1
 
@@ -167,7 +168,7 @@ def test_cots_delayed_simple_post(mock_rabbitmq):
             "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21)
         )
         assert db_trip_delayed.stop_time_updates[4].message is None
-    db_trip_delayed = check_db_96231_delayed(contributor=COTS_CONTRIBUTOR)
+    db_trip_delayed = check_db_96231_delayed(contributor_id=COTS_CONTRIBUTOR_ID)
     assert db_trip_delayed.effect == "SIGNIFICANT_DELAYS"
     assert len(db_trip_delayed.stop_time_updates) == 6
     assert mock_rabbitmq.call_count == 1
@@ -186,7 +187,7 @@ def test_cots_delayed_then_ok(mock_rabbitmq):
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 6
         assert RealTimeUpdate.query.first().status == "OK"
-    db_trip_delayed = check_db_96231_delayed(contributor=COTS_CONTRIBUTOR)
+    db_trip_delayed = check_db_96231_delayed(contributor_id=COTS_CONTRIBUTOR_ID)
     assert db_trip_delayed.effect == "SIGNIFICANT_DELAYS"
     assert len(db_trip_delayed.stop_time_updates) == 6
     assert mock_rabbitmq.call_count == 1
@@ -199,7 +200,7 @@ def test_cots_delayed_then_ok(mock_rabbitmq):
         assert len(RealTimeUpdate.query.all()) == 2
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 6
-    check_db_96231_normal(contributor=COTS_CONTRIBUTOR)
+    check_db_96231_normal(contributor_id=COTS_CONTRIBUTOR_ID)
     assert mock_rabbitmq.call_count == 2
 
 
@@ -229,7 +230,7 @@ def test_cots_paris_tz(mock_rabbitmq):
         assert len(RealTimeUpdate.query.all()) == 1
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 6
-    check_db_96231_normal(contributor=COTS_CONTRIBUTOR)
+    check_db_96231_normal(contributor_id=COTS_CONTRIBUTOR_ID)
     assert mock_rabbitmq.call_count == 1
 
 
@@ -247,7 +248,7 @@ def test_cots_partial_removal_delayed_then_partial_removal_ok(mock_rabbitmq):
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) == 1
         assert RealTimeUpdate.query.first().status == "OK"
-    check_db_870154_partial_removal(contributor=COTS_CONTRIBUTOR)
+    check_db_870154_partial_removal(contributor_id=COTS_CONTRIBUTOR_ID)
     check_db_870154_delay()
     assert mock_rabbitmq.call_count == 1
 
@@ -257,7 +258,7 @@ def test_cots_partial_removal_delayed_then_partial_removal_ok(mock_rabbitmq):
 
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) == 2
-    check_db_870154_partial_removal(contributor=COTS_CONTRIBUTOR)
+    check_db_870154_partial_removal(contributor_id=COTS_CONTRIBUTOR_ID)
     check_db_870154_normal()
     assert mock_rabbitmq.call_count == 2
 
@@ -276,7 +277,7 @@ def test_cots_delayed_post_twice(mock_rabbitmq):
         assert len(RealTimeUpdate.query.all()) == 2
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 6
-    db_trip_delayed = check_db_96231_delayed(contributor=COTS_CONTRIBUTOR)
+    db_trip_delayed = check_db_96231_delayed(contributor_id=COTS_CONTRIBUTOR_ID)
     assert db_trip_delayed.effect == "SIGNIFICANT_DELAYS"
     assert len(db_trip_delayed.stop_time_updates) == 6
     # the rabbit mq has to have been called twice
@@ -298,7 +299,7 @@ def test_cots_mixed_statuses_inside_stop_times(mock_rabbitmq):
         assert len(RealTimeUpdate.query.all()) == 1
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 6
-    check_db_96231_mixed_statuses_inside_stops(contributor=COTS_CONTRIBUTOR)
+    check_db_96231_mixed_statuses_inside_stops(contributor_id=COTS_CONTRIBUTOR_ID)
 
     assert mock_rabbitmq.call_count == 1
 
@@ -318,7 +319,7 @@ def test_cots_mixed_statuses_delay_removal_delay(mock_rabbitmq):
         assert len(RealTimeUpdate.query.all()) == 1
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 6
-    check_db_96231_mixed_statuses_delay_removal_delay(contributor=COTS_CONTRIBUTOR)
+    check_db_96231_mixed_statuses_delay_removal_delay(contributor_id=COTS_CONTRIBUTOR_ID)
     # the rabbit mq has to have been called twice
     assert mock_rabbitmq.call_count == 1
 
@@ -359,7 +360,7 @@ def test_cots_trip_delayed_then_partial_removal(mock_rabbitmq):
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 6
         assert RealTimeUpdate.query.first().status == "OK"
-    check_db_96231_partial_removal(contributor=COTS_CONTRIBUTOR)
+    check_db_96231_partial_removal(contributor_id=COTS_CONTRIBUTOR_ID)
     # the rabbit mq has to have been called twice
     assert mock_rabbitmq.call_count == 2
 
@@ -412,7 +413,7 @@ def test_cots_delayed_and_trip_removal_post(mock_rabbitmq):
         assert len(RealTimeUpdate.query.all()) == 2
         assert len(TripUpdate.query.all()) == 2
         assert len(StopTimeUpdate.query.all()) == 6
-    db_trip_delayed = check_db_96231_delayed(contributor=COTS_CONTRIBUTOR)
+    db_trip_delayed = check_db_96231_delayed(contributor_id=COTS_CONTRIBUTOR_ID)
     assert db_trip_delayed.effect == "SIGNIFICANT_DELAYS"
     assert len(db_trip_delayed.stop_time_updates) == 6
     check_db_6113_trip_removal()
@@ -578,9 +579,9 @@ def test_cots_trip_unknown_vj(mock_rabbitmq):
         assert RealTimeUpdate.query.first().raw_data == cots_6112
 
     status = api_get("/status")
-    assert "-" in status["last_update"][COTS_CONTRIBUTOR]  # only check it's a date
+    assert "-" in status["last_update"][COTS_CONTRIBUTOR_ID]  # only check it's a date
     assert status["last_valid_update"] == {}
-    assert status["last_update_error"][COTS_CONTRIBUTOR] == "no train found for headsign(s) 006112"
+    assert status["last_update_error"][COTS_CONTRIBUTOR_ID] == "no train found for headsign(s) 006112"
 
     assert mock_rabbitmq.call_count == 0
 
@@ -646,7 +647,7 @@ def test_cots_partial_removal_then_reactivation(mock_rabbitmq):
         assert len(TripUpdate.query.all()) == 1
         assert len(StopTimeUpdate.query.all()) == 7
         assert RealTimeUpdate.query.first().status == "OK"
-    check_db_840427_partial_removal(contributor=COTS_CONTRIBUTOR)
+    check_db_840427_partial_removal(contributor_id=COTS_CONTRIBUTOR_ID)
     assert mock_rabbitmq.call_count == 1
 
     # Then 2 stops are reactivated
@@ -700,7 +701,7 @@ def test_cots_partial_removal_then_reactivation(mock_rabbitmq):
         for s in db_trip_partial_react.stop_time_updates[3:6]:
             assert s.message == "Défaut d'alimentation électrique"
 
-        assert db_trip_partial_react.contributor_id == COTS_CONTRIBUTOR
+        assert db_trip_partial_react.contributor_id == COTS_CONTRIBUTOR_ID
 
     # Then all 3 stops are reactivated
     cots_080427_full_react = get_fixture_data("cots_train_840427_full_reactivation.json")
@@ -894,7 +895,7 @@ def test_cots_added_and_deleted_stop_time():
         assert StopTimeUpdate.query.all()[3].departure_status == "delete"
         # It has already been deleted, but it's allowed to send deleted once again.
         assert StopTimeUpdate.query.all()[3].created_at > created_at_for_delete
-        db_trip_delayed = check_db_96231_delayed(contributor=COTS_CONTRIBUTOR)
+        db_trip_delayed = check_db_96231_delayed(contributor_id=COTS_CONTRIBUTOR_ID)
         # when delete and delays exist, effect=REDUCED_SERVICE, because REDUCED_SERVICE > SIGNIFICANT_DELAYS
         assert db_trip_delayed.effect == "REDUCED_SERVICE"
         assert len(db_trip_delayed.stop_time_updates) == 7

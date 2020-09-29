@@ -315,7 +315,14 @@ class TripUpdate(db.Model, TimestampMixin):  # type: ignore
     db.Index("contributor_id_idx", contributor_id)
 
     def __init__(
-        self, vj, contributor, status="none", company_id=None, effect=None, physical_mode_id=None, headsign=None
+        self,
+        vj,
+        contributor_id,
+        status="none",
+        company_id=None,
+        effect=None,
+        physical_mode_id=None,
+        headsign=None,
     ):
         self.created_at = datetime.datetime.utcnow()
         self.vj = vj
@@ -324,7 +331,7 @@ class TripUpdate(db.Model, TimestampMixin):  # type: ignore
         self.effect = effect
         self.physical_mode_id = physical_mode_id
         self.headsign = headsign
-        self.contributor_id = contributor
+        self.contributor_id = contributor_id
 
     def __repr__(self):
         return "<TripUpdate %r>" % self.vj_id
@@ -436,13 +443,13 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         db.Index("realtime_update_contributor_id_and_created_at", "created_at", "contributor_id"),
     )
 
-    def __init__(self, raw_data, connector, contributor, status="OK", error=None):
+    def __init__(self, raw_data, connector_type, contributor_id, status="OK", error=None):
         self.id = gen_uuid()
         self.raw_data = raw_data
-        self.connector = connector
+        self.connector = connector_type
         self.status = status
         self.error = error
-        self.contributor_id = contributor
+        self.contributor_id = contributor_id
 
     @classmethod
     def get_probes_by_contributor(cls):
@@ -509,8 +516,8 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         db.session.commit()
 
     @classmethod
-    def get_last_rtu(cls, connector, contributor):
-        q = cls.query.filter_by(connector=connector, contributor_id=contributor)
+    def get_last_rtu(cls, connector_type, contributor_id):
+        q = cls.query.filter_by(connector=connector_type, contributor_id=contributor_id)
         q = q.order_by(desc(cls.created_at))
         return q.first()
 

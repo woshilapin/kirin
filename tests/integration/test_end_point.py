@@ -30,20 +30,19 @@
 # www.navitia.io
 from __future__ import absolute_import, print_function, unicode_literals, division
 
-from flask import json
-
+from kirin.core.types import ConnectorType
 from kirin.utils import make_rt_update, save_rt_data_with_error
 from tests.check_utils import api_get
 from kirin.core import model
 from kirin import app
 from datetime import datetime, time
 from tests.integration.conftest import (
-    COTS_CONTRIBUTOR,
-    PIV_CONTRIBUTOR,
-    COTS_CONTRIBUTOR_DB,
-    GTFS_CONTRIBUTOR,
-    PIV_CONTRIBUTOR_DB,
-    GTFS_CONTRIBUTOR_DB,
+    COTS_CONTRIBUTOR_ID,
+    PIV_CONTRIBUTOR_ID,
+    COTS_CONTRIBUTOR_DB_ID,
+    GTFS_CONTRIBUTOR_ID,
+    PIV_CONTRIBUTOR_DB_ID,
+    GTFS_CONTRIBUTOR_DB_ID,
 )
 import pytest
 import requests_mock
@@ -60,8 +59,8 @@ def test_end_point():
 
     # test that the contributors endpoints are listed in piv POST endpoint
     resp = api_get("/piv")
-    assert "/piv/{}".format(PIV_CONTRIBUTOR) in resp[PIV_CONTRIBUTOR]["href"]
-    assert "/piv/{}".format(PIV_CONTRIBUTOR_DB) in resp[PIV_CONTRIBUTOR_DB]["href"]
+    assert "/piv/{}".format(PIV_CONTRIBUTOR_ID) in resp[PIV_CONTRIBUTOR_ID]["href"]
+    assert "/piv/{}".format(PIV_CONTRIBUTOR_DB_ID) in resp[PIV_CONTRIBUTOR_DB_ID]["href"]
 
 
 def test_status(setup_database):
@@ -74,15 +73,15 @@ def test_status(setup_database):
     assert "last_update" in resp
     assert resp["navitia_connection"] == "KO"
     assert resp["db_connection"] == "OK"
-    assert COTS_CONTRIBUTOR in resp["last_update"]
-    assert GTFS_CONTRIBUTOR in resp["last_update"]
+    assert COTS_CONTRIBUTOR_ID in resp["last_update"]
+    assert GTFS_CONTRIBUTOR_ID in resp["last_update"]
 
-    assert "2015-11-04T07:32:00Z" in resp["last_update"][COTS_CONTRIBUTOR]
-    assert "2015-11-04T07:52:00Z" in resp["last_update"][GTFS_CONTRIBUTOR]
+    assert "2015-11-04T07:32:00Z" in resp["last_update"][COTS_CONTRIBUTOR_ID]
+    assert "2015-11-04T07:52:00Z" in resp["last_update"][GTFS_CONTRIBUTOR_ID]
 
-    assert GTFS_CONTRIBUTOR in resp["last_update_error"]
-    assert "2015-11-04T07:32:00Z" in resp["last_valid_update"][COTS_CONTRIBUTOR]
-    assert "2015-11-04T07:42:00Z" in resp["last_valid_update"][GTFS_CONTRIBUTOR]
+    assert GTFS_CONTRIBUTOR_ID in resp["last_update_error"]
+    assert "2015-11-04T07:32:00Z" in resp["last_valid_update"][COTS_CONTRIBUTOR_ID]
+    assert "2015-11-04T07:42:00Z" in resp["last_valid_update"][GTFS_CONTRIBUTOR_ID]
 
     assert "rabbitmq_info" in resp
     assert "password" not in resp["rabbitmq_info"]
@@ -100,9 +99,9 @@ def test_status_from_db(setup_database):
     assert "db_version" in resp
     assert "navitia_url" in resp
     assert "last_update" in resp
-    assert GTFS_CONTRIBUTOR_DB in resp["last_update"]
-    assert "2015-11-04T08:02:00Z" in resp["last_update"][GTFS_CONTRIBUTOR_DB]
-    assert COTS_CONTRIBUTOR_DB not in resp["last_update"]
+    assert GTFS_CONTRIBUTOR_DB_ID in resp["last_update"]
+    assert "2015-11-04T08:02:00Z" in resp["last_update"][GTFS_CONTRIBUTOR_DB_ID]
+    assert COTS_CONTRIBUTOR_DB_ID not in resp["last_update"]
 
     # Set "GTFS_RT_CONTRIBUTOR" to "rt.vroumvroum" to read contributor from file
     # Contributor GTFS_CONTRIBUTOR_DB should also be present
@@ -111,12 +110,12 @@ def test_status_from_db(setup_database):
     app.config["COTS_CONTRIBUTOR"] = None
     resp = api_get("/status")
     assert "last_update" in resp
-    assert COTS_CONTRIBUTOR_DB in resp["last_update"]
-    assert "2015-11-04T08:12:00Z" in resp["last_update"][COTS_CONTRIBUTOR_DB]
-    assert GTFS_CONTRIBUTOR_DB in resp["last_update"]
-    assert "2015-11-04T08:02:00Z" in resp["last_update"][GTFS_CONTRIBUTOR_DB]
-    assert GTFS_CONTRIBUTOR in resp["last_update"]
-    assert "2015-11-04T07:52:00Z" in resp["last_update"][GTFS_CONTRIBUTOR]
+    assert COTS_CONTRIBUTOR_DB_ID in resp["last_update"]
+    assert "2015-11-04T08:12:00Z" in resp["last_update"][COTS_CONTRIBUTOR_DB_ID]
+    assert GTFS_CONTRIBUTOR_DB_ID in resp["last_update"]
+    assert "2015-11-04T08:02:00Z" in resp["last_update"][GTFS_CONTRIBUTOR_DB_ID]
+    assert GTFS_CONTRIBUTOR_ID in resp["last_update"]
+    assert "2015-11-04T07:52:00Z" in resp["last_update"][GTFS_CONTRIBUTOR_ID]
 
 
 def test_health_ok(setup_database):
@@ -172,13 +171,13 @@ def test_status_with_navitia_ko(setup_database):
         assert "db_version" in resp
         assert "navitia_url" in resp
         assert "last_update" in resp
-        assert COTS_CONTRIBUTOR in resp["last_update"]
-        assert GTFS_CONTRIBUTOR in resp["last_update"]
-        assert "2015-11-04T07:32:00Z" in resp["last_update"][COTS_CONTRIBUTOR]
-        assert "2015-11-04T07:52:00Z" in resp["last_update"][GTFS_CONTRIBUTOR]
-        assert GTFS_CONTRIBUTOR in resp["last_update_error"]
-        assert "2015-11-04T07:32:00Z" in resp["last_valid_update"][COTS_CONTRIBUTOR]
-        assert "2015-11-04T07:42:00Z" in resp["last_valid_update"][GTFS_CONTRIBUTOR]
+        assert COTS_CONTRIBUTOR_ID in resp["last_update"]
+        assert GTFS_CONTRIBUTOR_ID in resp["last_update"]
+        assert "2015-11-04T07:32:00Z" in resp["last_update"][COTS_CONTRIBUTOR_ID]
+        assert "2015-11-04T07:52:00Z" in resp["last_update"][GTFS_CONTRIBUTOR_ID]
+        assert GTFS_CONTRIBUTOR_ID in resp["last_update_error"]
+        assert "2015-11-04T07:32:00Z" in resp["last_valid_update"][COTS_CONTRIBUTOR_ID]
+        assert "2015-11-04T07:42:00Z" in resp["last_valid_update"][GTFS_CONTRIBUTOR_ID]
 
 
 def test_status_with_database_ko(setup_database):
@@ -198,8 +197,8 @@ def test_status_with_database_ko(setup_database):
         assert len(resp["last_update"]) == 0
         assert len(resp["last_update_error"]) == 0
         assert len(resp["last_valid_update"]) == 0
-        resp["db_pool_status"] is None
-        resp["db_version"] is None
+        assert resp["db_pool_status"] is None
+        assert resp["db_version"] is None
         assert "navitia_url" in resp
 
 
@@ -220,8 +219,8 @@ def test_status_with_database_and_navitia_ko(setup_database):
         assert len(resp["last_update"]) == 0
         assert len(resp["last_update_error"]) == 0
         assert len(resp["last_valid_update"]) == 0
-        resp["db_pool_status"] is None
-        resp["db_version"] is None
+        assert resp["db_pool_status"] is None
+        assert resp["db_version"] is None
         assert "navitia_url" in resp
 
 
@@ -262,21 +261,21 @@ def setup_database():
             datetime(2015, 11, 4, 8, 0, 0),
             datetime(2015, 11, 4, 10, 0, 0),
         )
-        tu1 = model.TripUpdate(vj1, contributor=COTS_CONTRIBUTOR)
-        tu2 = model.TripUpdate(vj2, contributor=COTS_CONTRIBUTOR)
-        tu3 = model.TripUpdate(vj3, contributor=GTFS_CONTRIBUTOR)
-        rtu1 = make_rt_update(None, "cots", COTS_CONTRIBUTOR)
+        tu1 = model.TripUpdate(vj1, contributor_id=COTS_CONTRIBUTOR_ID)
+        tu2 = model.TripUpdate(vj2, contributor_id=COTS_CONTRIBUTOR_ID)
+        tu3 = model.TripUpdate(vj3, contributor_id=GTFS_CONTRIBUTOR_ID)
+        rtu1 = make_rt_update(None, ConnectorType.cots.value, COTS_CONTRIBUTOR_ID)
         rtu1.created_at = datetime(2015, 11, 4, 6, 32)
         rtu1.updated_at = datetime(2015, 11, 4, 6, 32)  # mock creation, no update done
         rtu1.trip_updates.append(tu1)
         model.db.session.add(rtu1)
-        rtu2 = make_rt_update(None, "cots", contributor=COTS_CONTRIBUTOR)
+        rtu2 = make_rt_update(None, ConnectorType.cots.value, contributor_id=COTS_CONTRIBUTOR_ID)
         rtu2.created_at = datetime(2015, 11, 4, 7, 32)
         rtu2.updated_at = datetime(2015, 11, 4, 7, 32)
         rtu2.trip_updates.append(tu2)
         model.db.session.add(rtu2)
 
-        rtu3 = make_rt_update(None, "gtfs-rt", contributor=GTFS_CONTRIBUTOR)
+        rtu3 = make_rt_update(None, ConnectorType.gtfs_rt.value, contributor_id=GTFS_CONTRIBUTOR_ID)
         rtu3.created_at = datetime(2015, 11, 4, 7, 42)
         rtu3.updated_at = datetime(2015, 11, 4, 7, 42)
         rtu3.trip_updates.append(tu3)
@@ -284,8 +283,8 @@ def setup_database():
 
         rtu4 = save_rt_data_with_error(
             None,
-            connector="gtfs-rt",
-            contributor=GTFS_CONTRIBUTOR,
+            connector_type=ConnectorType.gtfs_rt.value,
+            contributor_id=GTFS_CONTRIBUTOR_ID,
             error="No new information destined to navitia for this gtfs-rt",
             is_reprocess_same_data_allowed=False,
         )
@@ -293,12 +292,16 @@ def setup_database():
         rtu4.updated_at = datetime(2015, 11, 4, 7, 52)
         model.db.session.add(rtu4)
 
-        rtu5 = make_rt_update(None, connector="gtfs-rt", contributor=GTFS_CONTRIBUTOR_DB)
+        rtu5 = make_rt_update(
+            None, connector_type=ConnectorType.gtfs_rt.value, contributor_id=GTFS_CONTRIBUTOR_DB_ID
+        )
         rtu5.created_at = datetime(2015, 11, 4, 8, 2)
         rtu5.updated_at = datetime(2015, 11, 4, 8, 2)
         model.db.session.add(rtu5)
 
-        rtu6 = make_rt_update(None, connector="cots", contributor=COTS_CONTRIBUTOR_DB)
+        rtu6 = make_rt_update(
+            None, connector_type=ConnectorType.cots.value, contributor_id=COTS_CONTRIBUTOR_DB_ID
+        )
         rtu6.created_at = datetime(2015, 11, 4, 8, 12)
         rtu6.updated_at = datetime(2015, 11, 4, 8, 12)
         model.db.session.add(rtu6)

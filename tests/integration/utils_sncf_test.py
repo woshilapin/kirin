@@ -32,11 +32,11 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 from kirin import app
 from kirin.core.model import RealTimeUpdate, TripUpdate, StopTimeUpdate
-from tests.integration.conftest import COTS_CONTRIBUTOR
+from tests.integration.conftest import COTS_CONTRIBUTOR_ID
 from datetime import timedelta, datetime
 
 
-def check_db_96231_delayed(contributor=None, motif_externe_is_null=False):
+def check_db_96231_delayed(contributor_id=None, motif_externe_is_null=False):
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) >= 1
         assert len(TripUpdate.query.all()) >= 1
@@ -104,12 +104,12 @@ def check_db_96231_delayed(contributor=None, motif_externe_is_null=False):
         else:
             assert second_st.message == "Affluence exceptionnelle de voyageurs"
 
-        assert db_trip_delayed.contributor_id == contributor
+        assert db_trip_delayed.contributor_id == contributor_id
 
         return db_trip_delayed  # for additional testing if needed
 
 
-def check_db_870154_partial_removal(contributor=None):
+def check_db_870154_partial_removal(contributor_id=None):
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) >= 1
         assert len(TripUpdate.query.all()) == 1
@@ -151,7 +151,7 @@ def check_db_870154_partial_removal(contributor=None):
         assert fourth_st.departure_status == "delete"
         assert fourth_st.message is None
 
-        assert db_trip.contributor_id == contributor
+        assert db_trip.contributor_id == contributor_id
 
 
 def check_db_870154_delay():
@@ -340,7 +340,7 @@ def check_db_870154_normal():
         assert twelfth_st.message is None
 
 
-def check_db_96231_mixed_statuses_inside_stops(contributor=None):
+def check_db_96231_mixed_statuses_inside_stops(contributor_id=None):
     with app.app_context():
         db_trip_delayed = TripUpdate.find_by_dated_vj(
             "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21)
@@ -412,10 +412,10 @@ def check_db_96231_mixed_statuses_inside_stops(contributor=None):
         assert sixth_st.departure_status == "none"  # not in the feed, so none and no delay
         assert sixth_st.departure_delay == timedelta(0)
 
-        assert db_trip_delayed.contributor_id == contributor
+        assert db_trip_delayed.contributor_id == contributor_id
 
 
-def check_db_96231_mixed_statuses_delay_removal_delay(contributor=None):
+def check_db_96231_mixed_statuses_delay_removal_delay(contributor_id=None):
     with app.app_context():
         db_trip_delayed = TripUpdate.find_by_dated_vj(
             "trip:OCETrainTER-87212027-85000109-3:11859", datetime(2015, 9, 21, 15, 21)
@@ -485,10 +485,10 @@ def check_db_96231_mixed_statuses_delay_removal_delay(contributor=None):
         assert sixth_st.departure_status == "none"  # not in the feed, so none and no delay
         assert sixth_st.departure_delay == timedelta(0)
 
-        assert db_trip_delayed.contributor_id == contributor
+        assert db_trip_delayed.contributor_id == contributor_id
 
 
-def check_db_96231_normal(contributor=None):
+def check_db_96231_normal(contributor_id=None):
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) >= 1
         assert len(TripUpdate.query.all()) >= 1
@@ -548,7 +548,7 @@ def check_db_96231_normal(contributor=None):
         except AssertionError:
             pass  # xfail: we don't change back the departure :(
 
-        assert db_trip_delayed.contributor_id == contributor
+        assert db_trip_delayed.contributor_id == contributor_id
 
 
 def check_db_john_trip_removal():
@@ -662,7 +662,7 @@ def check_db_6114_trip_removal():
         assert len(db_trip_removal.stop_time_updates) == 0
 
 
-def check_db_96231_partial_removal(contributor=None):
+def check_db_96231_partial_removal(contributor_id=None):
     with app.app_context():
         assert len(RealTimeUpdate.query.all()) >= 1
         assert len(TripUpdate.query.all()) >= 1
@@ -736,10 +736,10 @@ def check_db_96231_partial_removal(contributor=None):
         assert last_st.departure_delay == timedelta(minutes=0)
         assert last_st.departure_status == "none"
 
-        assert db_trip_partial_removed.contributor_id == contributor
+        assert db_trip_partial_removed.contributor_id == contributor_id
 
 
-def check_db_840427_partial_removal(contributor=None):
+def check_db_840427_partial_removal(contributor_id=None):
     with app.app_context():
         db_trip_partial_removed = TripUpdate.find_by_dated_vj("OCE:SN840427F03001", datetime(2017, 3, 18, 13, 5))
         assert db_trip_partial_removed
@@ -791,4 +791,4 @@ def check_db_840427_partial_removal(contributor=None):
         assert tro_st.departure_status == "none"  # the train still does not leave from this stop
         assert tro_st.message == "Défaut d'alimentation électrique"
 
-        assert db_trip_partial_removed.contributor_id == contributor
+        assert db_trip_partial_removed.contributor_id == contributor_id

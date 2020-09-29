@@ -33,10 +33,9 @@ import os
 from kirin import app
 import json
 from dateutil.parser import parse
-import navitia_wrapper
 
 
-def api_get(url, display=False, check=True, *args, **kwargs):
+def api_get(url, check=True, *args, **kwargs):
     """
     call api, check response status code, and return json as dict
     """
@@ -45,12 +44,12 @@ def api_get(url, display=False, check=True, *args, **kwargs):
 
     if check:
         assert resp.status_code == 200
-        return _to_json(resp.data, display)
+        return _to_json(resp.data)
     else:
-        return _to_json(resp.data, display), resp.status_code
+        return _to_json(resp.data), resp.status_code
 
 
-def api_post(url, display=False, check=True, *args, **kwargs):
+def api_post(url, check=True, *args, **kwargs):
     """
     call api, check response status code, and return json as dict
     """
@@ -59,12 +58,12 @@ def api_post(url, display=False, check=True, *args, **kwargs):
 
     if check:
         assert resp.status_code == 200
-        return _to_json(resp.data, display)
+        return _to_json(resp.data)
     else:
-        return _to_json(resp.data, display), resp.status_code
+        return _to_json(resp.data), resp.status_code
 
 
-def _to_json(data, display):
+def _to_json(data):
     assert data
     json_response = json.loads(data)
 
@@ -91,8 +90,3 @@ def _dt(dt_to_parse, year=2015, month=9, day=8):
     """
     d = parse(dt_to_parse)
     return d.replace(year=year, month=month, day=day)
-
-
-def dumb_nav_wrapper():
-    """return a dumb navitia wrapper (all the param are useless since the 'query' call has been mocked)"""
-    return navitia_wrapper.Navitia(url="").instance("")

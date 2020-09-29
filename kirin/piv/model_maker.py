@@ -46,7 +46,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
 
     def build_rt_update(self, input_raw):
         rt_update = make_rt_update(
-            input_raw, connector=self.contributor.connector_type, contributor=self.contributor.id
+            input_raw, connector_type=self.contributor.connector_type, contributor_id=self.contributor.id
         )
         log_dict = {}
         return rt_update, log_dict

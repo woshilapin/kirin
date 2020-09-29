@@ -40,7 +40,7 @@ from kirin.core.types import ConnectorType
 from kirin.tasks import purge_trip_update, purge_rt_update
 from tests.check_utils import api_post, api_get
 from tests import mock_navitia
-from tests.integration.conftest import PIV_CONTRIBUTOR
+from tests.integration.conftest import PIV_CONTRIBUTOR_ID
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -68,7 +68,7 @@ def test_wrong_get_piv_with_id():
     """
     GET /piv/id.contributor (so with an id) is not allowed, only POST is possible
     """
-    resp, status = api_get("/piv/{}".format(PIV_CONTRIBUTOR), check=False)
+    resp, status = api_get("/piv/{}".format(PIV_CONTRIBUTOR_ID), check=False)
     assert status == 405
     assert resp.get("message") == "The method is not allowed for the requested URL."
 
@@ -78,7 +78,7 @@ def test_piv_post_wrong_data():
     simple json post on the api
     """
     wrong_piv_feed = "{}"
-    res, status = api_post("/piv/{}".format(PIV_CONTRIBUTOR), check=False, data=wrong_piv_feed)
+    res, status = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), check=False, data=wrong_piv_feed)
 
     # For now, no check on data
     # TODO xfail: check and change test
@@ -115,7 +115,7 @@ def test_piv_post_no_data():
             assert len(StopTimeUpdate.query.all()) == 0
 
     post_and_check("/piv/", 405, "The method is not allowed for the requested URL.", None)
-    post_and_check("/piv/{}".format(PIV_CONTRIBUTOR), 400, "invalid arguments", "no piv data provided")
+    post_and_check("/piv/{}".format(PIV_CONTRIBUTOR_ID), 400, "invalid arguments", "no piv data provided")
     post_and_check("/piv/unknown_id", 404, "Contributor 'unknown_id' not found", None)
 
 
@@ -124,7 +124,7 @@ def test_piv_simple_post(mock_rabbitmq):
     simple PIV post should be stored in db as a RealTimeUpdate
     """
     piv_feed = "{}"  # TODO: use a valid PIV feed
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR), data=piv_feed)
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 
     with app.app_context():
@@ -135,7 +135,7 @@ def test_piv_simple_post(mock_rabbitmq):
         assert rtu.created_at
         assert rtu.status == "KO"  # TODO xfail: should be "OK"
         assert rtu.error is not None  # TODO xfail: no error for a valid PIV feed
-        assert rtu.contributor_id == PIV_CONTRIBUTOR
+        assert rtu.contributor_id == PIV_CONTRIBUTOR_ID
         assert rtu.connector == ConnectorType.piv.value
         assert rtu.raw_data == piv_feed
     assert mock_rabbitmq.call_count == 1
@@ -146,7 +146,7 @@ def test_piv_purge(mock_rabbitmq):
     Simple PIV post, then test the purge
     """
     piv_feed = "{}"  # TODO: use a valid PIV feed
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR), data=piv_feed)
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 
     with app.app_context():
@@ -166,7 +166,7 @@ def test_piv_purge(mock_rabbitmq):
 
         # TODO VehicleJourney affected is old, so it's affected by TripUpdate purge (based on base-VJ's date)
         config = {
-            "contributor": PIV_CONTRIBUTOR,
+            "contributor": PIV_CONTRIBUTOR_ID,
             "nb_days_to_keep": int(app.config.get("NB_DAYS_TO_KEEP_TRIP_UPDATE")),
         }
         purge_trip_update(config)
