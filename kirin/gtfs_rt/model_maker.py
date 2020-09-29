@@ -91,6 +91,9 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         log_dict = {}
 
         if not hasattr(rt_update, "proto"):
+            # GOTCHA: should match error message from build_rt_update(), as it will override it.
+            # It allows manage_db_error() to work as expected.
+            # TODO: improve that, but things are quite intricate for error/log management here.
             raise InvalidArguments("invalid protobuf")
 
         proto = rt_update.proto

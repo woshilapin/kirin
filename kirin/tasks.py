@@ -127,7 +127,9 @@ def poller(self):
             "feed_url": contributor.feed_url,
             "retrieval_interval": contributor.retrieval_interval,
             "timeout": app.config.get(str("GTFS_RT_TIMEOUT"), 1),
-        }
+        }  # WARNING: cleanup might be done here, but be cautious when removing.
+        # Keep in mind that during deployment, workers from version n and n+1 are present
+        # (so no remove before both version stop using what's removed).
         gtfs_poller.delay(config)
 
 
