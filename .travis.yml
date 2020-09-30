@@ -15,7 +15,6 @@ matrix:
         - git submodule update --init --recursive
         - pip install -r requirements_dev.txt
         - python setup.py build_pbf
-        - pip install -r requirements_pre-commit.txt
         - pre-commit install
       script:
         - pre-commit run --all --show-diff-on-failure
