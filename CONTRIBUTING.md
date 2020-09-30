@@ -23,33 +23,34 @@ When absolutely needed, datetimes that are not UTC **must** be timezone-aware to
 being able to mix them with naive-UTC-datetimes (it's also the easiest and safest way to handle timezones).\
 Communication (request and read) with external services is done in UTC as much as possible (with Navitia especially).
 
-### Python formatting
-
-Python source code in this project is formatted with [Black](https://black.readthedocs.io/en/stable/)
-You should enable the pre-commit git hook to be sure. It's also the easier way to run black, you can simply run:
-
-```sh
-pre-commit run black
-```
-
-This will only update file that you changed, if you want to run it on whole project you can add `--all`:
-
-```sh
-pre-commit run black --all
-```
-
-Obviously you can also [install Black traditionally](https://black.readthedocs.io/en/stable/installation_and_usage.html)
-But attention: it requires python 3.6+ to run.
-
 ### Git hooks
 
 The project provides a few git hooks that you should use to prevent any issues.
+Attention: they require python 3.6+ to run.
+
 These hooks are managed by [pre-commit](https://pre-commit.com/)
 that you need to [install](https://pre-commit.com/#install).
-Then you can install the hooks with:
+
+The simplest way is to create a _virtualenv using python 3.6+_.\
+Then run:
+
+```sh
+pip install -U pre-commit
+```
+
+After that, you can install the hooks from the root of the repository with:
 
 ```sh
 pre-commit install
+```
+
+Then each time you commit, those hooks will be triggered.
+
+You can also run them on the whole codebase.\
+From the _pre-commit's virtualenv_ run:
+
+```sh
+pre-commit run --all
 ```
 
 ## Internal data format
