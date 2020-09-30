@@ -26,7 +26,7 @@ Communication (request and read) with external services is done in UTC as much a
 ### Git hooks
 
 The project provides a few git hooks that you should use to prevent any issues.
-Attention: they require python 3.6+ to run.
+Warning: they require **python 3.6+** to run (as opposed to Kirin itself, still using python 2).
 
 These hooks are managed by [pre-commit](https://pre-commit.com/)
 that you need to [install](https://pre-commit.com/#install).
