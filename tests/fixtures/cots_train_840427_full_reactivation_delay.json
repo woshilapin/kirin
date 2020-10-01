@@ -240,7 +240,7 @@
                     "dateHeure":"2017-03-18T14:22:00+0000",
                     "heureLocale":"15:22:00",
                     "idFuseauHoraire":"Europe/Paris",
-                    "nbJoursPasseMinuit":0,
+                    "nbJoursPasseMinuit":0
                 },
                 "horaireVoyageurDepart":{
                     "dateHeure":"2017-03-18T14:24:00+0000",
