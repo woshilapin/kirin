@@ -7,6 +7,5 @@ pytest-cov==2.9.0
 docker==3.5.0
 mock==2.0.0
 pbr==4.2.0
-pre-commit==1.18.3
 requests-mock==1.5.2
 newrelic
