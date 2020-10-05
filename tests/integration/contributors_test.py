@@ -331,7 +331,7 @@ def test_put_contributor_with_malformed_data(test_client, with_custom_contributo
     assert resp.status_code == 400
 
 
-def test_post_get_put_to_ensure_API_consitency(test_client):
+def test_post_get_put_to_ensure_API_consistency(test_client):
     new_contrib = {
         "id": "realtime.tokyo",
         "navitia_coverage": "jp",
@@ -343,6 +343,9 @@ def test_post_get_put_to_ensure_API_consitency(test_client):
     }
     post_resp = test_client.post("/contributors", json=new_contrib)
     post_contrib = json.loads(post_resp.data)
+    new_contrib["broker_url"] = None
+    new_contrib["exchange_name"] = None
+    new_contrib["queue_name"] = None
     assert post_contrib["contributor"] == new_contrib
 
     get_resp = test_client.get("/contributors/realtime.tokyo")

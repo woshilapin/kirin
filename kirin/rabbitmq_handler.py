@@ -136,15 +136,15 @@ class RabbitMQHandler(object):
     def __init__(self, connection_string, exchange):
         self._connection = BrokerConnection(connection_string)
         self._connections = {self._connection}  # set of connection for the heartbeat
-        self._exchange = Exchange(exchange, durable=True, delivry_mode=2, type="topic")
+        self._exchange = Exchange(exchange, durable=True, delivery_mode=2, type="topic")
         monitor_heartbeats(self._connections)
 
     @retry(wait_fixed=200, stop_max_attempt_number=3)
-    def publish(self, item, contributor):
+    def publish(self, item, contributor_id):
         with self._connection.channel() as channel:
             with Producer(channel) as producer:
                 producer.publish(
-                    item, exchange=self._exchange, routing_key=contributor, declare=[self._exchange]
+                    item, exchange=self._exchange, routing_key=contributor_id, declare=[self._exchange]
                 )
 
     def info(self):

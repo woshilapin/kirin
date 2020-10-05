@@ -55,6 +55,16 @@ def get_piv_contributors(include_deactivated=False):
     return piv_contributors
 
 
+def get_piv_contributor(contributor_id):
+    """
+    :param contributor_id: Identifier of the contributor
+    :return: The PIV contributor from DB corresponding to the input ID
+    """
+    # FIXME: Raise an exception if no contributor is found?
+    contributors = [c for c in get_piv_contributors() if c.id == contributor_id]
+    return contributors[0] if contributors else None
+
+
 def _get_piv(req):
     if not req.data:
         raise InvalidArguments("no piv data provided")

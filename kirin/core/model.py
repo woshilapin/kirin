@@ -535,6 +535,9 @@ class Contributor(db.Model):  # type: ignore
     connector_type = db.Column(Db_ConnectorType, nullable=False)
     retrieval_interval = db.Column(db.Integer, nullable=True, default=10)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
+    broker_url = db.Column(db.Text, nullable=True)
+    exchange_name = db.Column(db.Text, nullable=True)
+    queue_name = db.Column(db.Text, nullable=True)
 
     def __init__(
         self,
@@ -545,6 +548,9 @@ class Contributor(db.Model):  # type: ignore
         feed_url=None,
         retrieval_interval=10,
         is_active=True,
+        broker_url=None,
+        exchange_name=None,
+        queue_name=None,
     ):
         self.id = id
         self.navitia_coverage = navitia_coverage
@@ -553,6 +559,9 @@ class Contributor(db.Model):  # type: ignore
         self.feed_url = feed_url
         self.retrieval_interval = retrieval_interval
         self.is_active = is_active
+        self.broker_url = broker_url
+        self.exchange_name = exchange_name
+        self.queue_name = queue_name
 
     @classmethod
     def find_by_connector_type(cls, type, include_deactivated=False):
