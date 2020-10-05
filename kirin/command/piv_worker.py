@@ -52,6 +52,14 @@ CONF_RELOAD_TIMEOUT = timedelta(
 
 class PivWorker(ConsumerMixin):
     def __init__(self, contributor):
+        if contributor.connector_type != ConnectorType.piv.value:
+            raise ValueError(
+                "Contributor '{0}': PivWorker requires type {1}".format(contributor.id, ConnectorType.piv.value)
+            )
+        if not contributor.is_active:
+            raise ValueError(
+                "Contributor '{0}': PivWorker requires an activated contributor.".format(contributor.id)
+            )
         if not contributor.broker_url:
             raise ValueError("Missing 'broker_url' configuration for contributor '{0}'".format(contributor.id))
         if not contributor.exchange_name:
