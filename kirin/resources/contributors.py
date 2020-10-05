@@ -106,22 +106,11 @@ class Contributors(Resource):
         broker_url = data.get("broker_url", None)
         exchange_name = data.get("exchange_name", None)
         queue_name = data.get("queue_name", None)
-        if broker_url:
-            if not exchange_name or not queue_name:
-                abort(
-                    400,
-                    message="When 'broker_url' is given, 'exchange_name' and 'queue_name' must be provided as well but were respectively '{0}' and '{1}'.".format(
-                        exchange_name, queue_name
-                    ),
-                )
-        else:
-            if exchange_name or queue_name:
-                abort(
-                    400,
-                    message="No 'broker_url' provided, expecting 'exchange_name' and 'queue_name' to be empty as well but were '{0}' and '{1}'.".format(
-                        exchange_name, queue_name
-                    ),
-                )
+        if any([broker_url, exchange_name, queue_name]) and not all([broker_url, exchange_name, queue_name]):
+            abort(
+                400,
+                message="'broker_url', 'exchange_name' and 'queue_name' must all be provided or none of them.",
+            )
 
         try:
             new_contrib = model.Contributor(
