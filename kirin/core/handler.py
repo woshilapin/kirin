@@ -648,15 +648,15 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete):
     return None
 
 
-def publish(feed, contributor):
+def publish(feed, contributor_id):
     """
     send RT feed to navitia
     """
     try:
-        kirin.rmq_handler.publish(feed, contributor)
+        kirin.rmq_handler.publish(feed, contributor_id)
 
     except socket.error:
         logging.getLogger(__name__).exception(
-            "impossible to publish in rabbitmq", extra={"contributor": contributor}
+            "impossible to publish in rabbitmq", extra={"contributor": contributor_id}
         )
         raise MessageNotPublished()
