@@ -61,8 +61,8 @@ def get_piv_contributor(contributor_id):
     :return: The PIV contributor from DB corresponding to the input ID
     """
     # FIXME: Raise an exception if no contributor is found?
-    contributor = model.Contributor.query.get(contributor_id)
-    return contributor
+    contributors = [c for c in get_piv_contributors() if c.id == contributor_id]
+    return contributors[0] if contributors else None
 
 
 def _get_piv(req):
