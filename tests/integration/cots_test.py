@@ -1,6 +1,6 @@
 # coding: utf8
 #
-# Copyright (c) 2001-2018, Canal TP and/or its affiliates. All rights reserved.
+# Copyright (c) 2001, Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
 #     the software to build cool stuff with public transport.
