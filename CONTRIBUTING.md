@@ -58,27 +58,9 @@ pre-commit run --all
 The format used internally to store and process realtime information is
 described [here](documentation/internal_format.md)
 
-## Alembic database revisions
+## Database migrations
 
-To generate a new database revision script (after an upgrade of the model.py file):
-
-```sh
-honcho run ./manage.py db migrate
-```
-
-This will generate a new migration file, that you can amend at your will.
-
-:bulb: Keep in mind that db upgrade is done **before** deployment of Kirin (and Kirin must work all the way).\
-Also, where Kirin is duplicated, at some point both Kirin version `n-1` and Kirin version `n` are
-running, using the same upgraded database.
-
-:warning: To ensure safe db migrations for both upgrade (deploy) and downgrade (rollback), please make sure that:\
-Kirin version `n` is able to read/write in db version `n+1` FILLED by Kirin `n+1` (it's the case on rollback).\
-As for a (column) removal, one should ensure that version `n-1` (and of course `n`) don't use (read or write)
-the "object" removed from db.
-So first (in version `n-1`) do a PR removing **any** use in python (especially in model.py) but keeping db
-almost as-is, with just a "nullable" migration if needed.
-Then (version `n`) do a PR with only the db migration, removing the "object" unused.
+Look at the [documentation in `migrations/`](migrations/README.md).
 
 ## Roles and architecture
 
