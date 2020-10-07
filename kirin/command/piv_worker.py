@@ -45,8 +45,8 @@ import time
 
 logger = logging.getLogger(__name__)
 
-CONF_RELOAD_TIMEOUT = timedelta(
-    seconds=float(str(app.config.get("BROKER_CONSUMER_CONFIGURATION_RELOAD_TIMEOUT")))
+CONF_RELOAD_INTERVAL = timedelta(
+    seconds=float(str(app.config.get("BROKER_CONSUMER_CONFIGURATION_RELOAD_INTERVAL")))
 )
 
 
@@ -104,7 +104,7 @@ class PivWorker(ConsumerMixin):
         message.ack()
 
     def on_iteration(self):
-        if datetime.now() - self.last_config_checked_time < CONF_RELOAD_TIMEOUT:
+        if datetime.now() - self.last_config_checked_time < CONF_RELOAD_INTERVAL:
             return
         else:
             # SQLAlchemy is not querying the DB for read (uses cache instead),
@@ -145,7 +145,7 @@ def piv_worker():
         contributors = get_piv_contributors()
         if len(contributors) == 0:
             logger.warning("no PIV contributor")
-            time.sleep(CONF_RELOAD_TIMEOUT.total_seconds())
+            time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
             continue
         contributor = contributors[0]
         if len(contributors) > 1:
@@ -160,4 +160,4 @@ def piv_worker():
                 worker.run()
         except Exception as e:
             logger.warning("worker died unexpectedly: {0}".format(e))
-            time.sleep(CONF_RELOAD_TIMEOUT.total_seconds())
+            time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
