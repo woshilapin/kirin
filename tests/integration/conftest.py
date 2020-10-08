@@ -42,6 +42,8 @@ from kirin.core.types import ConnectorType
 
 COTS_CONTRIBUTOR_ID = "rt.tchoutchou"
 PIV_CONTRIBUTOR_ID = "rt.piv"
+PIV_EXCHANGE_NAME = "piv_schedule"
+PIV_QUEUE_NAME = "piv_schedule_kirin"
 GTFS_CONTRIBUTOR_ID = "rt.vroumvroum"
 COTS_CONTRIBUTOR_DB_ID = "rt.tchoutchou_db"
 PIV_CONTRIBUTOR_DB_ID = "rt.piv_db"
@@ -68,7 +70,8 @@ def bdd(init_flask_db):
         flask_migrate.downgrade(revision="base", directory=migration_dir)
 
 
-def clean_db():
+@pytest.fixture(scope="function", autouse=True)
+def clean_db(rabbitmq_docker_fixture):
     """
     before all tests the database is cleared
     """
@@ -94,9 +97,12 @@ def clean_db():
                     "sncf_piv",
                     ConnectorType.piv.value,
                     "piv_token",
-                    "piv_feed_url",
-                    10,
+                    None,
+                    None,
                     True,
+                    rabbitmq_docker_fixture.url,
+                    PIV_EXCHANGE_NAME,
+                    PIV_QUEUE_NAME,
                 ),
                 model.Contributor(
                     GTFS_CONTRIBUTOR_ID,
@@ -111,7 +117,16 @@ def clean_db():
                     COTS_CONTRIBUTOR_DB_ID, "idfm", ConnectorType.cots.value, "cots_db_token", "cots_db_feed_url"
                 ),
                 model.Contributor(
-                    PIV_CONTRIBUTOR_DB_ID, "tn", ConnectorType.piv.value, "piv_db_token", "piv_db_feed_url"
+                    PIV_CONTRIBUTOR_DB_ID,
+                    "tn",
+                    ConnectorType.piv.value,
+                    "piv_db_token",
+                    None,
+                    None,
+                    True,
+                    rabbitmq_docker_fixture.url,
+                    PIV_EXCHANGE_NAME,
+                    PIV_QUEUE_NAME,
                 ),
                 model.Contributor(
                     GTFS_CONTRIBUTOR_DB_ID,
@@ -124,11 +139,6 @@ def clean_db():
             ]
         )
         db.session.commit()
-
-
-@pytest.fixture(scope="function", autouse=True)
-def clean_db_fixture():
-    clean_db()
 
 
 @pytest.fixture(scope="function")
@@ -152,3 +162,10 @@ def mock_rabbitmq(monkeypatch):
     monkeypatch.setattr("kombu.messaging.Producer.publish", mock_amqp)
 
     return mock_amqp
+
+
+@pytest.yield_fixture
+def test_client():
+    app.testing = True
+    with app.app_context(), app.test_client() as tester:
+        yield tester

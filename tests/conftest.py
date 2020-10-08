@@ -85,4 +85,4 @@ def rabbitmq_docker_fixture():
 @pytest.fixture(scope="session", autouse=True)
 def init_rabbitmq(rabbitmq_docker_fixture):
     # Switch global RabbitMQ-client's connection to use the RabbitMQ server from docker (instead of the conf)
-    kirin.rmq_handler = rabbitmq_docker_fixture.get_rabbitmq_handler()
+    kirin.rmq_handler = rabbitmq_docker_fixture.create_rabbitmq_handler("navitia", "topic")

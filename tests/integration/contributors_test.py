@@ -51,13 +51,6 @@ from kirin.core.types import ConnectorType
 from tests.integration.gtfs_rt_test import basic_gtfs_rt_data, navitia
 
 
-@pytest.yield_fixture
-def test_client():
-    app.testing = True
-    with app.app_context(), app.test_client() as tester:
-        yield tester
-
-
 def test_get_contributor_end_point(test_client):
     assert test_client.get("/contributors").status_code == 200
 
