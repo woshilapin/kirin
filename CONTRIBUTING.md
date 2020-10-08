@@ -112,6 +112,18 @@ There must be at least one worker if any feed is polled.
 There can be several of these if the load is important.
 At least one per polled provider is recommended.
 
+### Kirin-PIV-worker
+
+> Alias 'PIV'
+
+Its role is to handle PIV contributors and listen to configured RabbitMQ.
+In that case, the PIV-worker connects to it, processes feeds received, stores the result in db and sends the
+corresponding info to Kraken.
+
+There must be at least one PIV-worker if any PIV contributor is configured.
+There can be several of these to ensure uptime.
+Limitation: currently, only the first PIV contributor encountered is polled.
+
 ## Tests
 
 Most tests are implemented in `/tests` directory.\

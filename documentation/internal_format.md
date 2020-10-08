@@ -23,8 +23,15 @@ id | String, Required | Unique code of the contributor. It must be known by Krak
 navitia_coverage | String, Required | Navitia coverage to be used while calling navitia to retrieve corresponding element
 navitia_token | String, Optional | Navitia token to be used while calling navitia to retrieve corresponding element
 feed_url | String, Optional | Url to retrieve the realtime information feed (for polled sources)
+retrieval_interval | Integer, Optional | Minimal interval to retrieve the realtime information feed (for polled sources)
 connector_type | Enum, Required | Type of connector (possible values are `cots`, `gtfs-rt`)
 is_active | Boolean, Optional | Used to activate/deactivate the kirin service for the contributor (default value `true`)
+broker_url| Integer, Optional | Url of the AMQP broker to listen for realtime information queue (case of `piv` contributor only for now)
+exchange_name| Integer, Optional | Exchange of the AMQP broker to listen for realtime information queue (case of `piv` contributor only for now)
+queue_name| Integer, Optional | Queue of the AMQP broker to listen for realtime information queue (case of `piv` contributor only for now)
+
+Note: `broker_url`, `exchange_name` and `queue_name` are used for `piv` contributor only for now.
+All 3 must be filled if used.
 
 ### RealTimeUpdate
 

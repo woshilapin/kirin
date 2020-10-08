@@ -183,20 +183,40 @@ curl -X GET 'http://localhost:5000/contributors'
 {
   "contributors": [
     {
-      "feed_url": "feed_url_not_used_for_cots",
       "navitia_coverage": "sncf",
       "is_active": true,
       "navitia_token": "9489dd5f-46b4hhhhhhhhhhhhhhhh",
       "connector_type": "cots",
-      "id": "realtime.cots"
+      "id": "realtime.cots",
+      "feed_url": "*not_used_for_cots*",
+      "retrieval_interval": "*not_used_for_cots*",
+      "broker_url": "*not_used_for_cots*",
+      "exchange_name": "*not_used_for_cots*",
+      "queue_name": "*not_used_for_cots*"
     },
     {
-      "feed_url": "http://0.0.0.0./civilia/TTT/pb/tripUpdates.pb",
       "navitia_coverage": "ca-qc-sherbrooke",
       "is_active": true,
       "navitia_token": "9489dd5f-46b4-mmmmmmmmmm3bfba0c71e8a",
       "connector_type": "gtfs-rt",
-      "id": "realtime.sherbrooke"
+      "id": "realtime.sherbrooke",
+      "feed_url": "http://0.0.0.0./civilia/TTT/pb/tripUpdates.pb",
+      "retrieval_interval": 10,
+      "broker_url": "*not_used_for_gtfsrt*",
+      "exchange_name": "*not_used_for_gtfsrt*",
+      "queue_name": "*not_used_for_gtfsrt*"
+    },
+    {
+      "navitia_coverage": "sncf",
+      "is_active": true,
+      "navitia_token": "9489dd5f-46b4-mmmmmmmmmm3bfba0c71e8a",
+      "connector_type": "piv",
+      "id": "realtime.piv",
+      "feed_url": "*not_used_for_piv*",
+      "retrieval_interval": "*not_used_for_piv*",
+      "broker_url": "pyamqp://guest:guest@localhost:5672//?heartbeat=60",
+      "exchange_name": "piv",
+      "queue_name": "piv-kirin"
     }
   ]
 }
@@ -212,12 +232,16 @@ curl -X GET 'http://localhost:5000/contributors/realtime.sherbrooke'
 {
   "contributors": [
     {
-      "feed_url": "http://0.0.0.0./civilia/TTT/pb/tripUpdates.pb",
       "navitia_coverage": "ca-qc-sherbrooke",
       "is_active": true,
       "navitia_token": "9489dd5f-46b4-mmmmmmmmmm3bfba0c71e8a",
       "connector_type": "gtfs-rt",
-      "id": "realtime.sherbrooke"
+      "id": "realtime.sherbrooke",
+      "feed_url": "http://0.0.0.0./civilia/TTT/pb/tripUpdates.pb",
+      "retrieval_interval": 10,
+      "broker_url": "*not_used_for_gtfsrt*",
+      "exchange_name": "*not_used_for_gtfsrt*",
+      "queue_name": "*not_used_for_gtfsrt*"
     }
   ]
 }
@@ -225,16 +249,18 @@ curl -X GET 'http://localhost:5000/contributors/realtime.sherbrooke'
 
 #### POST
 
-To create a new contributor, parameters need to be given in json sent in the body as described [here](documentation/internal_format.md)
+To create a new contributor, parameters need to be given in json sent in the body as described [here](documentation/internal_format.md).\
+Please be careful with format of booleans and numbers :wink:
 
 ```sh
-curl -X POST 'http://localhost:5000/contributors/' -d'{"feed_url": "http://0.0.0.0./civilia/TTT/pb/tripUpdates.pb", "navitia_coverage": "ca-qc-sherbrooke", "is_active": true, "navitia_token": "9489dd5f-46b4-mmmmmmmmmm3bfba0c71e8a", "connector_type": "gtfs-rt", "id": "realtime.sherbrooke"}' -H'content-type: application/json'
+curl -X POST 'http://localhost:5000/contributors/' -d'{"feed_url": "http://0.0.0.0./civilia/TTT/pb/tripUpdates.pb", "retrieval_interval": 10, "navitia_coverage": "ca-qc-sherbrooke", "is_active": true, "navitia_token": "9489dd5f-46b4-mmmmmmmmmm3bfba0c71e8a", "connector_type": "gtfs-rt", "id": "realtime.sherbrooke"}' -H'content-type: application/json'
 ```
 
 ``` json
 {
   "contributor": {
     "feed_url": "http://0.0.0.0./civilia/TTT/pb/tripUpdates.pb",
+    "retrieval_interval": 10,
     "navitia_coverage": "ca-qc-sherbrooke",
     "is_active": true,
     "navitia_token": "9489dd5f-46b4-mmmmmmmmmm3bfba0c71e8a",
@@ -246,20 +272,22 @@ curl -X POST 'http://localhost:5000/contributors/' -d'{"feed_url": "http://0.0.0
 
 #### PUT
 
-Modifies a contributor and has same parameters as POST.
+Modifies a contributor and has same parameters as POST.\
+Please be careful with format of booleans and numbers :wink:
 
 When a parameter is missing, it is not changed.
 
 When PUTing the exact result of a GET nothing is changed.
 
 ```sh
-curl -X PUT 'http://localhost:5000/contributors/' -d'{"feed_url": "http://0.0.0.0./civilia/TTT/pb/tripUpdates.pb", "navitia_coverage": "ca-qc-sherbrooke", "is_active": true, "navitia_token": "9489dd5f-46b4-mmmmmmmmmm3bfba0c71e8a", "connector_type": "gtfs-rt", "id": "realtime.sherbrooke"}' -H'content-type: application/json'
+curl -X PUT 'http://localhost:5000/contributors/' -d'{"feed_url": "http://0.0.0.0./civilia/TTT/pb/tripUpdates.pb", "retrieval_interval": 10, "navitia_coverage": "ca-qc-sherbrooke", "is_active": true, "navitia_token": "9489dd5f-46b4-mmmmmmmmmm3bfba0c71e8a", "connector_type": "gtfs-rt", "id": "realtime.sherbrooke"}' -H'content-type: application/json'
 ```
 
 ```json
 {
   "contributor": {
     "feed_url": "http://0.0.0.0./civilia/TTT/pb/tripUpdates.pb",
+    "retrieval_interval": 10,
     "navitia_coverage": "ca-qc-sherbrooke",
     "is_active": true,
     "navitia_token": "9489dd5f-46b4-mmmmmmmmmm3bfba0c71e8a",
