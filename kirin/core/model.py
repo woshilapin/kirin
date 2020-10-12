@@ -54,6 +54,10 @@ meta = sqlalchemy.schema.MetaData(
     }
 )
 
+DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE = 3
+DEFAULT_DAYS_TO_KEEP_RT_UPDATE = 30
+GTFS_RT_DAYS_TO_KEEP_TRIP_UPDATE = 3
+GTFS_RT_DAYS_TO_KEEP_RT_UPDATE = 10
 
 # force the server to use UTC time for each connection checkouted from the pool
 @sqlalchemy.event.listens_for(sqlalchemy.pool.Pool, "checkout")
@@ -381,9 +385,9 @@ class TripUpdate(db.Model, TimestampMixin):  # type: ignore
                 sqlalchemy.text("vehicle_journey_1.start_timestamp >= '{start_dt}'".format(start_dt=start_dt))
             )
         if end_date:
-            end_dt = datetime.datetime.combine(end_date, datetime.time(0, 0)) + datetime.timedelta(days=1)
+            end_dt = datetime.datetime.combine(end_date, datetime.time(0, 0))
             query = query.filter(
-                sqlalchemy.text("vehicle_journey_1.start_timestamp <= '{end_dt}'".format(end_dt=end_dt))
+                sqlalchemy.text("vehicle_journey_1.start_timestamp < '{end_dt}'".format(end_dt=end_dt))
             )
         return query.all()
 
@@ -480,12 +484,12 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         return result
 
     @classmethod
-    def remove_by_connectors_until(cls, connectors, until):
+    def remove_by_contributors_until(cls, contributors, until):
         sub_query = (
             db.session.query(cls.id)
             .outerjoin(associate_realtimeupdate_tripupdate)
-            .filter(cls.connector.in_(connectors))
-            .filter(cls.created_at <= until)
+            .filter(cls.contributor_id.in_(contributors))
+            .filter(cls.created_at < until)
             .filter(associate_realtimeupdate_tripupdate.c.real_time_update_id == None)
         )  # '==' works, not 'is'
         cls.query.filter(cls.id.in_(sub_query)).delete(synchronize_session=False)
@@ -515,6 +519,8 @@ class Contributor(db.Model):  # type: ignore
     broker_url = db.Column(db.Text, nullable=True)
     exchange_name = db.Column(db.Text, nullable=True)
     queue_name = db.Column(db.Text, nullable=True)
+    nb_days_to_keep_trip_update = db.Column(db.Integer, default=DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE, nullable=False)
+    nb_days_to_keep_rt_update = db.Column(db.Integer, default=DEFAULT_DAYS_TO_KEEP_RT_UPDATE, nullable=False)
 
     def __init__(
         self,
@@ -528,6 +534,8 @@ class Contributor(db.Model):  # type: ignore
         broker_url=None,
         exchange_name=None,
         queue_name=None,
+        nb_days_to_keep_trip_update=None,
+        nb_days_to_keep_rt_update=None,
     ):
         self.id = id
         self.navitia_coverage = navitia_coverage
@@ -539,6 +547,8 @@ class Contributor(db.Model):  # type: ignore
         self.broker_url = broker_url
         self.exchange_name = exchange_name
         self.queue_name = queue_name
+        self.nb_days_to_keep_trip_update = nb_days_to_keep_trip_update
+        self.nb_days_to_keep_rt_update = nb_days_to_keep_rt_update
 
     @classmethod
     def find_by_connector_type(cls, type, include_deactivated=False):

@@ -30,7 +30,9 @@
 # www.navitia.io
 
 from __future__ import absolute_import, print_function, unicode_literals, division
-from kirin.utils import str_to_date
+from kirin import db, app
+from kirin.utils import make_rt_update, str_to_date
+from kirin.core.model import VehicleJourney, TripUpdate, StopTimeUpdate, Contributor
 import datetime
 
 
@@ -42,3 +44,31 @@ def test_valid_date():
 def test_invalid_date():
     res = str_to_date("aaaa")
     assert res == None
+
+
+# def create_trip_update(vj_id, trip_id, circulation_date, contributor_id=COTS_CONTRIBUTOR_ID):
+def create_trip_update(vj_id, trip_id, circulation_date, contributor_id):
+    vj = VehicleJourney(
+        {
+            "trip": {"id": trip_id},
+            "stop_times": [
+                {"utc_arrival_time": datetime.time(8, 0), "stop_point": {"stop_area": {"timezone": "UTC"}}}
+            ],
+        },
+        datetime.datetime.combine(circulation_date, datetime.time(7, 0)),
+        datetime.datetime.combine(circulation_date, datetime.time(9, 0)),
+    )
+    vj.id = vj_id
+    trip_update = TripUpdate(vj=vj, contributor_id=contributor_id)
+
+    db.session.add(vj)
+    db.session.add(trip_update)
+    return trip_update
+
+
+def create_rt_update_and_trip_update(id, contributor_id, connector_type, vj_id, trip_id, circulation_date):
+    rtu = make_rt_update("", connector_type, contributor_id=contributor_id)
+    rtu.id = id
+    trip_update = create_trip_update(vj_id, trip_id, circulation_date, contributor_id)
+    trip_update.contributor_id = contributor_id
+    rtu.trip_updates.append(trip_update)

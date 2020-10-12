@@ -31,22 +31,17 @@
 
 from __future__ import absolute_import, print_function, unicode_literals, division
 import logging
-from kirin.core import model
-
-
+import datetime
 from celery.signals import task_postrun, setup_logging
-
-from kirin.core.types import ConnectorType
-from kirin.helper import make_celery
-
 from retrying import retry
 from kirin import app
-import datetime
-from kirin.core.model import TripUpdate, RealTimeUpdate
-from kirin.utils import should_retry_exception, make_kirin_lock_name, get_lock
+from kirin.core import model
+from kirin.core.model import TripUpdate, RealTimeUpdate, Contributor
+from kirin.core.types import ConnectorType
 from kirin.gtfs_rt.gtfs_rt import get_gtfsrt_contributors
-from kirin.piv.piv import get_piv_contributors
-from kirin.cots.cots import get_cots_contributor
+from kirin.helper import make_celery
+from kirin.utils import should_retry_exception, make_kirin_lock_name, get_lock
+
 
 TASK_STOP_MAX_DELAY = app.config[str("TASK_STOP_MAX_DELAY")]
 TASK_WAIT_FIXED = app.config[str("TASK_WAIT_FIXED")]
@@ -68,6 +63,26 @@ def close_session(*args, **kwargs):
     # context, this ensures tasks have a fresh session (e.g. session errors
     # won't propagate across tasks)
     model.db.session.remove()
+
+
+from kirin.gtfs_rt.tasks import gtfs_poller
+
+
+@celery.task(bind=True)
+def poller(self):
+    for contributor in get_gtfsrt_contributors():
+        config = {
+            "contributor": contributor.id,
+            "navitia_url": app.config.get(str("NAVITIA_URL")),
+            "token": contributor.navitia_token,
+            "coverage": contributor.navitia_coverage,
+            "feed_url": contributor.feed_url,
+            "retrieval_interval": contributor.retrieval_interval,
+            "timeout": app.config.get(str("GTFS_RT_TIMEOUT"), 1),
+        }  # WARNING: cleanup might be done here, but be cautious when removing.
+        # Keep in mind that during deployment, workers from version n and n+1 are present
+        # (so no remove before both version stop using what's removed).
+        gtfs_poller.delay(config)
 
 
 @celery.task(bind=True)
@@ -94,112 +109,71 @@ def purge_trip_update(self, config):
 @retry(stop_max_delay=TASK_STOP_MAX_DELAY, wait_fixed=TASK_WAIT_FIXED, retry_on_exception=should_retry_exception)
 def purge_rt_update(self, config):
     func_name = "purge_rt_update"
-    connector = config["connector"]
+    contributor = config["contributor"]
 
-    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={"connector": connector})
-    logger.debug("purge realtime update for %s", connector)
+    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": contributor})
+    logger.debug("purge realtime update for %s", contributor)
 
-    lock_name = make_kirin_lock_name(func_name, connector)
+    lock_name = make_kirin_lock_name(func_name, contributor)
     with get_lock(logger, lock_name, app.config[str("REDIS_LOCK_TIMEOUT_PURGE")]) as locked:
         if not locked:
-            logger.warning("%s for %s is already in progress", func_name, connector)
+            logger.warning("%s for %s is already in progress", func_name, contributor)
             return
 
         until = datetime.date.today() - datetime.timedelta(days=int(config["nb_days_to_keep"]))
-        logger.info("purge realtime update for {} until {}".format(connector, until))
+        logger.info("purge realtime update for {} until {}".format(contributor, until))
 
-        # TODO:  we want to purge on "contributor" later, not "connector".
-        RealTimeUpdate.remove_by_connectors_until(connectors=[connector], until=until)
-        logger.info("%s for %s is finished", func_name, connector)
-
-
-from kirin.gtfs_rt.tasks import gtfs_poller
+        RealTimeUpdate.remove_by_contributors_until(contributors=[contributor], until=until)
+        logger.info("%s for %s is finished", func_name, contributor)
 
 
 @celery.task(bind=True)
-def poller(self):
-    for contributor in get_gtfsrt_contributors():
-        config = {
-            "contributor": contributor.id,
-            "navitia_url": app.config.get(str("NAVITIA_URL")),
-            "token": contributor.navitia_token,
-            "coverage": contributor.navitia_coverage,
-            "feed_url": contributor.feed_url,
-            "retrieval_interval": contributor.retrieval_interval,
-            "timeout": app.config.get(str("GTFS_RT_TIMEOUT"), 1),
-        }  # WARNING: cleanup might be done here, but be cautious when removing.
-        # Keep in mind that during deployment, workers from version n and n+1 are present
-        # (so no remove before both version stop using what's removed).
-        gtfs_poller.delay(config)
+def purge_trip_update_by_connector_type(self, connector_type):
+    """
+    This task will remove ONLY TripUpdate, StopTimeUpdate and VehicleJourney that are created by given connector_type
+    but the RealTimeUpdate are kept so that we can replay it for debug purpose. RealTimeUpdate will be remove by
+    another task
+    """
+    for contributor in Contributor.find_by_connector_type(connector_type.value, include_deactivated=True):
+        config = {"contributor": contributor.id, "nb_days_to_keep": contributor.nb_days_to_keep_trip_update}
+        purge_trip_update.delay(config)
+
+
+@celery.task(bind=True)
+def purge_rt_update_by_connector_type(self, connector_type):
+    """
+    This task will remove realtime update
+    """
+    for contributor in Contributor.find_by_connector_type(connector_type.value, include_deactivated=True):
+        config = {"contributor": contributor.id, "nb_days_to_keep": contributor.nb_days_to_keep_rt_update}
+        purge_rt_update.delay(config)
 
 
 @celery.task(bind=True)
 def purge_gtfs_trip_update(self):
-    """
-    This task will remove ONLY TripUpdate, StoptimeUpdate and VehicleJourney that are created by gtfs-rt but the
-    RealTimeUpdate are kept so that we can replay it for debug purpose. RealTimeUpdate will be remove by another task
-    """
-    for contributor in get_gtfsrt_contributors(include_deactivated=True):
-        config = {
-            "contributor": contributor.id,
-            "nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_TRIP_UPDATE")),
-        }
-        purge_trip_update.delay(config)
+    purge_trip_update_by_connector_type(ConnectorType.gtfs_rt)
 
 
 @celery.task(bind=True)
 def purge_gtfs_rt_update(self):
-    """
-    This task will remove realtime update
-    """
-    config = {
-        "nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_RT_UPDATE")),
-        "connector": ConnectorType.gtfs_rt.value,
-    }
-    purge_rt_update.delay(config)
+    purge_rt_update_by_connector_type(ConnectorType.gtfs_rt)
 
 
 @celery.task(bind=True)
 def purge_piv_trip_update(self):
-    """
-    This task will remove ONLY TripUpdate, StoptimeUpdate and VehicleJourney that are created by piv but the
-    RealTimeUpdate are kept so that we can replay it for debug purpose. RealTimeUpdate will be remove by another task
-    """
-    for contributor in get_piv_contributors(include_deactivated=True):
-        config = {
-            "contributor": contributor.id,
-            "nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_TRIP_UPDATE")),
-        }
-        purge_trip_update.delay(config)
+    purge_trip_update_by_connector_type(ConnectorType.piv)
 
 
 @celery.task(bind=True)
 def purge_piv_rt_update(self):
-    """
-    This task will remove realtime update
-    """
-    config = {
-        "nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_RT_UPDATE")),
-        "connector": ConnectorType.piv.value,
-    }
-    purge_rt_update.delay(config)
+    purge_rt_update_by_connector_type(ConnectorType.piv)
 
 
 @celery.task(bind=True)
 def purge_cots_trip_update(self):
-    """
-    This task will remove ONLY TripUpdate, StopTimeUpdate and VehicleJourney that are created by COTS but the
-    RealTimeUpdate are kept so that we can replay it for debug purpose. RealTimeUpdate will be remove by another task
-    """
-    contributor = get_cots_contributor(include_deactivated=True)
-    config = {"contributor": contributor.id, "nb_days_to_keep": 10}
-    purge_trip_update.delay(config)
+    purge_trip_update_by_connector_type(ConnectorType.cots)
 
 
 @celery.task(bind=True)
 def purge_cots_rt_update(self):
-    """
-    This task will remove realtime update
-    """
-    config = {"nb_days_to_keep": 100, "connector": ConnectorType.cots.value}
-    purge_rt_update.delay(config)
+    purge_rt_update_by_connector_type(ConnectorType.cots)

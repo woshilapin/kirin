@@ -37,7 +37,15 @@ import pytest
 
 from kirin.core import model
 from kirin.core.abstract_builder import wrap_build
-from kirin.core.model import RealTimeUpdate, db, TripUpdate, StopTimeUpdate, VehicleJourney
+from kirin.core.model import (
+    RealTimeUpdate,
+    db,
+    TripUpdate,
+    StopTimeUpdate,
+    VehicleJourney,
+    GTFS_RT_DAYS_TO_KEEP_TRIP_UPDATE,
+    GTFS_RT_DAYS_TO_KEEP_RT_UPDATE,
+)
 from kirin.core.populate_pb import to_posix_time, convert_to_gtfsrt
 from kirin import redis_client
 from kirin.core.types import TripEffect, ConnectorType
@@ -61,18 +69,6 @@ def navitia(monkeypatch):
     monkeypatch.setattr(
         "navitia_wrapper._NavitiaWrapper.get_publication_date", mock_navitia.mock_publication_date
     )
-
-
-@pytest.fixture(scope="function")
-def mock_rabbitmq(monkeypatch):
-    """
-    Mock all calls to navitia for this fixture
-    """
-    from mock import MagicMock
-
-    mock_amqp = MagicMock()
-    monkeypatch.setattr("kombu.messaging.Producer.publish", mock_amqp)
-    return mock_amqp
 
 
 @pytest.fixture()
@@ -349,7 +345,7 @@ def test_gtfs_rt_purge(basic_gtfs_rt_data, mock_rabbitmq):
         # VehicleJourney affected is old, so it's affected by TripUpdate purge (based on base-VJ's date)
         config = {
             "contributor": GTFS_CONTRIBUTOR_ID,
-            "nb_days_to_keep": int(app.config.get("NB_DAYS_TO_KEEP_TRIP_UPDATE")),
+            "nb_days_to_keep": GTFS_RT_DAYS_TO_KEEP_TRIP_UPDATE,
         }
         purge_trip_update(config)
 
@@ -359,10 +355,7 @@ def test_gtfs_rt_purge(basic_gtfs_rt_data, mock_rabbitmq):
         assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 0
         assert len(RealTimeUpdate.query.all()) == 1  # keeping RTU longer for potential debug need
 
-        config = {
-            "nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_RT_UPDATE")),
-            "connector": ConnectorType.gtfs_rt.value,
-        }
+        config["nb_days_to_keep"] = GTFS_RT_DAYS_TO_KEEP_RT_UPDATE
         purge_rt_update(config)
 
         assert len(TripUpdate.query.all()) == 0

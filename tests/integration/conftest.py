@@ -139,3 +139,16 @@ def mock_navitia_fixture(monkeypatch):
     Mock all calls to navitia for this fixture
     """
     monkeypatch.setattr("navitia_wrapper._NavitiaWrapper.query", mock_navitia.mock_navitia_query)
+
+
+@pytest.fixture(scope="function")
+def mock_rabbitmq(monkeypatch):
+    """
+    Mock all publishes to navitia for this fixture
+    """
+    from mock import MagicMock
+
+    mock_amqp = MagicMock()
+    monkeypatch.setattr("kombu.messaging.Producer.publish", mock_amqp)
+
+    return mock_amqp

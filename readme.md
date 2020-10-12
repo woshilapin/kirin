@@ -192,7 +192,9 @@ curl -X GET 'http://localhost:5000/contributors'
       "retrieval_interval": "*not_used_for_cots*",
       "broker_url": "*not_used_for_cots*",
       "exchange_name": "*not_used_for_cots*",
-      "queue_name": "*not_used_for_cots*"
+      "queue_name": "*not_used_for_cots*",
+      "nb_days_to_keep_trip_update": 3,
+      "nb_days_to_keep_rt_update": 30
     },
     {
       "navitia_coverage": "ca-qc-sherbrooke",
@@ -204,7 +206,9 @@ curl -X GET 'http://localhost:5000/contributors'
       "retrieval_interval": 10,
       "broker_url": "*not_used_for_gtfsrt*",
       "exchange_name": "*not_used_for_gtfsrt*",
-      "queue_name": "*not_used_for_gtfsrt*"
+      "queue_name": "*not_used_for_gtfsrt*",
+      "nb_days_to_keep_trip_update": 3,
+      "nb_days_to_keep_rt_update": 10
     },
     {
       "navitia_coverage": "sncf",
@@ -216,7 +220,9 @@ curl -X GET 'http://localhost:5000/contributors'
       "retrieval_interval": "*not_used_for_piv*",
       "broker_url": "pyamqp://guest:guest@localhost:5672//?heartbeat=60",
       "exchange_name": "piv",
-      "queue_name": "piv-kirin"
+      "queue_name": "piv-kirin",
+      "nb_days_to_keep_trip_update": 3,
+      "nb_days_to_keep_rt_update": 30
     }
   ]
 }
@@ -241,7 +247,9 @@ curl -X GET 'http://localhost:5000/contributors/realtime.sherbrooke'
       "retrieval_interval": 10,
       "broker_url": "*not_used_for_gtfsrt*",
       "exchange_name": "*not_used_for_gtfsrt*",
-      "queue_name": "*not_used_for_gtfsrt*"
+      "queue_name": "*not_used_for_gtfsrt*",
+      "nb_days_to_keep_trip_update": 3,
+      "nb_days_to_keep_rt_update": 10
     }
   ]
 }
@@ -265,7 +273,9 @@ curl -X POST 'http://localhost:5000/contributors/' -d'{"feed_url": "http://0.0.0
     "is_active": true,
     "navitia_token": "9489dd5f-46b4-mmmmmmmmmm3bfba0c71e8a",
     "connector_type": "gtfs-rt",
-    "id": "realtime.sherbrooke"
+    "id": "realtime.sherbrooke",
+    "nb_days_to_keep_trip_update": 3,
+    "nb_days_to_keep_rt_update": 10
   }
 }
 ```
@@ -292,7 +302,9 @@ curl -X PUT 'http://localhost:5000/contributors/' -d'{"feed_url": "http://0.0.0.
     "is_active": true,
     "navitia_token": "9489dd5f-46b4-mmmmmmmmmm3bfba0c71e8a",
     "connector_type": "gtfs-rt",
-    "id": "realtime.sherbrooke"
+    "id": "realtime.sherbrooke",
+    "nb_days_to_keep_trip_update": 3,
+    "nb_days_to_keep_rt_update": 10
   }
 }
 ```
