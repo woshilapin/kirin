@@ -73,7 +73,7 @@ Kirin is split in 4 separate "components", as seen in honcho's Procfile.
 Its roles are:
 
 * display the `/status`.
-* provide a POST endpoint for each type of accepted realtime provider.\
+* provide a POST endpoint for each type of accepted realtime provider (`cots` so far).\
   On given endpoints, the webservice receives and directly processes the feed.
   The result is then saved in db and sent to corresponding Navitia's Kraken.
   It is mainly used for COTS.
@@ -108,6 +108,8 @@ There is only one of these on each platform.
 Its role is to poll an external location and check if new information was published.
 In that case, the worker processes it, stores the result in db and sends the corresponding info to Kraken.
 
+For each `gtfs-rt` contributor, polling is done every `retrieval_interval` seconds.
+
 There must be at least one worker if any feed is polled.
 There can be several of these if the load is important.
 At least one per polled provider is recommended.
@@ -119,6 +121,12 @@ At least one per polled provider is recommended.
 Its role is to handle PIV contributors and listen to configured RabbitMQ.
 In that case, the PIV-worker connects to it, processes feeds received, stores the result in db and sends the
 corresponding info to Kraken.
+
+For given `piv` contributor, the piv-worker will require a `broker_url`, `exchange_name` and `queue_name`.\
+The RabbitMQ broker at `broker_url` must be up and the exchange `exchange_name` must exist before triggering
+contributor.\
+Then piv-worker will create (or use if existing) a queue named `queue_name`, bound to `exchange_name`.\
+No cleaning is done after contributor shutdown (queue is persistent).
 
 There must be at least one PIV-worker if any PIV contributor is configured.
 There can be several of these to ensure uptime.
