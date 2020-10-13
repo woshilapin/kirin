@@ -151,7 +151,7 @@ def test_find_activate():
         db.session.commit()
 
         """
-        contributor                     COTS_CONTRIBUTOR
+        contributor                     COTS_CONTRIBUTOR_ID
         VehicleJourney                  vj1
         Circulation date                20150908                         20150910                20150912
                                             |                               |                       |
@@ -165,7 +165,7 @@ def test_find_activate():
         assert rtu[2].vj_id == "70866ce8-0638-4fa1-8556-1ddfa22d09d5"
 
         """
-        contributor                     COTS_CONTRIBUTOR
+        contributor                     COTS_CONTRIBUTOR_ID
         VehicleJourney                  vj1
         Circulation date                20150908                         20150910                20150912
                                             |                               |                       |
@@ -175,7 +175,7 @@ def test_find_activate():
         assert len(rtu) == 3
 
         """
-        contributor                     COTS_CONTRIBUTOR
+        contributor                     COTS_CONTRIBUTOR_ID
         VehicleJourney                  vj1
         Circulation date                20150908                         20150910                20150912
                                             |                               |                       |
@@ -187,7 +187,7 @@ def test_find_activate():
         assert rtu[1].vj_id == "70866ce8-0638-4fa1-8556-1ddfa22d09d5"
 
         """
-        contributor                     COTS_CONTRIBUTOR
+        contributor                     COTS_CONTRIBUTOR_ID
         VehicleJourney                  vj1
         Circulation date                20150908                         20150910                20150912
                                             |                               |                       |
@@ -198,7 +198,7 @@ def test_find_activate():
         assert len(rtu) == 2
 
         """
-        contributor                     COTS_CONTRIBUTOR
+        contributor                     COTS_CONTRIBUTOR_ID
         VehicleJourney                  vj1
         Circulation date                20150908                         20150910                20150912
                                             |                               |                       |
@@ -210,7 +210,7 @@ def test_find_activate():
         assert rtu[0].vj_id == "70866ce8-0638-4fa1-8556-1ddfa22d09d5"
 
         """
-        contributor                     COTS_CONTRIBUTOR
+        contributor                     COTS_CONTRIBUTOR_ID
         VehicleJourney                  vj1
         Circulation date                20150908                         20150910                20150912
                                             |                               |                       |
@@ -221,7 +221,7 @@ def test_find_activate():
         assert len(rtu) == 1
 
         """
-        contributor                     COTS_CONTRIBUTOR
+        contributor                     COTS_CONTRIBUTOR_ID
         VehicleJourney                  vj1
         Circulation date                20150908                         20150910                20150912
                                             |                               |                       |
@@ -232,7 +232,7 @@ def test_find_activate():
         assert len(rtu) == 0
 
         """
-        contributor                            COTS_CONTRIBUTOR
+        contributor                            COTS_CONTRIBUTOR_ID
         VehicleJourney                          vj1
         Circulation date                        20150908                         20150910                20150912
                                                     |                               |                       |
@@ -246,7 +246,7 @@ def test_find_activate():
         assert len(rtu) == 0
 
         """
-        contributor                            COTS_CONTRIBUTOR
+        contributor                            COTS_CONTRIBUTOR_ID
         VehicleJourney                          vj1
         Circulation date                        20150908                         20150910                20150912
                                                     |                               |                       |
@@ -260,7 +260,7 @@ def test_find_activate():
         assert len(rtu) == 1
 
         """
-        contributor                            COTS_CONTRIBUTOR
+        contributor                            COTS_CONTRIBUTOR_ID
         VehicleJourney                          vj1
         Circulation date                        20150908                         20150910                20150912
                                                     |                               |                       |
@@ -274,7 +274,7 @@ def test_find_activate():
         assert len(rtu) == 1
 
         """
-        contributor                            COTS_CONTRIBUTOR
+        contributor                            COTS_CONTRIBUTOR_ID
         VehicleJourney                          vj1
         Circulation date                        20150908                         20150910                20150912
                                                     |                               |                       |
@@ -288,7 +288,7 @@ def test_find_activate():
         assert len(rtu) == 2
 
         """
-        contributor                            COTS_CONTRIBUTOR
+        contributor                            COTS_CONTRIBUTOR_ID
         VehicleJourney                          vj1
         Circulation date                        20150908                         20150910                20150912
                                                     |                               |                       |
@@ -302,7 +302,7 @@ def test_find_activate():
         assert len(rtu) == 2
 
         """
-        contributor                            COTS_CONTRIBUTOR
+        contributor                            COTS_CONTRIBUTOR_ID
         VehicleJourney                          vj1
         Circulation date                        20150908                         20150910                20150912
                                                     |                               |                       |
@@ -316,7 +316,7 @@ def test_find_activate():
         assert len(rtu) == 3
 
         """
-        contributor                            COTS_CONTRIBUTOR
+        contributor                            COTS_CONTRIBUTOR_ID
         VehicleJourney                          vj1
         Circulation date                        20150908                         20150910                20150912
                                                     |                               |                       |
@@ -330,7 +330,7 @@ def test_find_activate():
         assert len(rtu) == 3
 
         """
-        contributor                            COTS_CONTRIBUTOR
+        contributor                            COTS_CONTRIBUTOR_ID
         VehicleJourney                          vj1
         Circulation date                        20150908                         20150910                20150912
                                                     |                               |                       |
@@ -344,7 +344,7 @@ def test_find_activate():
         assert len(rtu) == 3
 
         """
-        contributor                            COTS_CONTRIBUTOR
+        contributor                            COTS_CONTRIBUTOR_ID
         VehicleJourney                          vj1
         Circulation date                        20150908                         20150910                20150912
                                                     |                               |                       |
@@ -358,7 +358,7 @@ def test_find_activate():
         assert len(rtu) == 2
 
         """
-        contributor                            COTS_CONTRIBUTOR
+        contributor                            COTS_CONTRIBUTOR_ID
         VehicleJourney                          vj1
         Circulation date                        20150908                         20150910                20150912
                                                     |                               |                       |
@@ -372,7 +372,7 @@ def test_find_activate():
         assert len(rtu) == 2
 
         """
-        contributor                            COTS_CONTRIBUTOR
+        contributor                            COTS_CONTRIBUTOR_ID
         VehicleJourney                          vj1
         Circulation date                        20150908                         20150910                20150912
                                                     |                               |                       |
@@ -386,7 +386,7 @@ def test_find_activate():
         assert len(rtu) == 1
 
         """
-        contributor                            COTS_CONTRIBUTOR
+        contributor                            COTS_CONTRIBUTOR_ID
         VehicleJourney                          vj1
         Circulation date                        20150908                         20150910                20150912
                                                     |                               |                       |
@@ -400,7 +400,7 @@ def test_find_activate():
         assert len(rtu) == 1
 
         """
-        contributor                            COTS_CONTRIBUTOR
+        contributor                            COTS_CONTRIBUTOR_ID
         VehicleJourney                          vj1
         Circulation date                        20150908                         20150910                20150912
                                                     |                               |                       |

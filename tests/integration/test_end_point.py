@@ -93,8 +93,6 @@ def test_status_from_db(setup_database):
     """
     Check that contributors are read from db and returned in /status
     """
-    # Set "GTFS_RT_CONTRIBUTOR" to None to read contributor from db
-    app.config["GTFS_RT_CONTRIBUTOR"] = None
     resp = api_get("/status")
     assert "version" in resp
     assert "db_pool_status" in resp
@@ -106,11 +104,6 @@ def test_status_from_db(setup_database):
     assert COTS_CONTRIBUTOR_DB_ID in resp["last_update"]  # config does not affect status anymore
     assert PIV_CONTRIBUTOR_ID in resp["last_update"]
 
-    # Set "GTFS_RT_CONTRIBUTOR" to "rt.vroumvroum" to read contributor from file
-    # Contributor GTFS_CONTRIBUTOR_DB should also be present
-    app.config["GTFS_RT_CONTRIBUTOR"] = "rt.vroumvroum"
-    # Set "COTS_CONTRIBUTOR" to None to read contributor from db
-    app.config["COTS_CONTRIBUTOR"] = None
     resp = api_get("/status")
     assert "last_update" in resp
     assert COTS_CONTRIBUTOR_DB_ID in resp["last_update"]

@@ -45,32 +45,22 @@ from kirin.core.types import ConnectorType
 
 def get_cots_contributor(include_deactivated=False):
     """
-    :return 1 COTS contributor from config file or db
-    File has priority over db
-    TODO: Remove from config file
+    :return 1 COTS contributor from config in db
     """
-    if "COTS_CONTRIBUTOR" in current_app.config and current_app.config.get(str("COTS_CONTRIBUTOR")):
-        return model.Contributor(
-            id=current_app.config.get(str("COTS_CONTRIBUTOR")),
-            navitia_coverage=current_app.config.get(str("NAVITIA_INSTANCE")),
-            connector_type=ConnectorType.cots.value,
-            navitia_token=current_app.config.get(str("NAVITIA_TOKEN")),
-        )
-    else:
-        contributor = model.Contributor.find_by_connector_type(
-            ConnectorType.cots.value, include_deactivated=include_deactivated
-        )
-        if len(contributor) == 0:
-            logging.getLogger(__name__).error("No COTS contributor found")
-            raise SubServiceError
+    contributor = model.Contributor.find_by_connector_type(
+        ConnectorType.cots.value, include_deactivated=include_deactivated
+    )
+    if len(contributor) == 0:
+        logging.getLogger(__name__).error("No COTS contributor found")
+        raise SubServiceError
 
-        if len(contributor) > 1:
-            logging.getLogger(__name__).warning(
-                "{n} COTS contributors found in db - {id} taken into account ".format(
-                    n=len(contributor), id=contributor[0].id
-                )
+    if len(contributor) > 1:
+        logging.getLogger(__name__).warning(
+            "{n} COTS contributors found in db - {id} taken into account ".format(
+                n=len(contributor), id=contributor[0].id
             )
-        return contributor[0]
+        )
+    return contributor[0]
 
 
 def get_cots(req):
