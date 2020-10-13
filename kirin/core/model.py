@@ -456,49 +456,26 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         """
         create a dict of probes
         """
-        from kirin import app
-
         result = {"last_update": {}, "last_valid_update": {}, "last_update_error": {}}
-        # TODO :
-        #  remove config from file
-        # Get contributors from both file and db (config file has priority)
-        gtfsrt_contributors = []
-        contributor_legacy = None
-        if "GTFS_RT_CONTRIBUTOR" in app.config and app.config[str("GTFS_RT_CONTRIBUTOR")]:
-            contributor_legacy = app.config[str("GTFS_RT_CONTRIBUTOR")]
-            gtfsrt_contributors.append(contributor_legacy)
 
-        gtfsrt_contributors.extend(
-            [
-                x.id
-                for x in Contributor.find_by_connector_type(ConnectorType.gtfs_rt.value)
-                if x.id != contributor_legacy
-            ]
-        )
-
-        if "COTS_CONTRIBUTOR" in app.config and app.config[str("COTS_CONTRIBUTOR")]:
-            cots_contributors = [app.config[str("COTS_CONTRIBUTOR")]]
-        else:
-            cots_contributors = [x.id for x in Contributor.find_by_connector_type(ConnectorType.cots.value)]
-
-        contributors = cots_contributors + gtfsrt_contributors
-        for c in contributors:
+        contributor_ids = [contributor.id for contributor in Contributor.query_existing().all()]
+        for c_id in contributor_ids:
             sql = db.session.query(cls.created_at, cls.status, cls.updated_at, cls.error)
-            sql = sql.filter(cls.contributor_id == c)
+            sql = sql.filter(cls.contributor_id == c_id)
             sql = sql.order_by(desc(cls.created_at))
             row = sql.first()
             if row:
                 date = row[2] if row[2] else row[0]  # update if exist, otherwise created
-                result["last_update"][c] = date.strftime("%Y-%m-%dT%H:%M:%SZ")
+                result["last_update"][c_id] = date.strftime("%Y-%m-%dT%H:%M:%SZ")
                 if row[1] == "OK":
-                    result["last_valid_update"][c] = row[0].strftime("%Y-%m-%dT%H:%M:%SZ")
+                    result["last_valid_update"][c_id] = row[0].strftime("%Y-%m-%dT%H:%M:%SZ")
                     # no error to populate
                 else:
-                    result["last_update_error"][c] = row[3]
+                    result["last_update_error"][c_id] = row[3]
                     sql_ok = sql.filter(cls.status == "OK")
                     row_ok = sql_ok.first()
                     if row_ok:
-                        result["last_valid_update"][c] = row_ok[0].strftime("%Y-%m-%dT%H:%M:%SZ")
+                        result["last_valid_update"][c_id] = row_ok[0].strftime("%Y-%m-%dT%H:%M:%SZ")
 
         return result
 

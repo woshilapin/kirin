@@ -75,9 +75,11 @@ def test_status(setup_database):
     assert resp["db_connection"] == "OK"
     assert COTS_CONTRIBUTOR_ID in resp["last_update"]
     assert GTFS_CONTRIBUTOR_ID in resp["last_update"]
+    assert PIV_CONTRIBUTOR_ID in resp["last_update"]
 
     assert "2015-11-04T07:32:00Z" in resp["last_update"][COTS_CONTRIBUTOR_ID]
     assert "2015-11-04T07:52:00Z" in resp["last_update"][GTFS_CONTRIBUTOR_ID]
+    assert "2015-11-04T08:17:00Z" in resp["last_update"][PIV_CONTRIBUTOR_ID]
 
     assert GTFS_CONTRIBUTOR_ID in resp["last_update_error"]
     assert "2015-11-04T07:32:00Z" in resp["last_valid_update"][COTS_CONTRIBUTOR_ID]
@@ -101,7 +103,8 @@ def test_status_from_db(setup_database):
     assert "last_update" in resp
     assert GTFS_CONTRIBUTOR_DB_ID in resp["last_update"]
     assert "2015-11-04T08:02:00Z" in resp["last_update"][GTFS_CONTRIBUTOR_DB_ID]
-    assert COTS_CONTRIBUTOR_DB_ID not in resp["last_update"]
+    assert COTS_CONTRIBUTOR_DB_ID in resp["last_update"]  # config does not affect status anymore
+    assert PIV_CONTRIBUTOR_ID in resp["last_update"]
 
     # Set "GTFS_RT_CONTRIBUTOR" to "rt.vroumvroum" to read contributor from file
     # Contributor GTFS_CONTRIBUTOR_DB should also be present
@@ -116,6 +119,8 @@ def test_status_from_db(setup_database):
     assert "2015-11-04T08:02:00Z" in resp["last_update"][GTFS_CONTRIBUTOR_DB_ID]
     assert GTFS_CONTRIBUTOR_ID in resp["last_update"]
     assert "2015-11-04T07:52:00Z" in resp["last_update"][GTFS_CONTRIBUTOR_ID]
+    assert PIV_CONTRIBUTOR_ID in resp["last_update"]
+    assert "2015-11-04T08:17:00Z" in resp["last_update"][PIV_CONTRIBUTOR_ID]
 
 
 def test_health_ok(setup_database):
@@ -269,6 +274,7 @@ def setup_database():
         rtu1.updated_at = datetime(2015, 11, 4, 6, 32)  # mock creation, no update done
         rtu1.trip_updates.append(tu1)
         model.db.session.add(rtu1)
+
         rtu2 = make_rt_update(None, ConnectorType.cots.value, contributor_id=COTS_CONTRIBUTOR_ID)
         rtu2.created_at = datetime(2015, 11, 4, 7, 32)
         rtu2.updated_at = datetime(2015, 11, 4, 7, 32)
@@ -305,5 +311,10 @@ def setup_database():
         rtu6.created_at = datetime(2015, 11, 4, 8, 12)
         rtu6.updated_at = datetime(2015, 11, 4, 8, 12)
         model.db.session.add(rtu6)
+
+        rtu_piv = make_rt_update(None, connector_type=ConnectorType.piv.value, contributor_id=PIV_CONTRIBUTOR_ID)
+        rtu_piv.created_at = datetime(2015, 11, 4, 8, 17)
+        rtu_piv.updated_at = datetime(2015, 11, 4, 8, 17)
+        model.db.session.add(rtu_piv)
 
         model.db.session.commit()
