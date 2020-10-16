@@ -465,17 +465,17 @@ class RealTimeUpdate(db.Model, TimestampMixin):  # type: ignore
             sql = sql.order_by(desc(cls.created_at))
             row = sql.first()
             if row:
-                date = row[2] if row[2] else row[0]  # update if exist, otherwise created
+                date = row.updated_at if row.updated_at else row.created_at  # update if exist, otherwise created
                 result["last_update"][c_id] = date.strftime("%Y-%m-%dT%H:%M:%SZ")
-                if row[1] == "OK":
-                    result["last_valid_update"][c_id] = row[0].strftime("%Y-%m-%dT%H:%M:%SZ")
+                if row.status == "OK":
+                    result["last_valid_update"][c_id] = row.created_at.strftime("%Y-%m-%dT%H:%M:%SZ")
                     # no error to populate
                 else:
-                    result["last_update_error"][c_id] = row[3]
+                    result["last_update_error"][c_id] = row.error
                     sql_ok = sql.filter(cls.status == "OK")
                     row_ok = sql_ok.first()
                     if row_ok:
-                        result["last_valid_update"][c_id] = row_ok[0].strftime("%Y-%m-%dT%H:%M:%SZ")
+                        result["last_valid_update"][c_id] = row_ok.created_at.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         return result
 
