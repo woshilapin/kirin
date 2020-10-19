@@ -36,9 +36,7 @@ from datetime import datetime
 from operator import itemgetter
 
 import jmespath
-from dateutil import parser
 from flask.globals import current_app
-from pytz import utc
 
 # For perf benches:
 # https://artem.krylysov.com/blog/2015/09/29/benchmark-python-json-libraries/
@@ -48,7 +46,14 @@ from kirin.core import model
 from kirin.core.abstract_builder import AbstractKirinModelBuilder
 from kirin.cots.message_handler import MessageHandler
 from kirin.exceptions import InvalidArguments, InternalException, ObjectNotFound
-from kirin.utils import record_internal_failure, make_rt_update, to_navitia_utc_str
+from kirin.utils import (
+    record_internal_failure,
+    make_rt_update,
+    to_navitia_utc_str,
+    get_value,
+    as_utc_naive_dt,
+    as_duration,
+)
 from kirin.core.types import (
     TripEffect,
     ModificationType,
@@ -129,21 +134,6 @@ def get_navitia_stop_time_sncf(cr, ci, ch, nav_vj):
     return nav_stop_times[0], log_dict
 
 
-def get_value(sub_json, key, nullable=False):
-    """
-    get a unique element in an json dict
-    raise an exception if the element does not exists
-    """
-    res = sub_json.get(key)
-    if res is None and not nullable:
-        raise InvalidArguments(
-            'invalid json, impossible to find "{key}" in json dict {elt}'.format(
-                key=key, elt=ujson.dumps(sub_json)
-            )
-        )
-    return res
-
-
 def is_station(pdp):
     """
     determine if a Point de Parcours is a legit station
@@ -197,37 +187,6 @@ def _retrieve_interesting_pdp(list_pdp):
         picked_one = True
         res.append(pdp)
     return res
-
-
-def as_utc_naive_dt(str_time):
-    try:
-        return (
-            parser.parse(str_time, dayfirst=False, yearfirst=True, ignoretz=False)
-            .astimezone(utc)
-            .replace(tzinfo=None)
-        )
-    except Exception as e:
-        raise InvalidArguments(
-            'Impossible to parse timezoned datetime from "{s}": {m}'.format(s=str_time, m=e.message)
-        )
-
-
-def as_duration(seconds):
-    """
-    transform a number of seconds into a timedelta
-    >>> as_duration(None)
-
-    >>> as_duration(900)
-    datetime.timedelta(0, 900)
-    >>> as_duration(-400)
-    datetime.timedelta(-1, 86000)
-    >>> as_duration("bob")
-    Traceback (most recent call last):
-    TypeError: a float is required
-    """
-    if seconds is None:
-        return None
-    return datetime.utcfromtimestamp(seconds) - datetime.utcfromtimestamp(0)
 
 
 def _retrieve_stop_event_datetime(cots_traveler_time):
