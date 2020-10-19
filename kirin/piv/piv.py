@@ -46,13 +46,9 @@ def get_piv_contributors(include_deactivated=False):
     """
     :return: all PIV contributors from db (not configurable via file)
     """
-    piv_contributors = [
-        c
-        for c in model.Contributor.find_by_connector_type(
-            ConnectorType.piv.value, include_deactivated=include_deactivated
-        )
-    ]
-    return piv_contributors
+    return model.Contributor.find_by_connector_type(
+        ConnectorType.piv.value, include_deactivated=include_deactivated
+    )
 
 
 def get_piv_contributor(contributor_id):

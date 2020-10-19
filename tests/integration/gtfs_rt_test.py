@@ -348,7 +348,7 @@ def test_gtfs_rt_purge(basic_gtfs_rt_data, mock_rabbitmq):
 
         # VehicleJourney affected is old, so it's affected by TripUpdate purge (based on base-VJ's date)
         config = {
-            "contributor": app.config.get(str("GTFS_RT_CONTRIBUTOR")),
+            "contributor": GTFS_CONTRIBUTOR_ID,
             "nb_days_to_keep": int(app.config.get("NB_DAYS_TO_KEEP_TRIP_UPDATE")),
         }
         purge_trip_update(config)
