@@ -33,10 +33,9 @@ from __future__ import absolute_import, print_function, unicode_literals, divisi
 import flask
 import jsonschema
 import sqlalchemy
-from flask_restful import Resource, marshal_with_field, marshal_with, fields, abort
+from flask_restful import Resource, marshal_with, fields, abort
 from kirin.core import model
 from kirin.core.types import ConnectorType
-from kirin.exceptions import ObjectNotFound
 
 contributor_fields = {
     "id": fields.String,
@@ -49,6 +48,8 @@ contributor_fields = {
     "broker_url": fields.String,
     "exchange_name": fields.String,
     "queue_name": fields.String,
+    "nb_days_to_keep_trip_update": fields.Integer,
+    "nb_days_to_keep_rt_update": fields.Integer,
 }
 
 contributors_list_fields = {"contributors": fields.List(fields.Nested(contributor_fields))}
@@ -68,12 +69,19 @@ class Contributors(Resource):
         "broker_url": {"type": ["string", "null"], "format": "uri"},
         "exchange_name": {"type": ["string", "null"]},
         "queue_name": {"type": ["string", "null"]},
+        "nb_days_to_keep_trip_update": {"type": "integer"},
+        "nb_days_to_keep_rt_update": {"type": "integer"},
     }
 
     post_data_schema = {
         "type": "object",
         "properties": schema_properties,
-        "required": ["navitia_coverage", "connector_type"],
+        "required": [
+            "navitia_coverage",
+            "connector_type",
+            "nb_days_to_keep_trip_update",
+            "nb_days_to_keep_rt_update",
+        ],
     }
 
     put_data_schema = {"type": "object", "properties": schema_properties}
@@ -106,6 +114,8 @@ class Contributors(Resource):
         broker_url = data.get("broker_url", None)
         exchange_name = data.get("exchange_name", None)
         queue_name = data.get("queue_name", None)
+        nb_days_to_keep_trip_update = data.get("nb_days_to_keep_trip_update")
+        nb_days_to_keep_rt_update = data.get("nb_days_to_keep_rt_update")
         if any([broker_url, exchange_name, queue_name]) and not all([broker_url, exchange_name, queue_name]):
             abort(
                 400,
@@ -124,6 +134,8 @@ class Contributors(Resource):
                 broker_url,
                 exchange_name,
                 queue_name,
+                nb_days_to_keep_trip_update,
+                nb_days_to_keep_rt_update,
             )
             model.db.session.add(new_contrib)
             model.db.session.commit()

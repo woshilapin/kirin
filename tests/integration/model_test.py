@@ -33,53 +33,35 @@ from __future__ import absolute_import, print_function, unicode_literals, divisi
 
 from sqlalchemy.orm.exc import FlushError
 
-from kirin.core.model import VehicleJourney, TripUpdate, StopTimeUpdate, Contributor
+from kirin.core.model import TripUpdate, StopTimeUpdate, Contributor
 from kirin.core.types import ConnectorType
-from kirin.utils import make_rt_update
 from tests.integration.conftest import COTS_CONTRIBUTOR_ID, GTFS_CONTRIBUTOR_ID
+from tests.integration.utils_test import create_trip_update, create_rt_update_and_trip_update
 from kirin import db, app
 import datetime
 import pytest
-
-
-def create_trip_update(vj_id, trip_id, circulation_date, contributor_id=COTS_CONTRIBUTOR_ID):
-    vj = VehicleJourney(
-        {
-            "trip": {"id": trip_id},
-            "stop_times": [
-                {"utc_arrival_time": datetime.time(8, 0), "stop_point": {"stop_area": {"timezone": "UTC"}}}
-            ],
-        },
-        datetime.datetime.combine(circulation_date, datetime.time(7, 0)),
-        datetime.datetime.combine(circulation_date, datetime.time(9, 0)),
-    )
-    vj.id = vj_id
-    trip_update = TripUpdate(vj=vj, contributor_id=contributor_id)
-
-    db.session.add(vj)
-    db.session.add(trip_update)
-    return trip_update
-
-
-def create_real_time_update(id, contributor_id, connector_type, vj_id, trip_id, circulation_date):
-    rtu = make_rt_update("", connector_type, contributor_id=contributor_id)
-    rtu.id = id
-    trip_update = create_trip_update(vj_id, trip_id, circulation_date)
-    trip_update.contributor_id = contributor_id
-    rtu.trip_updates.append(trip_update)
 
 
 @pytest.fixture()
 def setup_database():
     with app.app_context():
         create_trip_update(
-            "70866ce8-0638-4fa1-8556-1ddfa22d09d3", "vehicle_journey:1", datetime.date(2015, 9, 8)
+            "70866ce8-0638-4fa1-8556-1ddfa22d09d3",
+            "vehicle_journey:1",
+            datetime.date(2015, 9, 8),
+            COTS_CONTRIBUTOR_ID,
         )
         create_trip_update(
-            "70866ce8-0638-4fa1-8556-1ddfa22d09d4", "vehicle_journey:2", datetime.date(2015, 9, 8)
+            "70866ce8-0638-4fa1-8556-1ddfa22d09d4",
+            "vehicle_journey:2",
+            datetime.date(2015, 9, 8),
+            COTS_CONTRIBUTOR_ID,
         )
         create_trip_update(
-            "70866ce8-0638-4fa1-8556-1ddfa22d09d5", "vehicle_journey:2", datetime.date(2015, 9, 9)
+            "70866ce8-0638-4fa1-8556-1ddfa22d09d5",
+            "vehicle_journey:2",
+            datetime.date(2015, 9, 9),
+            COTS_CONTRIBUTOR_ID,
         )
         db.session.commit()
 
@@ -98,7 +80,9 @@ def test_find_by_vj(setup_database):
 
 def test_find_stop():
     with app.app_context():
-        vj = create_trip_update("70866ce8-0638-4fa1-8556-1ddfa22d09d3", "vj1", datetime.date(2015, 9, 8))
+        vj = create_trip_update(
+            "70866ce8-0638-4fa1-8556-1ddfa22d09d3", "vj1", datetime.date(2015, 9, 8), COTS_CONTRIBUTOR_ID
+        )
         st1 = StopTimeUpdate({"id": "sa:1"}, None, None, order=0)
         vj.stop_time_updates.append(st1)
         st2 = StopTimeUpdate({"id": "sa:2"}, None, None, order=1)
@@ -115,7 +99,7 @@ def test_find_stop():
 
 def test_find_activate():
     with app.app_context():
-        create_real_time_update(
+        create_rt_update_and_trip_update(
             "70866ce8-0638-4fa1-8556-1ddfa22d09d3",
             COTS_CONTRIBUTOR_ID,
             ConnectorType.cots.value,
@@ -123,7 +107,7 @@ def test_find_activate():
             "vj1",
             datetime.date(2015, 9, 8),
         )
-        create_real_time_update(
+        create_rt_update_and_trip_update(
             "70866ce8-0638-4fa1-8556-1ddfa22d09d4",
             COTS_CONTRIBUTOR_ID,
             ConnectorType.cots.value,
@@ -131,7 +115,7 @@ def test_find_activate():
             "vj2",
             datetime.date(2015, 9, 10),
         )
-        create_real_time_update(
+        create_rt_update_and_trip_update(
             "70866ce8-0638-4fa1-8556-1ddfa22d09d5",
             COTS_CONTRIBUTOR_ID,
             ConnectorType.cots.value,
@@ -140,7 +124,7 @@ def test_find_activate():
             datetime.date(2015, 9, 12),
         )
 
-        create_real_time_update(
+        create_rt_update_and_trip_update(
             "70866ce8-0638-4fa1-8556-1ddfa22d09d6",
             GTFS_CONTRIBUTOR_ID,
             ConnectorType.cots.value,
@@ -257,7 +241,7 @@ def test_find_activate():
         rtu = TripUpdate.find_by_contributor_period(
             [COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 5), datetime.date(2015, 9, 8)
         )
-        assert len(rtu) == 1
+        assert len(rtu) == 0
 
         """
         contributor                            COTS_CONTRIBUTOR_ID
@@ -285,7 +269,7 @@ def test_find_activate():
         rtu = TripUpdate.find_by_contributor_period(
             [COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 5), datetime.date(2015, 9, 10)
         )
-        assert len(rtu) == 2
+        assert len(rtu) == 1
 
         """
         contributor                            COTS_CONTRIBUTOR_ID
@@ -313,7 +297,7 @@ def test_find_activate():
         rtu = TripUpdate.find_by_contributor_period(
             [COTS_CONTRIBUTOR_ID], datetime.date(2015, 9, 5), datetime.date(2015, 9, 12)
         )
-        assert len(rtu) == 3
+        assert len(rtu) == 2
 
         """
         contributor                            COTS_CONTRIBUTOR_ID

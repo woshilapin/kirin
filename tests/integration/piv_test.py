@@ -35,7 +35,14 @@ import datetime
 import pytest
 
 from kirin import app, db
-from kirin.core.model import RealTimeUpdate, TripUpdate, StopTimeUpdate, VehicleJourney
+from kirin.core.model import (
+    RealTimeUpdate,
+    TripUpdate,
+    StopTimeUpdate,
+    VehicleJourney,
+    DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE,
+    DEFAULT_DAYS_TO_KEEP_RT_UPDATE,
+)
 from kirin.core.types import ConnectorType
 from kirin.tasks import purge_trip_update, purge_rt_update
 from tests.check_utils import api_post, api_get
@@ -49,19 +56,6 @@ def navitia(monkeypatch):
     Mock all calls to navitia for this fixture
     """
     monkeypatch.setattr("navitia_wrapper._NavitiaWrapper.query", mock_navitia.mock_navitia_query)
-
-
-@pytest.fixture(scope="function")
-def mock_rabbitmq(monkeypatch):
-    """
-    Mock all publishes to navitia for this fixture
-    """
-    from mock import MagicMock
-
-    mock_amqp = MagicMock()
-    monkeypatch.setattr("kombu.messaging.Producer.publish", mock_amqp)
-
-    return mock_amqp
 
 
 def test_wrong_get_piv_with_id():
@@ -167,7 +161,7 @@ def test_piv_purge(mock_rabbitmq):
         # TODO VehicleJourney affected is old, so it's affected by TripUpdate purge (based on base-VJ's date)
         config = {
             "contributor": PIV_CONTRIBUTOR_ID,
-            "nb_days_to_keep": int(app.config.get("NB_DAYS_TO_KEEP_TRIP_UPDATE")),
+            "nb_days_to_keep": DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE,
         }
         purge_trip_update(config)
 
@@ -175,11 +169,11 @@ def test_piv_purge(mock_rabbitmq):
         assert len(VehicleJourney.query.all()) == 0
         assert len(StopTimeUpdate.query.all()) == 0
         assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 0
-        assert len(RealTimeUpdate.query.all()) == 1  # keeping RTU longer for potential debug need
+        assert len(RealTimeUpdate.query.all()) == 1
 
         config = {
-            "nb_days_to_keep": app.config.get(str("NB_DAYS_TO_KEEP_RT_UPDATE")),
-            "connector": ConnectorType.piv.value,
+            "contributor": PIV_CONTRIBUTOR_ID,
+            "nb_days_to_keep": DEFAULT_DAYS_TO_KEEP_RT_UPDATE,
         }
         purge_rt_update(config)
 

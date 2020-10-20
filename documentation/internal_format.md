@@ -29,6 +29,8 @@ is_active | Boolean, Optional | Used to activate/deactivate the kirin service fo
 broker_url| String, Optional | Url of the AMQP broker to listen for realtime information queue
 exchange_name| String, Optional | Exchange of the AMQP broker to listen for realtime information
 queue_name| String, Optional | Queue of the AMQP broker to listen for realtime information queue
+nb_days_to_keep_trip_update| Integer, Optional | number of days to keep in trip_update table
+nb_days_to_keep_rt_update| Integer, Optional | number of days to keep in real_time_update table
 
 Note: `broker_url`, `exchange_name` and `queue_name` are used for `piv` contributor only for now.
 All 3 must be filled if used.

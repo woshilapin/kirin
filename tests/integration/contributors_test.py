@@ -36,10 +36,19 @@ from kirin.core import model
 from flask import json
 import pytest
 import jsonschema
-from kirin.core.model import RealTimeUpdate, db, TripUpdate, VehicleJourney, StopTimeUpdate, Contributor
+from kirin.core.model import (
+    RealTimeUpdate,
+    db,
+    TripUpdate,
+    VehicleJourney,
+    StopTimeUpdate,
+    Contributor,
+    DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE,
+    DEFAULT_DAYS_TO_KEEP_RT_UPDATE,
+)
 from kirin.command.purge_rt import purge_contributor
 from kirin.core.types import ConnectorType
-from tests.integration.gtfs_rt_test import basic_gtfs_rt_data, mock_rabbitmq, navitia
+from tests.integration.gtfs_rt_test import basic_gtfs_rt_data, navitia
 
 
 @pytest.yield_fixture
@@ -148,6 +157,8 @@ def test_post_new_contributor(test_client):
         "feed_url": "http://nihongo.jp",
         "connector_type": ConnectorType.gtfs_rt.value,
         "retrieval_interval": 30,
+        "nb_days_to_keep_trip_update": DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE,
+        "nb_days_to_keep_rt_update": DEFAULT_DAYS_TO_KEEP_RT_UPDATE,
     }
     resp = test_client.post("/contributors", json=new_contrib)
     assert resp.status_code == 201
@@ -159,6 +170,8 @@ def test_post_new_contributor(test_client):
     assert contrib.navitia_token == "blablablabla"
     assert contrib.feed_url == "http://nihongo.jp"
     assert contrib.retrieval_interval == 30
+    assert contrib.nb_days_to_keep_trip_update == DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE
+    assert contrib.nb_days_to_keep_rt_update == DEFAULT_DAYS_TO_KEEP_RT_UPDATE
 
 
 def test_post_new_partial_contributor(test_client):
@@ -166,6 +179,8 @@ def test_post_new_partial_contributor(test_client):
         "id": "realtime.tokyo",
         "navitia_coverage": "jp",
         "connector_type": ConnectorType.gtfs_rt.value,
+        "nb_days_to_keep_trip_update": 10,
+        "nb_days_to_keep_rt_update": 200,
     }
     resp = test_client.post("/contributors", json=new_contrib)
     assert resp.status_code == 201
@@ -177,6 +192,8 @@ def test_post_new_partial_contributor(test_client):
     assert contrib.navitia_token is None
     assert contrib.feed_url is None
     assert contrib.retrieval_interval == 10
+    assert contrib.nb_days_to_keep_trip_update == 10
+    assert contrib.nb_days_to_keep_rt_update == 200
 
 
 def test_post_empty_contributor_should_fail(test_client):
@@ -187,7 +204,12 @@ def test_post_empty_contributor_should_fail(test_client):
 def test_post_with_id_in_the_resource_path(test_client):
     resp = test_client.post(
         "/contributors/realtime.test",
-        json={"navitia_coverage": "jp", "connector_type": ConnectorType.gtfs_rt.value},
+        json={
+            "navitia_coverage": "jp",
+            "connector_type": ConnectorType.gtfs_rt.value,
+            "nb_days_to_keep_trip_update": DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE,
+            "nb_days_to_keep_rt_update": DEFAULT_DAYS_TO_KEEP_RT_UPDATE,
+        },
     )
     assert resp.status_code == 201
 
@@ -198,7 +220,13 @@ def test_post_with_id_in_the_resource_path(test_client):
 def test_post_with_id_in_the_resource_path_and_data(test_client):
     resp = test_client.post(
         "/contributors/the_real_id",
-        json={"id": "overridden_id", "navitia_coverage": "jp", "connector_type": ConnectorType.gtfs_rt.value},
+        json={
+            "id": "overridden_id",
+            "navitia_coverage": "jp",
+            "connector_type": ConnectorType.gtfs_rt.value,
+            "nb_days_to_keep_trip_update": DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE,
+            "nb_days_to_keep_rt_update": DEFAULT_DAYS_TO_KEEP_RT_UPDATE,
+        },
     )
     assert resp.status_code == 201
 
@@ -240,6 +268,8 @@ def test_post_new_valid_contributor_with_unknown_parameter_should_work(test_clie
             "id": "realtime.tokyo",
             "navitia_coverage": "jp",
             "connector_type": ConnectorType.gtfs_rt.value,
+            "nb_days_to_keep_trip_update": DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE,
+            "nb_days_to_keep_rt_update": DEFAULT_DAYS_TO_KEEP_RT_UPDATE,
         },
     )
     assert resp.status_code == 201
@@ -340,12 +370,16 @@ def test_post_get_put_to_ensure_API_consistency(test_client):
         "connector_type": ConnectorType.gtfs_rt.value,
         "retrieval_interval": 180,
         "is_active": True,
+        "nb_days_to_keep_trip_update": DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE,
+        "nb_days_to_keep_rt_update": DEFAULT_DAYS_TO_KEEP_RT_UPDATE,
     }
     post_resp = test_client.post("/contributors", json=new_contrib)
     post_contrib = json.loads(post_resp.data)
     new_contrib["broker_url"] = None
     new_contrib["exchange_name"] = None
     new_contrib["queue_name"] = None
+    new_contrib["nb_days_to_keep_trip_update"] = DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE
+    new_contrib["nb_days_to_keep_rt_update"] = DEFAULT_DAYS_TO_KEEP_RT_UPDATE
     assert post_contrib["contributor"] == new_contrib
 
     get_resp = test_client.get("/contributors/realtime.tokyo")
@@ -405,6 +439,8 @@ def test_activate_contributor(test_client):
         "feed_url": "http://nihongo.jp",
         "connector_type": ConnectorType.gtfs_rt.value,
         "is_active": False,
+        "nb_days_to_keep_trip_update": DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE,
+        "nb_days_to_keep_rt_update": DEFAULT_DAYS_TO_KEEP_RT_UPDATE,
     }
     test_client.post("/contributors", json=new_contrib)
 
@@ -528,6 +564,8 @@ def test_piv_contributor(test_client):
         "feed_url": "no_url",
         "connector_type": ConnectorType.piv.value,
         "retrieval_interval": 30,
+        "nb_days_to_keep_trip_update": DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE,
+        "nb_days_to_keep_rt_update": DEFAULT_DAYS_TO_KEEP_RT_UPDATE,
     }
     resp = test_client.post("/contributors", json=new_contrib)
     assert resp.status_code == 201

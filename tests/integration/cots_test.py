@@ -29,7 +29,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 from __future__ import absolute_import, print_function, unicode_literals, division
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import pytest
 
@@ -38,9 +38,18 @@ from tests.check_utils import api_post, api_get
 from kirin import app
 from tests import mock_navitia
 from tests.check_utils import get_fixture_data
-from kirin.core.model import RealTimeUpdate, TripUpdate, StopTimeUpdate
+from kirin.core.model import (
+    db,
+    RealTimeUpdate,
+    TripUpdate,
+    StopTimeUpdate,
+    VehicleJourney,
+    DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE,
+    DEFAULT_DAYS_TO_KEEP_RT_UPDATE,
+)
+from kirin.tasks import purge_trip_update, purge_rt_update
 from tests.integration.utils_cots_test import requests_mock_cause_message
-from tests.integration.conftest import COTS_CONTRIBUTOR_ID
+from tests.integration.conftest import COTS_CONTRIBUTOR_ID, COTS_CONTRIBUTOR_DB_ID
 from tests.integration.utils_sncf_test import (
     check_db_96231_delayed,
     check_db_john_trip_removal,
@@ -65,19 +74,6 @@ def navitia(monkeypatch):
     Mock all calls to navitia for this fixture
     """
     monkeypatch.setattr("navitia_wrapper._NavitiaWrapper.query", mock_navitia.mock_navitia_query)
-
-
-@pytest.fixture(scope="function")
-def mock_rabbitmq(monkeypatch):
-    """
-    Mock all publishes to navitia for this fixture
-    """
-    from mock import MagicMock
-
-    mock_amqp = MagicMock()
-    monkeypatch.setattr("kombu.messaging.Producer.publish", mock_amqp)
-
-    return mock_amqp
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -1683,3 +1679,153 @@ def test_cots_add_first_stop_with_advance_pass_midnight():
         assert stop_times[-1].departure_status == "none"
         assert stop_times[-1].arrival == datetime(2012, 11, 21, 20, 46)
         assert stop_times[-1].departure == datetime(2012, 11, 21, 20, 46)
+
+
+def test_cots_purge_trip_and_rt(mock_rabbitmq):
+    """
+    Simple COTS post, then test the purge
+    """
+    cots_file = get_fixture_data("cots_train_96231_delayed.json")
+    res = api_post("/cots", data=cots_file)
+    assert res == "OK"
+
+    with app.app_context():
+        # Check there's really something before purge
+        assert RealTimeUpdate.query.count() == 1
+
+        config = {
+            "contributor": COTS_CONTRIBUTOR_ID,
+            "nb_days_to_keep": DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE,
+        }
+        tu = VehicleJourney.query.first()
+        tu.start_timestamp = date.today() - timedelta(days=DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE + 1)
+        purge_trip_update(config)
+
+        assert TripUpdate.query.count() == 0
+        assert VehicleJourney.query.count() == 0
+        assert StopTimeUpdate.query.count() == 0
+        assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 0
+        assert RealTimeUpdate.query.count() == 1
+
+        config["nb_days_to_keep"] = DEFAULT_DAYS_TO_KEEP_RT_UPDATE
+        # Put an old (realistic) date to RealTimeUpdate object so that RTU purge affects it
+        rtu = RealTimeUpdate.query.first()
+        rtu.created_at = date.today() - timedelta(days=DEFAULT_DAYS_TO_KEEP_RT_UPDATE + 1)
+        purge_rt_update(config)
+
+        assert TripUpdate.query.count() == 0
+        assert VehicleJourney.query.count() == 0
+        assert StopTimeUpdate.query.count() == 0
+        assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 0
+        assert RealTimeUpdate.query.count() == 0
+
+
+def test_cots_purge_trip_only(mock_rabbitmq):
+    cots_file = get_fixture_data("cots_train_96231_normal.json")
+    res = api_post("/cots", data=cots_file)
+    assert res == "OK"
+
+    with app.app_context():
+        # Check there's really something before purge
+        assert RealTimeUpdate.query.count() == 1
+
+        config = {
+            "contributor": COTS_CONTRIBUTOR_ID,
+            "nb_days_to_keep": DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE,
+        }
+
+        tu = VehicleJourney.query.first()
+        tu.start_timestamp = date.today() - timedelta(days=DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE + 1)
+        purge_trip_update(config)
+
+        assert TripUpdate.query.count() == 0
+        assert VehicleJourney.query.count() == 0
+        assert StopTimeUpdate.query.count() == 0
+        assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 0
+        assert RealTimeUpdate.query.count() == 1
+
+        config["nb_days_to_keep"] = DEFAULT_DAYS_TO_KEEP_RT_UPDATE
+
+        # Put a realistic date to RealTimeUpdate object, but just outside the limit where it should be purged
+        rtu = RealTimeUpdate.query.first()
+        rtu.created_at = date.today() - timedelta(days=DEFAULT_DAYS_TO_KEEP_RT_UPDATE)
+        purge_rt_update(config)
+
+        assert TripUpdate.query.count() == 0
+        assert VehicleJourney.query.count() == 0
+        assert StopTimeUpdate.query.count() == 0
+        assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 0
+        assert RealTimeUpdate.query.count() == 1
+
+
+def test_no_purge_different_contributor(mock_rabbitmq):
+    """
+    Simple COTS post, then test the purge
+    """
+    cots_file = get_fixture_data("cots_train_96231_delayed.json")
+    res = api_post("/cots", data=cots_file)
+    assert res == "OK"
+
+    with app.app_context():
+        # Check there's really something before purge
+        assert RealTimeUpdate.query.count() == 1
+
+        config = {
+            "contributor": COTS_CONTRIBUTOR_DB_ID,
+            "nb_days_to_keep": 0,
+        }
+
+        date_all_purge = date.today() - timedelta(days=DEFAULT_DAYS_TO_KEEP_RT_UPDATE + 1)
+        tu = VehicleJourney.query.first()
+        tu.start_timestamp = date_all_purge
+        purge_trip_update(config)
+
+        rtu = RealTimeUpdate.query.first()
+        rtu.created_at = date_all_purge
+        purge_rt_update(config)
+
+        assert TripUpdate.query.count() == 1
+        assert VehicleJourney.query.count() == 1
+        assert StopTimeUpdate.query.count() == 6
+        assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 1
+        assert RealTimeUpdate.query.count() == 1
+
+
+def test_cots_no_purge(mock_rabbitmq):
+    """
+    Simple COTS post, then test the purge
+    """
+    cots_file = get_fixture_data("cots_train_96231_delayed.json")
+    res = api_post("/cots", data=cots_file)
+    assert res == "OK"
+
+    with app.app_context():
+        # Check there's really something before purge
+        assert RealTimeUpdate.query.count() == 1
+
+        config = {
+            "contributor": COTS_CONTRIBUTOR_ID,
+            "nb_days_to_keep": DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE,
+        }
+
+        tu = VehicleJourney.query.first()
+        tu.start_timestamp = date.today() - timedelta(days=DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE)
+        purge_trip_update(config)
+
+        assert TripUpdate.query.count() == 1
+        assert VehicleJourney.query.count() == 1
+        assert StopTimeUpdate.query.count() == 6
+        assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 1
+        assert RealTimeUpdate.query.count() == 1
+
+        config["²"] = DEFAULT_DAYS_TO_KEEP_RT_UPDATE
+
+        rtu = RealTimeUpdate.query.first()
+        rtu.created_at = date.today() - timedelta(days=DEFAULT_DAYS_TO_KEEP_RT_UPDATE)
+        purge_rt_update(config)
+
+        assert TripUpdate.query.count() == 1
+        assert VehicleJourney.query.count() == 1
+        assert StopTimeUpdate.query.count() == 6
+        assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 1
+        assert RealTimeUpdate.query.count() == 1
