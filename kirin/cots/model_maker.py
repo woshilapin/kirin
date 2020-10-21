@@ -361,9 +361,9 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         dict_version = get_value(json, "nouvelleVersion")
         train_numbers = get_value(dict_version, "numeroCourse")
         pdps = _retrieve_interesting_pdp(get_value(dict_version, "listePointDeParcours"))
-        if not pdps:
+        if len(pdps) < 2:
             raise InvalidArguments(
-                'invalid json, "listePointDeParcours" has no valid stop_time in '
+                'invalid json, "listePointDeParcours" has less than 2 valid stop_times in '
                 "json elt {elt}".format(elt=ujson.dumps(dict_version))
             )
 
