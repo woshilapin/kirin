@@ -45,7 +45,7 @@ from kirin.core.model import (
 )
 from kirin.core.types import ConnectorType
 from kirin.tasks import purge_trip_update, purge_rt_update
-from tests.check_utils import api_post, api_get
+from tests.check_utils import api_post, api_get, get_fixture_data
 from tests import mock_navitia
 from tests.integration.conftest import PIV_CONTRIBUTOR_ID
 
@@ -74,10 +74,9 @@ def test_piv_post_wrong_data():
     wrong_piv_feed = "{}"
     res, status = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), check=False, data=wrong_piv_feed)
 
-    # For now, no check on data
-    # TODO xfail: check and change test
-    assert status == 200
-    assert "PIV feed processed" in res.get("message")
+    assert status == 400
+    assert res.get("error")
+    assert "invalid arguments" in res.get("message")
 
     with app.app_context():
         # Raw data is saved in db, even when an error occurred
@@ -86,7 +85,7 @@ def test_piv_post_wrong_data():
         assert len(StopTimeUpdate.query.all()) == 0
 
         assert RealTimeUpdate.query.first().status == "KO"
-        assert RealTimeUpdate.query.first().error == "No new information destined to navitia for this piv"
+        assert RealTimeUpdate.query.first().error == 'No object "objects" available in feed provided'
         assert RealTimeUpdate.query.first().raw_data == wrong_piv_feed
 
 
@@ -117,7 +116,7 @@ def test_piv_simple_post(mock_rabbitmq):
     """
     simple PIV post should be stored in db as a RealTimeUpdate
     """
-    piv_feed = "{}"  # TODO: use a valid PIV feed
+    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json").decode("utf8")
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 
@@ -127,8 +126,8 @@ def test_piv_simple_post(mock_rabbitmq):
         rtu = rtu_array[0]
         assert "-" in rtu.id
         assert rtu.created_at
-        assert rtu.status == "KO"  # TODO xfail: should be "OK"
-        assert rtu.error is not None  # TODO xfail: no error for a valid PIV feed
+        assert rtu.status == "OK"
+        assert rtu.error is None
         assert rtu.contributor_id == PIV_CONTRIBUTOR_ID
         assert rtu.connector == ConnectorType.piv.value
         assert rtu.raw_data == piv_feed
@@ -139,7 +138,7 @@ def test_piv_purge(mock_rabbitmq):
     """
     Simple PIV post, then test the purge
     """
-    piv_feed = "{}"  # TODO: use a valid PIV feed
+    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json").decode("utf8")
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 
@@ -151,14 +150,12 @@ def test_piv_purge(mock_rabbitmq):
         rtu = RealTimeUpdate.query.all()[0]
         rtu.created_at = datetime.datetime(2012, 6, 15, 15, 33)
 
-        assert len(TripUpdate.query.all()) == 0  # TODO xfail: =1 with a valid feed and processing
-        assert len(VehicleJourney.query.all()) == 0  # TODO xfail: =1
-        assert len(StopTimeUpdate.query.all()) == 0  # TODO xfail: =some
-        assert (
-            db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 0
-        )  # TODO xfail: =1
+        assert len(TripUpdate.query.all()) == 1
+        assert len(VehicleJourney.query.all()) == 1
+        assert len(StopTimeUpdate.query.all()) > 0
+        assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 1
 
-        # TODO VehicleJourney affected is old, so it's affected by TripUpdate purge (based on base-VJ's date)
+        # VehicleJourney affected is old, so it's affected by TripUpdate purge (based on base-VJ's date)
         config = {
             "contributor": PIV_CONTRIBUTOR_ID,
             "nb_days_to_keep": DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE,

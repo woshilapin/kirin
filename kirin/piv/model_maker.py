@@ -130,7 +130,7 @@ def _make_navitia_empty_vj(piv_key):
 
 def _extract_navitia_stop_time(uic8, nav_vj):
     nav_stop_times = jmespath.search(
-        "stop_times[? stop_point.stop_area.codes[? value==`{uic8}` && type==`source`]]".format(uic8=uic8),
+        "stop_times[? stop_point.stop_area.codes[? value=='{uic8}' && type=='source']]".format(uic8=uic8),
         nav_vj,
     )
 
