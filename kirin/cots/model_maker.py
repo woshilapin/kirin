@@ -117,7 +117,7 @@ def get_navitia_stop_time_sncf(cr, ci, ch, nav_vj):
     nav_external_code = "{cr}-{ci}-{ch}".format(cr=cr, ci=ci, ch=ch)
 
     nav_stop_times = jmespath.search(
-        "stop_times[? stop_point.stop_area.codes[? value==`{nav_ext_code}` && type==`CR-CI-CH`]]".format(
+        "stop_times[? stop_point.stop_area.codes[? value=='{nav_ext_code}' && type=='CR-CI-CH']]".format(
             nav_ext_code=nav_external_code
         ),
         nav_vj,
