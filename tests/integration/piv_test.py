@@ -80,12 +80,12 @@ def test_piv_post_wrong_data():
 
     with app.app_context():
         # Raw data is saved in db, even when an error occurred
-        assert len(RealTimeUpdate.query.all()) == 1
-        assert len(TripUpdate.query.all()) == 0
-        assert len(StopTimeUpdate.query.all()) == 0
+        assert RealTimeUpdate.query.count() == 1
+        assert TripUpdate.query.count() == 0
+        assert StopTimeUpdate.query.count() == 0
 
         assert RealTimeUpdate.query.first().status == "KO"
-        assert RealTimeUpdate.query.first().error == 'No object "objects" available in feed provided'
+        assert 'impossible to find "objects" in json' in RealTimeUpdate.query.first().error
         assert RealTimeUpdate.query.first().raw_data == wrong_piv_feed
 
 
@@ -103,9 +103,9 @@ def test_piv_post_no_data():
             assert expected_error == resp.get("error")
 
         with app.app_context():
-            assert len(RealTimeUpdate.query.all()) == 0
-            assert len(TripUpdate.query.all()) == 0
-            assert len(StopTimeUpdate.query.all()) == 0
+            assert RealTimeUpdate.query.count() == 0
+            assert TripUpdate.query.count() == 0
+            assert StopTimeUpdate.query.count() == 0
 
     post_and_check("/piv/", 405, "The method is not allowed for the requested URL.", None)
     post_and_check("/piv/{}".format(PIV_CONTRIBUTOR_ID), 400, "invalid arguments", "no piv data provided")
@@ -144,15 +144,15 @@ def test_piv_purge(mock_rabbitmq):
 
     with app.app_context():
         # Check there's really something before purge
-        assert len(RealTimeUpdate.query.all()) == 1
+        assert RealTimeUpdate.query.count() == 1
 
         # Put an old (realistic) date to RealTimeUpdate object so that RTU purge affects it
-        rtu = RealTimeUpdate.query.all()[0]
+        rtu = RealTimeUpdate.query.first()
         rtu.created_at = datetime(2012, 6, 15, 15, 33)
 
-        assert len(TripUpdate.query.all()) == 1
-        assert len(VehicleJourney.query.all()) == 1
-        assert len(StopTimeUpdate.query.all()) > 0
+        assert TripUpdate.query.count() == 1
+        assert VehicleJourney.query.count() == 1
+        assert StopTimeUpdate.query.count() > 0
         assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 1
 
         # VehicleJourney affected is old, so it's affected by TripUpdate purge (based on base-VJ's date)
@@ -162,11 +162,11 @@ def test_piv_purge(mock_rabbitmq):
         }
         purge_trip_update(config)
 
-        assert len(TripUpdate.query.all()) == 0
-        assert len(VehicleJourney.query.all()) == 0
-        assert len(StopTimeUpdate.query.all()) == 0
+        assert TripUpdate.query.count() == 0
+        assert VehicleJourney.query.count() == 0
+        assert StopTimeUpdate.query.count() == 0
         assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 0
-        assert len(RealTimeUpdate.query.all()) == 1
+        assert RealTimeUpdate.query.count() == 1
 
         config = {
             "contributor": PIV_CONTRIBUTOR_ID,
@@ -174,18 +174,18 @@ def test_piv_purge(mock_rabbitmq):
         }
         purge_rt_update(config)
 
-        assert len(TripUpdate.query.all()) == 0
-        assert len(VehicleJourney.query.all()) == 0
-        assert len(StopTimeUpdate.query.all()) == 0
+        assert TripUpdate.query.count() == 0
+        assert VehicleJourney.query.count() == 0
+        assert StopTimeUpdate.query.count() == 0
         assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 0
-        assert len(RealTimeUpdate.query.all()) == 0
+        assert RealTimeUpdate.query.count() == 0
 
 
 def _check_db_stomp_20201022_23186_delayed_5min():
     with app.app_context():
-        assert len(RealTimeUpdate.query.all()) >= 1
-        assert len(TripUpdate.query.all()) >= 1
-        assert len(StopTimeUpdate.query.all()) >= 17
+        assert RealTimeUpdate.query.count() >= 1
+        assert TripUpdate.query.count() >= 1
+        assert StopTimeUpdate.query.count() >= 17
         db_trip_delayed = TripUpdate.find_by_dated_vj(
             "PIV:2020-10-22:23186:1187:Train", datetime(2020, 10, 22, 20, 34)
         )

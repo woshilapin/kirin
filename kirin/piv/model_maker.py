@@ -44,7 +44,7 @@ from kirin.core.types import ModificationType, TripEffect, get_higher_status, ge
 from kirin.exceptions import InvalidArguments, UnauthorizedValue, ObjectNotFound
 from kirin.utils import make_rt_update, get_value, as_utc_naive_dt, record_internal_failure, as_duration
 
-TRIP_PIV_ID_FORMAT = "PIV:{}"
+TRIP_PIV_ID_FORMAT = "PIV:REALTIME:{}"
 
 STATUS_MAP = {"arrivee": "arrival_status", "depart": "departure_status"}
 DELAY_MAP = {"arrivee": "arrival_delay", "depart": "departure_delay"}
@@ -84,7 +84,7 @@ def _retrieve_interesting_stops(list_ad):
         if not has_departure and not has_arrival:
             continue
         # stop consuming once all following stop_times are missing arrival time
-        # * if a stop_time only has departure time, travelers can only hop in, but if they are be able to
+        # * if a stop_time only has departure time, travelers can only hop in, but if they are able to
         #   hop off later because some stop_time has arrival time then the current stop_time is useful,
         #   so we keep current stop_time.
         # * if no stop_time has arrival time anymore, then stop_times are useless as traveler cannot
@@ -129,6 +129,8 @@ def _make_navitia_empty_vj(piv_key):
 
 
 def _extract_navitia_stop_time(uic8, nav_vj):
+    # In base_schedule trip, searching for a stop_time at stop_point belonging to the right stop_area
+    # stop_areas bear UIC8 code, while stop_point match one stop_area and one mode currently.
     nav_stop_times = jmespath.search(
         "stop_times[? stop_point.stop_area.codes[? value=='{uic8}' && type=='source']]".format(uic8=uic8),
         nav_vj,
@@ -156,8 +158,8 @@ def _check_stop_time_consistency(previous_rt_stop_time_dep, current_rt_stop_time
     rt_departure = current_rt_stop_time.get("depart")
     rt_departure = rt_departure if rt_departure is not None else rt_arrival
 
-    if not (rt_departure >= rt_arrival >= previous_rt_stop_time_dep):
-        raise InvalidArguments("invalid cots: stop_point's({}) time is not consistent".format(uic8))
+    if not (previous_rt_stop_time_dep <= rt_arrival <= rt_departure):
+        raise InvalidArguments("invalid feed: stop_point's({}) time is not consistent".format(uic8))
 
 
 class KirinModelBuilder(AbstractKirinModelBuilder):
@@ -186,9 +188,6 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         except ValueError as e:
             raise InvalidArguments("invalid json: {}".format(e.message))
 
-        if "objects" not in json:
-            raise InvalidArguments('No object "objects" available in feed provided')
-
         dict_objects = get_value(json, "objects")
         json_train = get_value(dict_objects[0], "object")  # TODO: can we get more than 1 relevant in objects[]?
         events = get_value(json_train, "evenement", nullable=True)
@@ -198,9 +197,9 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
             raise InvalidArguments('No object "evenement" or "planTransportSource" available in feed provided')
 
         if events:
-            event_type = [get_value(event, "type") for event in events]
-            if "RETARD" not in event_type:
-                raise UnauthorizedValue("Event type {} is not supported".format(event_type))
+            event_types = [get_value(event, "type", nullable=True) for event in events]
+            if "RETARD" not in event_types:
+                raise UnauthorizedValue("None of the event-types {} are supported".format(event_types))
         elif plan_transport_source and plan_transport_source not in ["PTP", "OPE"]:
             raise UnauthorizedValue("planTransportSource {} is not supported".format(plan_transport_source))
 
@@ -222,6 +221,8 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
                 'invalid json, "listeArretsDesserte/arret" has less than 2 valid stop_times in '
                 "json elt {elt}".format(elt=ujson.dumps(json_train))
             )
+        # replace by cleaned and sorted version of stoptimes list.
+        json_train["listeArretsDesserte"]["arret"] = ads
 
         vj = self._get_navitia_vj(piv_key, ads)
         trip_updates = [self._make_trip_update(json_train, vj)]
@@ -242,7 +243,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         )
 
         if not navitia_vjs:
-            # Last PIV is always right, so if the VJ doesn't exist, it's an ADD (no matter feed content)
+            # Last PIV information is always right, so if the VJ doesn't exist, it's an ADD (no matter feed content)
             navitia_vjs = [_make_navitia_empty_vj(piv_key)]
 
         vj = None
@@ -250,11 +251,12 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
             log.info("Can not match a unique train for key {}".format(piv_key))
             record_internal_failure("no unique train", contributor=self.contributor.id)
         else:
+            navitia_vj = navitia_vjs[0]
             try:
                 base_vs_rt_error_margin = timedelta(hours=1)
                 vj_base_start = _get_first_stop_base_datetime(ads, "depart", skip_fully_added_stops=True)
                 vj = model.VehicleJourney(
-                    navitia_vjs[0],
+                    navitia_vj,
                     vj_base_start - base_vs_rt_error_margin,
                     vj_base_start + base_vs_rt_error_margin,
                     vj_start_dt=vj_base_start,
@@ -272,8 +274,6 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         trip_update.headsign = get_value(json_train, "numero", nullable=True)
         company_id = get_value(get_value(json_train, "operateur"), "codeOperateur")
         trip_update.company_id = self._get_navitia_company(company_id)
-        if not trip_update.company_id:
-            raise ObjectNotFound("No company found from code {}".format(company_id))
         physical_mode = get_value(get_value(json_train, "modeTransport"), "typeMode")
         trip_update.physical_mode_id = self._get_navitia_physical_mode(physical_mode)
 
@@ -282,14 +282,14 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         trip_update.effect = TripEffect.MODIFIED_SERVICE.name
 
         highest_st_status = ModificationType.none.name
-        ads = _retrieve_interesting_stops(get_value(get_value(json_train, "listeArretsDesserte"), "arret"))
+        ads = get_value(get_value(json_train, "listeArretsDesserte"), "arret")
 
         # this variable is used to memoize the last stop_time's departure in order to check the stop_time consistency
         # ex. stop_time[i].arrival/departure must be greater than stop_time[i-1].departure
         previous_rt_stop_time_dep = None
 
         for arret in ads:
-            # retrieve navitia's stop_point corresponding to the current COTS pdp
+            # retrieve navitia's stop_point corresponding to the current PIV ad
             nav_stop, log_dict = self._get_navitia_stop_point(arret, vj.navitia_vj)
             rt_stop_time = {"arrivee": None, "depart": None}  # used to check consistency
 
@@ -317,10 +317,10 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
 
                 if not piv_event_status or piv_event_status in ["RETARD_OBSERVE", "RETARD_PROJETE", "NORMAL"]:
                     piv_event_datetime = get_value(event, "dateHeureReelle", nullable=True)
-                    even_datetime = as_utc_naive_dt(piv_event_datetime) if piv_event_datetime else None
-                    if even_datetime:
-                        rt_stop_time[event_toggle] = even_datetime
-                        setattr(st_update, STOP_EVENT_DATETIME_MAP[event_toggle], even_datetime)
+                    event_datetime = as_utc_naive_dt(piv_event_datetime) if piv_event_datetime else None
+                    if event_datetime:
+                        rt_stop_time[event_toggle] = event_datetime
+                        setattr(st_update, STOP_EVENT_DATETIME_MAP[event_toggle], event_datetime)
                     piv_event_delay = 0
                     if piv_disruption:
                         piv_delay = get_value(piv_disruption, "retard", nullable=True)
@@ -399,7 +399,8 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         uic8 = get_value(get_value(arret, "emplacement"), "code")
         nav_st, log_dict = _extract_navitia_stop_time(uic8, nav_vj)
         if not nav_st:
-            nav_stop, log_dict = self._request_navitia_stop_point(uic8)
+            nav_stop, req_log_dict = self._request_navitia_stop_point(uic8)
+            log_dict.update(req_log_dict)
         else:
             nav_stop = nav_st.get("stop_point", None)
         return nav_stop, log_dict
