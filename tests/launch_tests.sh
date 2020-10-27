@@ -1,4 +1,6 @@
 #!/bin/sh
+# exit when any command fails
+set -e
 
 # clean all existing cache and previous build artifacts
 rm -rf venv && virtualenv venv && . venv/bin/activate

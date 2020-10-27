@@ -30,7 +30,7 @@
 # www.navitia.io
 from __future__ import absolute_import, print_function, unicode_literals, division
 
-import datetime
+from datetime import timedelta, datetime
 
 import pytest
 
@@ -43,9 +43,9 @@ from kirin.core.model import (
     DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE,
     DEFAULT_DAYS_TO_KEEP_RT_UPDATE,
 )
-from kirin.core.types import ConnectorType
+from kirin.core.types import ConnectorType, TripEffect, ModificationType
 from kirin.tasks import purge_trip_update, purge_rt_update
-from tests.check_utils import api_post, api_get
+from tests.check_utils import api_post, api_get, get_fixture_data
 from tests import mock_navitia
 from tests.integration.conftest import PIV_CONTRIBUTOR_ID
 
@@ -74,19 +74,18 @@ def test_piv_post_wrong_data():
     wrong_piv_feed = "{}"
     res, status = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), check=False, data=wrong_piv_feed)
 
-    # For now, no check on data
-    # TODO xfail: check and change test
-    assert status == 200
-    assert "PIV feed processed" in res.get("message")
+    assert status == 400
+    assert res.get("error")
+    assert "invalid arguments" in res.get("message")
 
     with app.app_context():
         # Raw data is saved in db, even when an error occurred
-        assert len(RealTimeUpdate.query.all()) == 1
-        assert len(TripUpdate.query.all()) == 0
-        assert len(StopTimeUpdate.query.all()) == 0
+        assert RealTimeUpdate.query.count() == 1
+        assert TripUpdate.query.count() == 0
+        assert StopTimeUpdate.query.count() == 0
 
         assert RealTimeUpdate.query.first().status == "KO"
-        assert RealTimeUpdate.query.first().error == "No new information destined to navitia for this piv"
+        assert 'impossible to find "objects" in json' in RealTimeUpdate.query.first().error
         assert RealTimeUpdate.query.first().raw_data == wrong_piv_feed
 
 
@@ -104,9 +103,9 @@ def test_piv_post_no_data():
             assert expected_error == resp.get("error")
 
         with app.app_context():
-            assert len(RealTimeUpdate.query.all()) == 0
-            assert len(TripUpdate.query.all()) == 0
-            assert len(StopTimeUpdate.query.all()) == 0
+            assert RealTimeUpdate.query.count() == 0
+            assert TripUpdate.query.count() == 0
+            assert StopTimeUpdate.query.count() == 0
 
     post_and_check("/piv/", 405, "The method is not allowed for the requested URL.", None)
     post_and_check("/piv/{}".format(PIV_CONTRIBUTOR_ID), 400, "invalid arguments", "no piv data provided")
@@ -117,7 +116,7 @@ def test_piv_simple_post(mock_rabbitmq):
     """
     simple PIV post should be stored in db as a RealTimeUpdate
     """
-    piv_feed = "{}"  # TODO: use a valid PIV feed
+    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json").decode("utf8")
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 
@@ -127,8 +126,8 @@ def test_piv_simple_post(mock_rabbitmq):
         rtu = rtu_array[0]
         assert "-" in rtu.id
         assert rtu.created_at
-        assert rtu.status == "KO"  # TODO xfail: should be "OK"
-        assert rtu.error is not None  # TODO xfail: no error for a valid PIV feed
+        assert rtu.status == "OK"
+        assert rtu.error is None
         assert rtu.contributor_id == PIV_CONTRIBUTOR_ID
         assert rtu.connector == ConnectorType.piv.value
         assert rtu.raw_data == piv_feed
@@ -139,37 +138,35 @@ def test_piv_purge(mock_rabbitmq):
     """
     Simple PIV post, then test the purge
     """
-    piv_feed = "{}"  # TODO: use a valid PIV feed
+    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json").decode("utf8")
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 
     with app.app_context():
         # Check there's really something before purge
-        assert len(RealTimeUpdate.query.all()) == 1
+        assert RealTimeUpdate.query.count() == 1
 
         # Put an old (realistic) date to RealTimeUpdate object so that RTU purge affects it
-        rtu = RealTimeUpdate.query.all()[0]
-        rtu.created_at = datetime.datetime(2012, 6, 15, 15, 33)
+        rtu = RealTimeUpdate.query.first()
+        rtu.created_at = datetime(2012, 6, 15, 15, 33)
 
-        assert len(TripUpdate.query.all()) == 0  # TODO xfail: =1 with a valid feed and processing
-        assert len(VehicleJourney.query.all()) == 0  # TODO xfail: =1
-        assert len(StopTimeUpdate.query.all()) == 0  # TODO xfail: =some
-        assert (
-            db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 0
-        )  # TODO xfail: =1
+        assert TripUpdate.query.count() == 1
+        assert VehicleJourney.query.count() == 1
+        assert StopTimeUpdate.query.count() > 0
+        assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 1
 
-        # TODO VehicleJourney affected is old, so it's affected by TripUpdate purge (based on base-VJ's date)
+        # VehicleJourney affected is old, so it's affected by TripUpdate purge (based on base-VJ's date)
         config = {
             "contributor": PIV_CONTRIBUTOR_ID,
             "nb_days_to_keep": DEFAULT_DAYS_TO_KEEP_TRIP_UPDATE,
         }
         purge_trip_update(config)
 
-        assert len(TripUpdate.query.all()) == 0
-        assert len(VehicleJourney.query.all()) == 0
-        assert len(StopTimeUpdate.query.all()) == 0
+        assert TripUpdate.query.count() == 0
+        assert VehicleJourney.query.count() == 0
+        assert StopTimeUpdate.query.count() == 0
         assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 0
-        assert len(RealTimeUpdate.query.all()) == 1
+        assert RealTimeUpdate.query.count() == 1
 
         config = {
             "contributor": PIV_CONTRIBUTOR_ID,
@@ -177,8 +174,85 @@ def test_piv_purge(mock_rabbitmq):
         }
         purge_rt_update(config)
 
-        assert len(TripUpdate.query.all()) == 0
-        assert len(VehicleJourney.query.all()) == 0
-        assert len(StopTimeUpdate.query.all()) == 0
+        assert TripUpdate.query.count() == 0
+        assert VehicleJourney.query.count() == 0
+        assert StopTimeUpdate.query.count() == 0
         assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 0
-        assert len(RealTimeUpdate.query.all()) == 0
+        assert RealTimeUpdate.query.count() == 0
+
+
+def _check_db_stomp_20201022_23186_delayed_5min():
+    with app.app_context():
+        assert RealTimeUpdate.query.count() >= 1
+        assert TripUpdate.query.count() >= 1
+        assert StopTimeUpdate.query.count() >= 17
+        db_trip_delayed = TripUpdate.find_by_dated_vj(
+            "PIV:2020-10-22:23186:1187:Train", datetime(2020, 10, 22, 20, 34)
+        )
+        assert db_trip_delayed
+
+        assert db_trip_delayed.vj.navitia_trip_id == "PIV:2020-10-22:23186:1187:Train"
+        assert db_trip_delayed.vj.start_timestamp == datetime(2020, 10, 22, 20, 34)
+        assert db_trip_delayed.vj_id == db_trip_delayed.vj.id
+        assert db_trip_delayed.status == ModificationType.update.name
+        assert db_trip_delayed.effect == TripEffect.SIGNIFICANT_DELAYS.name
+        assert db_trip_delayed.message is None  # TODO xfail: to be updated when messages are read
+        # PIV contain delayed stop_times only
+        assert db_trip_delayed.company_id == "company:PIV:1187"
+        assert len(db_trip_delayed.stop_time_updates) == 17
+
+        first_st = db_trip_delayed.stop_time_updates[0]
+        assert first_st.stop_id == "stop_point:PIV:85010231:Train"
+        # no specific functional constraint on first arrival, except time consistency
+        assert first_st.arrival <= first_st.departure
+        assert first_st.departure == datetime(2020, 10, 22, 20, 39)
+        assert first_st.departure_delay == timedelta(minutes=5)
+        assert first_st.departure_status == ModificationType.update.name
+        assert first_st.message is None  # TODO xfail: to be updated when messages are read
+
+        second_st = db_trip_delayed.stop_time_updates[1]
+        assert second_st.stop_id == "stop_point:PIV:85010157:Train"
+        assert second_st.arrival == datetime(2020, 10, 22, 20, 40)
+        assert second_st.arrival_status == ModificationType.update.name
+        assert second_st.arrival_delay == timedelta(minutes=5)
+        assert second_st.departure == datetime(2020, 10, 22, 20, 40, 30)
+        assert second_st.departure_delay == timedelta(minutes=5)
+        assert second_st.departure_status == ModificationType.update.name
+        assert second_st.message is None  # TODO xfail: to be updated when messages are read
+
+        for st in db_trip_delayed.stop_time_updates[2:-1]:
+            assert st.stop_id
+            assert datetime(2020, 10, 22, 20, 42) <= st.arrival <= datetime(2020, 10, 22, 21, 24)
+            assert st.arrival_status == ModificationType.update.name
+            assert st.arrival_delay == timedelta(minutes=5)
+            assert datetime(2020, 10, 22, 20, 43) <= st.departure <= datetime(2020, 10, 22, 21, 25)
+            assert st.departure_status == ModificationType.update.name
+            assert st.departure_delay == timedelta(minutes=5)
+            assert st.message is None  # TODO xfail: to be updated when messages are read
+
+        last_st = db_trip_delayed.stop_time_updates[-1]
+        assert last_st.stop_id == "stop_point:PIV:87745497:Train"
+        assert last_st.arrival == datetime(2020, 10, 22, 21, 30)
+        assert last_st.arrival_status == ModificationType.update.name
+        assert last_st.arrival_delay == timedelta(minutes=5)
+        # no specific functional constraint on last departure, except time consistency
+        assert last_st.arrival <= last_st.departure
+        assert second_st.message is None  # TODO xfail: to be updated when messages are read
+
+        assert db_trip_delayed.contributor_id == PIV_CONTRIBUTOR_ID
+
+        return db_trip_delayed  # for additional testing if needed
+
+
+def test_piv_delayed(mock_rabbitmq):
+    """
+    delayed stops post
+    """
+    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json").decode("utf8")
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    assert "PIV feed processed" in res.get("message")
+
+    db_trip_delayed = _check_db_stomp_20201022_23186_delayed_5min()
+    assert db_trip_delayed.effect == "SIGNIFICANT_DELAYS"
+    # the rabbit mq has to have been called twice
+    assert mock_rabbitmq.call_count == 1

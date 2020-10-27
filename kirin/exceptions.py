@@ -82,3 +82,8 @@ class SubServiceError(KirinException):
 
 class UnauthorizedOnSubService(SubServiceError):
     message = "object not found (unauthorized on sub-service)"
+
+
+class UnauthorizedValue(KirinException):
+    code = 400
+    message = "Unauthorized value"

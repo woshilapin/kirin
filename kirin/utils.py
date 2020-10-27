@@ -31,18 +31,22 @@
 
 from __future__ import absolute_import, print_function, unicode_literals, division
 import logging
+from datetime import datetime
 
 import six
+import ujson
 from aniso8601 import parse_date
+from dateutil import parser
 from pythonjsonlogger import jsonlogger
 from flask.globals import current_app
+from pytz import utc
 
 from kirin import new_relic
 from redis.exceptions import ConnectionError
 from contextlib import contextmanager
 from kirin.core import model
 from kirin.core.model import RealTimeUpdate
-from kirin.exceptions import InternalException
+from kirin.exceptions import InternalException, InvalidArguments
 import requests
 
 
@@ -58,6 +62,34 @@ def str_to_date(value):
     except:
         logging.getLogger(__name__).info("[{value} invalid date.".format(value=value))
         return None
+
+
+def as_utc_naive_dt(str_time):
+    try:
+        return (
+            parser.parse(str_time, dayfirst=False, yearfirst=True, ignoretz=False)
+            .astimezone(utc)
+            .replace(tzinfo=None)
+        )
+    except Exception as e:
+        raise InvalidArguments(
+            'Impossible to parse timezoned datetime from "{s}": {m}'.format(s=str_time, m=e.message)
+        )
+
+
+def get_value(sub_json, key, nullable=False):
+    """
+    get a unique element in an json dict
+    raise an exception if the element does not exists
+    """
+    res = sub_json.get(key)
+    if res is None and not nullable:
+        raise InvalidArguments(
+            'invalid json, impossible to find "{key}" in json dict {elt}'.format(
+                key=key, elt=ujson.dumps(sub_json)
+            )
+        )
+    return res
 
 
 class CustomJsonFormatter(jsonlogger.JsonFormatter):
@@ -85,6 +117,24 @@ def to_navitia_utc_str(naive_utc_dt):
     if naive_utc_dt.tzinfo is not None:
         raise InternalException("Invalid datetime provided: must be naive (and UTC)")
     return naive_utc_dt.strftime("%Y%m%dT%H%M%SZ")
+
+
+def as_duration(seconds):
+    """
+    transform a number of seconds into a timedelta
+    >>> as_duration(None)
+
+    >>> as_duration(900)
+    datetime.timedelta(0, 900)
+    >>> as_duration(-400)
+    datetime.timedelta(-1, 86000)
+    >>> as_duration("bob")
+    Traceback (most recent call last):
+    TypeError: a float is required
+    """
+    if seconds is None:
+        return None
+    return datetime.utcfromtimestamp(seconds) - datetime.utcfromtimestamp(0)
 
 
 def make_rt_update(raw_data, connector_type, contributor_id, status="OK"):

@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Copyright (c) 2001, Canal TP and/or its affiliates. All rights reserved.
+# Copyright (c) Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
 #     the software to build cool stuff with public transport.
@@ -34,19 +34,17 @@ from tests.mock_navitia import navitia_response
 
 response = navitia_response.NavitiaResponse()
 
-response.queries = [
-    "physical_modes/?filter=physical_mode.id=physical_mode:LongDistanceTrain&count=1",
-    "physical_modes/physical_mode:LongDistanceTrain/",
-]
+response.queries = ["companies/?count=1"]
 
 response.response_code = 200
 
 response.json_response = """
 {
-  "physical_modes": [
+"companies": [
     {
-      "name": "Train grande vitesse",
-      "id": "physical_mode:LongDistanceTrain"
+        "codes": [],
+        "id": "company:PIV:1187",
+        "name": "SNCF"
     }
   ]
 }
