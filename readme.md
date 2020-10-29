@@ -219,8 +219,8 @@ curl -X GET 'http://localhost:5000/contributors'
       "feed_url": "*not_used_for_piv*",
       "retrieval_interval": "*not_used_for_piv*",
       "broker_url": "pyamqp://guest:guest@localhost:5672//?heartbeat=60",
-      "exchange_name": "piv",
-      "queue_name": "piv-kirin",
+      "exchange_name": "piv_schedule",
+      "queue_name": "piv_schedule_kirin",
       "nb_days_to_keep_trip_update": 3,
       "nb_days_to_keep_rt_update": 30
     }
