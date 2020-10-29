@@ -84,6 +84,6 @@ class UnauthorizedOnSubService(SubServiceError):
     message = "object not found (unauthorized on sub-service)"
 
 
-class UnauthorizedValue(KirinException):
+class UnsupportedValue(KirinException):
     code = 400
-    message = "unauthorized value"
+    message = "unsupported value"

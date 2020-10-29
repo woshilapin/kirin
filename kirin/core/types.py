@@ -30,6 +30,9 @@
 # www.navitia.io
 
 from __future__ import absolute_import, print_function, unicode_literals, division
+
+from sys import maxint
+
 from enum import Enum
 from kirin import kirin_pb2
 
@@ -70,6 +73,7 @@ class TripEffect(Enum):
     OTHER_EFFECT = 7
     UNKNOWN_EFFECT = 8
     STOP_MOVED = 9
+    UNDEFINED = maxint
 
 
 class ConnectorType(Enum):
