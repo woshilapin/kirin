@@ -143,11 +143,8 @@ def test_cots_train_trip_removal(mock_navitia_fixture):
 
 def test_get_action_on_trip_add(mock_navitia_fixture):
     """
-    Test the function _get_action_on_trip with different type of flux cots
-    returns:
-    1. Fist trip add(AJOUTEE)->  FIRST_TIME_ADDED
-    2. Add followed by update (PERTURBEE) -> PREVIOUSLY_ADDED
-    3. Delete followed by add -> FIRST_TIME_ADDED
+    Test the function _get_action_on_trip:
+    - Fist trip add(AJOUTEE)-> FIRST_TIME_ADDED
     """
 
     with app.app_context():
@@ -161,7 +158,11 @@ def test_get_action_on_trip_add(mock_navitia_fixture):
         action_on_trip = model_maker._get_action_on_trip(train_numbers, dict_version, pdps)
         assert action_on_trip == ActionOnTrip.FIRST_TIME_ADDED.name
 
+
+def test_get_action_on_trip_previously_added(mock_navitia_fixture):
+    with app.app_context():
         # Test for add followed by update should be PREVIOUSLY_ADDED
+        input_trip_add = get_fixture_data("cots_train_151515_added_trip.json")
         contributor = model.Contributor(
             id=COTS_CONTRIBUTOR_ID, navitia_coverage=None, connector_type=ConnectorType.cots.value
         )
@@ -177,10 +178,15 @@ def test_get_action_on_trip_add(mock_navitia_fixture):
         action_on_trip = model_maker._get_action_on_trip(train_numbers, dict_version, pdps)
         assert action_on_trip == ActionOnTrip.PREVIOUSLY_ADDED.name
 
-        # Clean database for further test
-        clean_db()
 
+def test_get_action_on_trip_delete(mock_navitia_fixture):
+    with app.app_context():
         # Delete the recently added trip followed by add: should be FIRST_TIME_ADDED
+        contributor = model.Contributor(
+            id=COTS_CONTRIBUTOR_ID, navitia_coverage=None, connector_type=ConnectorType.cots.value
+        )
+        builder = KirinModelBuilder(contributor)
+        input_trip_add = get_fixture_data("cots_train_151515_added_trip.json")
         wrap_build(builder, input_trip_add)
         input_trip_delete = get_fixture_data(
             "cots_train_151515_deleted_trip_with_delay_and_stop_time_added.json"

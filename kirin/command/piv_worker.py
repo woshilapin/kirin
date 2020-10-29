@@ -75,17 +75,19 @@ class PivWorker(ConsumerMixin):
     def __enter__(self):
         self.connection = Connection(self.builder.contributor.broker_url)
         self.exchange = self._get_exchange(self.builder.contributor.exchange_name)
-        self.queue = self._get_queue(self.exchange, self.builder.contributor.queue_name)
+        self.queue = self._get_or_create_queue(self.builder.contributor.queue_name)
         return self
 
     def __exit__(self, type, value, traceback):
         self.connection.release()
 
     def _get_exchange(self, exchange_name):
-        return Exchange(exchange_name, "fanout", durable=True, no_declare=True)
+        return Exchange(name=exchange_name, type="fanout", durable=True, no_declare=True, auto_delete=False)
 
-    def _get_queue(self, exchange, queue_name):
-        return Queue(queue_name, exchange, durable=True, auto_delete=False)
+    def _get_or_create_queue(self, queue_name):
+        queue = Queue(name=queue_name, exchange=self.exchange, durable=True, auto_delete=False)
+        queue.declare(channel=self.connection.channel())
+        return queue
 
     def get_consumers(self, Consumer, channel):
         return [
@@ -112,27 +114,19 @@ class PivWorker(ConsumerMixin):
             db.session.expire(self.builder.contributor, ["broker_url", "exchange_name", "queue_name"])
             self.last_config_checked_time = datetime.now()
         contributor = get_piv_contributor(self.builder.contributor.id)
-        if not contributor:
+        if (
+            not contributor
+            or contributor.broker_url != self.broker_url
+            or contributor.exchange_name != self.exchange.name
+            or contributor.queue_name != self.queue.name
+        ):
             logger.info(
-                "contributor '{0}' doesn't exist anymore, let the worker die".format(self.builder.contributor.id)
+                "configuration of contributor '{0}' changed, let the worker die".format(
+                    self.builder.contributor.id
+                )
             )
             self.should_stop = True
             return
-        if contributor.broker_url != self.broker_url:
-            logger.info("broker URL for contributor '{0}' changed, let the worker die".format(contributor.id))
-            self.should_stop = True
-            return
-        if contributor.exchange_name != self.exchange.name:
-            logger.info(
-                "exchange name for contributor '{0}' changed, worker updated".format(contributor.exchange_name)
-            )
-            self.exchange = self._get_exchange(contributor.exchange_name)
-            self.queue = self._get_queue(self.exchange, contributor.queue_name)
-        if contributor.queue_name != self.queue.name:
-            logger.info(
-                "queue name for contributor '{0}' changed, worker updated".format(contributor.queue_name)
-            )
-            self.queue = self._get_queue(self.exchange, contributor.queue_name)
         self.builder = KirinModelBuilder(contributor)
 
 
