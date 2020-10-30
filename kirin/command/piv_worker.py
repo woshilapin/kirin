@@ -29,7 +29,7 @@
 # [matrix] channel #navitia:matrix.org (https://app.element.io/#/room/#navitia:matrix.org)
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from kirin import manager, app
+from kirin import manager, app, new_relic
 from kirin.core.model import db
 from kirin.core.types import ConnectorType
 from kirin.core.abstract_builder import wrap_build
@@ -54,6 +54,7 @@ CONF_RELOAD_INTERVAL = timedelta(
 
 
 class PivWorker(ConsumerMixin):
+    @new_relic.agent.background_task(name="piv_worker-init", group="Task")
     def __init__(self, contributor):
         if contributor.connector_type != ConnectorType.piv.value:
             raise ConfigurationError(
@@ -82,6 +83,7 @@ class PivWorker(ConsumerMixin):
         self.navitia_coverage = deepcopy(contributor.navitia_coverage)
         self.navitia_token = deepcopy(contributor.navitia_token)
 
+    @new_relic.agent.background_task(name="piv_worker-enter", group="Task")
     def __enter__(self):
         self.connection = Connection(self.builder.contributor.broker_url)
         self.exchange = self._get_exchange(self.builder.contributor.exchange_name)
@@ -109,6 +111,7 @@ class PivWorker(ConsumerMixin):
             )
         ]
 
+    @new_relic.agent.background_task(name="piv_worker-process_message", group="Task")
     def process_message(self, body, message):
         try:
             wrap_build(self.builder, body)
@@ -121,6 +124,7 @@ class PivWorker(ConsumerMixin):
             # * we do not want to process this message after another one (produced later) on the same train
             message.ack()
 
+    @new_relic.agent.background_task(name="piv_worker-on_iteration", group="Task")
     def on_iteration(self):
         if datetime.now() - self.last_config_checked_time < CONF_RELOAD_INTERVAL:
             return
