@@ -71,8 +71,11 @@ class PivWorker(ConsumerMixin):
         if not contributor.queue_name:
             raise ValueError("Missing 'queue_name' configuration for contributor '{0}'".format(contributor.id))
         self.last_config_checked_time = datetime.now()
-        self.broker_url = deepcopy(contributor.broker_url)
         self.builder = KirinModelBuilder(contributor)
+        # store config to spot configuration changes
+        self.broker_url = deepcopy(contributor.broker_url)
+        self.navitia_coverage = deepcopy(contributor.navitia_coverage)
+        self.navitia_token = deepcopy(contributor.navitia_token)
 
     def __enter__(self):
         self.connection = Connection(self.builder.contributor.broker_url)
@@ -125,6 +128,8 @@ class PivWorker(ConsumerMixin):
         if (
             not contributor
             or contributor.broker_url != self.broker_url
+            or contributor.navitia_coverage != self.navitia_coverage
+            or contributor.navitia_token != self.navitia_token
             or contributor.exchange_name != self.exchange.name
             or contributor.queue_name != self.queue.name
         ):
@@ -135,7 +140,6 @@ class PivWorker(ConsumerMixin):
             )
             self.should_stop = True
             return
-        self.builder = KirinModelBuilder(contributor)
 
 
 @manager.command
