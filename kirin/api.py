@@ -34,15 +34,15 @@ import logging
 from flask.signals import got_request_exception
 import flask_restful
 from flask import request
-from werkzeug.exceptions import HTTPException
 from kirin import resources
 from kirin.piv import piv
 from kirin.gtfs_rt import gtfs_rt
 from kirin.cots import cots
 from kirin import app
-from kirin.new_relic import record_exception, allow_apm_logging, must_never_log
 
 # we always want pretty json
+from kirin.utils import log_exception
+
 flask_restful.representations.json.settings = {"indent": 4}
 
 api = flask_restful.Api(app, catch_all_404s=True)
@@ -61,27 +61,11 @@ api.add_resource(
 api.add_resource(resources.Health, "/health", endpoint=str("health"))
 
 
-def log_exception(sender, exception):
-    """
-    log all exceptions not caught before
-    """
-    logger = logging.getLogger(__name__)
-    message = ""
-    if hasattr(exception, "data"):
-        message = exception.data
-    error = "{ex} {data} {url}".format(ex=exception.__class__.__name__, data=message, url=request.url)
-
-    if must_never_log(exception):
-        logger.debug(error)
-    else:
-        logger.exception(error)
-
-    # must filter on ALL exceptions (including flask's ones)
-    if allow_apm_logging(exception):
-        record_exception()
+def _log_exception(sender, exception):
+    log_exception(exception, request.url)
 
 
-got_request_exception.connect(log_exception, app)
+got_request_exception.connect(_log_exception, app)
 
 
 @app.after_request

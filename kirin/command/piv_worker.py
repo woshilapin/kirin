@@ -43,6 +43,8 @@ from copy import deepcopy
 import logging
 import time
 
+from kirin.utils import log_exception
+
 logger = logging.getLogger(__name__)
 
 CONF_RELOAD_INTERVAL = timedelta(
@@ -100,10 +102,16 @@ class PivWorker(ConsumerMixin):
         ]
 
     def process_message(self, body, message):
-        wrap_build(self.builder, body)
-        # TODO: We might want to not acknowledge the message in case of error in
-        # the processing.
-        message.ack()
+        try:
+            wrap_build(self.builder, body)
+        except Exception as e:
+            log_exception(e, "piv_worker")
+        finally:
+            # We might want to not acknowledge the message in case of error in the processing.
+            # Not simple though as:
+            # * it re-queues message as first to handle
+            # * we do not want to process this message after another one (produced later) on the same train
+            message.ack()
 
     def on_iteration(self):
         if datetime.now() - self.last_config_checked_time < CONF_RELOAD_INTERVAL:

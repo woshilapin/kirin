@@ -49,6 +49,8 @@ from kirin.core.model import RealTimeUpdate
 from kirin.exceptions import InternalException, InvalidArguments
 import requests
 
+from kirin.new_relic import allow_apm_logging, must_never_log, record_exception
+
 
 def floor_datetime(datetime):
     return datetime.replace(minute=0, second=0, microsecond=0)
@@ -333,3 +335,23 @@ def get_lock(logger, lock_name, lock_timeout):
         if locked:
             logger.debug("releasing lock %s", lock_name)
             lock.release()
+
+
+def log_exception(exception, origin):
+    """
+    log all exceptions
+    """
+    logger = logging.getLogger(__name__)
+    message = ""
+    if hasattr(exception, "data"):
+        message = exception.data
+    error = "{ex} {data} {orig}".format(ex=exception.__class__.__name__, data=message, orig=origin)
+
+    if must_never_log(exception):
+        logger.debug(error)
+    else:
+        logger.exception(error)
+
+    # must filter on ALL exceptions (including flask's ones)
+    if allow_apm_logging(exception):
+        record_exception()
