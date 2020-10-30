@@ -30,7 +30,7 @@
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 from kirin import manager, app
-from kirin.core.model import Contributor, db
+from kirin.core.model import db
 from kirin.core.types import ConnectorType
 from kirin.core.abstract_builder import wrap_build
 from kirin.piv import KirinModelBuilder
@@ -161,5 +161,5 @@ def piv_worker():
                 logger.info("launching the PIV worker for '{0}'".format(contributor.id))
                 worker.run()
         except Exception as e:
-            logger.warning("worker died unexpectedly: {0}".format(e))
+            logger.warning("PIV worker died: {0}".format(e))
             time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
