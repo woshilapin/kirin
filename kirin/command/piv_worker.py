@@ -33,6 +33,7 @@ from kirin import manager, app
 from kirin.core.model import db
 from kirin.core.types import ConnectorType
 from kirin.core.abstract_builder import wrap_build
+from kirin.exceptions import ConfigurationError
 from kirin.piv import KirinModelBuilder
 from kirin.piv.piv import get_piv_contributors, get_piv_contributor
 
@@ -55,21 +56,25 @@ CONF_RELOAD_INTERVAL = timedelta(
 class PivWorker(ConsumerMixin):
     def __init__(self, contributor):
         if contributor.connector_type != ConnectorType.piv.value:
-            raise ValueError(
+            raise ConfigurationError(
                 "Contributor '{0}': PivWorker requires type {1}".format(contributor.id, ConnectorType.piv.value)
             )
         if not contributor.is_active:
-            raise ValueError(
+            raise ConfigurationError(
                 "Contributor '{0}': PivWorker requires an activated contributor.".format(contributor.id)
             )
         if not contributor.broker_url:
-            raise ValueError("Missing 'broker_url' configuration for contributor '{0}'".format(contributor.id))
+            raise ConfigurationError(
+                "Missing 'broker_url' configuration for contributor '{0}'".format(contributor.id)
+            )
         if not contributor.exchange_name:
-            raise ValueError(
+            raise ConfigurationError(
                 "Missing 'exchange_name' configuration for contributor '{0}'".format(contributor.id)
             )
         if not contributor.queue_name:
-            raise ValueError("Missing 'queue_name' configuration for contributor '{0}'".format(contributor.id))
+            raise ConfigurationError(
+                "Missing 'queue_name' configuration for contributor '{0}'".format(contributor.id)
+            )
         self.last_config_checked_time = datetime.now()
         self.builder = KirinModelBuilder(contributor)
         # store config to spot configuration changes
@@ -166,8 +171,9 @@ def piv_worker():
                 worker.run()
         except Exception as e:
             logger.warning("PIV worker died: {0}".format(e))
+            if isinstance(e, ConfigurationError):
+                time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
         finally:
             db.session.expire(
                 contributor
             )  # force db-reload otherwise staying locked on previous contributor's config
-            time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
