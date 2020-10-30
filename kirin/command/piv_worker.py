@@ -162,4 +162,8 @@ def piv_worker():
                 worker.run()
         except Exception as e:
             logger.warning("PIV worker died: {0}".format(e))
+        finally:
+            db.session.expire(
+                contributor
+            )  # force db-reload otherwise staying locked on previous contributor's config
             time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
