@@ -34,7 +34,7 @@ from tests.mock_navitia import navitia_response
 
 response = navitia_response.NavitiaResponse()
 
-response.queries = ["companies/?count=1"]
+response.queries = ['companies/?filter=company.has_code("source", "1187")&count=1']
 
 response.response_code = 200
 
