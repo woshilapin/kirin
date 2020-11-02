@@ -131,7 +131,7 @@ class PivWorker(ConsumerMixin):
         else:
             # SQLAlchemy is not querying the DB for read (uses cache instead),
             # unless we specifically tell that the data is expired.
-            db.session.expire(self.builder.contributor, ["broker_url", "exchange_name", "queue_name"])
+            db.session.expire(self.builder.contributor)
             self.last_config_checked_time = datetime.now()
         contributor = get_piv_contributor(self.builder.contributor.id)
         if (

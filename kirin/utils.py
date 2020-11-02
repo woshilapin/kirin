@@ -337,7 +337,7 @@ def get_lock(logger, lock_name, lock_timeout):
             lock.release()
 
 
-def log_exception(exception, origin):
+def log_exception(exception, exception_source):
     """
     log all exceptions
     """
@@ -345,7 +345,7 @@ def log_exception(exception, origin):
     message = ""
     if hasattr(exception, "data"):
         message = exception.data
-    error = "{ex} {data} {orig}".format(ex=exception.__class__.__name__, data=message, orig=origin)
+    error = "{ex}: {data} - {orig}".format(ex=exception.__class__.__name__, data=message, orig=exception_source)
 
     if must_never_log(exception):
         logger.debug(error)

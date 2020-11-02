@@ -40,10 +40,9 @@ from kirin.gtfs_rt import gtfs_rt
 from kirin.cots import cots
 from kirin import app
 
-# we always want pretty json
 from kirin.utils import log_exception
 
-flask_restful.representations.json.settings = {"indent": 4}
+flask_restful.representations.json.settings = {"indent": 4}  # we always want pretty json
 
 api = flask_restful.Api(app, catch_all_404s=True)
 api.app.url_map.strict_slashes = False
