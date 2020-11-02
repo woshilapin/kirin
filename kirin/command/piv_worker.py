@@ -33,7 +33,6 @@ from kirin import manager, app, new_relic
 from kirin.core.model import db
 from kirin.core.types import ConnectorType
 from kirin.core.abstract_builder import wrap_build
-from kirin.exceptions import ConfigurationError
 from kirin.piv import KirinModelBuilder
 from kirin.piv.piv import get_piv_contributors, get_piv_contributor
 
@@ -57,25 +56,21 @@ class PivWorker(ConsumerMixin):
     @new_relic.agent.background_task(name="piv_worker-init", group="Task")
     def __init__(self, contributor):
         if contributor.connector_type != ConnectorType.piv.value:
-            raise ConfigurationError(
+            raise ValueError(
                 "Contributor '{0}': PivWorker requires type {1}".format(contributor.id, ConnectorType.piv.value)
             )
         if not contributor.is_active:
-            raise ConfigurationError(
+            raise ValueError(
                 "Contributor '{0}': PivWorker requires an activated contributor.".format(contributor.id)
             )
         if not contributor.broker_url:
-            raise ConfigurationError(
-                "Missing 'broker_url' configuration for contributor '{0}'".format(contributor.id)
-            )
+            raise ValueError("Missing 'broker_url' configuration for contributor '{0}'".format(contributor.id))
         if not contributor.exchange_name:
-            raise ConfigurationError(
+            raise ValueError(
                 "Missing 'exchange_name' configuration for contributor '{0}'".format(contributor.id)
             )
         if not contributor.queue_name:
-            raise ConfigurationError(
-                "Missing 'queue_name' configuration for contributor '{0}'".format(contributor.id)
-            )
+            raise ValueError("Missing 'queue_name' configuration for contributor '{0}'".format(contributor.id))
         self.last_config_checked_time = datetime.now()
         self.builder = KirinModelBuilder(contributor)
         # store config to spot configuration changes
@@ -157,27 +152,29 @@ def piv_worker():
 
     # We assume one and only one PIV contributor is going to exist in the DB
     while True:
-        contributors = get_piv_contributors()
-        if len(contributors) == 0:
-            logger.warning("no PIV contributor")
-            time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
-            continue
-        contributor = contributors[0]
-        if len(contributors) > 1:
-            logger.warning(
-                "more than one PIV contributors: {0}; choosing '{1}'".format(
-                    map(lambda c: c.id, contributors), contributor.id
-                )
-            )
+        should_wait = True
         try:
+            contributors = get_piv_contributors()
+            if len(contributors) == 0:
+                logger.warning("no PIV contributor")
+                time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
+                continue
+            contributor = contributors[0]
+            if len(contributors) > 1:
+                logger.warning(
+                    "more than one PIV contributors: {0}; choosing '{1}'".format(
+                        map(lambda c: c.id, contributors), contributor.id
+                    )
+                )
             with PivWorker(contributor) as worker:
+                should_wait = False  # wait only after init crash
                 logger.info("launching the PIV worker for '{0}'".format(contributor.id))
                 worker.run()
         except Exception as e:
             logger.warning("PIV worker died: {0}".format(e))
-            if isinstance(e, ConfigurationError):
-                time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
         finally:
+            if should_wait:
+                time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
             db.session.expire(
                 contributor
             )  # force db-reload otherwise staying locked on previous contributor's config
