@@ -116,7 +116,7 @@ def test_piv_simple_post(mock_rabbitmq):
     """
     simple PIV post should be stored in db as a RealTimeUpdate
     """
-    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json").decode("utf8")
+    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json")
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 
@@ -138,7 +138,7 @@ def test_piv_purge(mock_rabbitmq):
     """
     Simple PIV post, then test the purge
     """
-    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json").decode("utf8")
+    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json")
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 
@@ -248,7 +248,7 @@ def test_piv_delayed(mock_rabbitmq):
     """
     delayed stops post
     """
-    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json").decode("utf8")
+    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json")
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 

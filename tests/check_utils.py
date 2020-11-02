@@ -75,9 +75,9 @@ def get_fixture_data(name):
     return a fixture input (IRE, COTS) as string
     the name must be the name of a file in kirin/tests/fixtures
     """
-    file = os.path.join(os.path.dirname(__file__), "fixtures", name)
-    with open(file, "r") as fixture:
-        return fixture.read()
+    f = os.path.join(os.path.dirname(__file__), "fixtures", name)
+    with open(f, "r") as fixture:
+        return fixture.read().decode("utf_8")
 
 
 def _dt(dt_to_parse, year=2015, month=9, day=8):

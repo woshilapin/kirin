@@ -180,9 +180,6 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
 
         The TripUpdates are not associated with the RealTimeUpdate at this point
         """
-        # assuming UTF-8 encoding for all input
-        rt_update.raw_data = rt_update.raw_data.encode("utf-8")
-
         try:
             json = ujson.loads(rt_update.raw_data)
         except ValueError as e:

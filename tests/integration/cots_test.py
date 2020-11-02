@@ -143,8 +143,8 @@ def test_save_bad_raw_cots():
         assert RealTimeUpdate.query.first().status == "KO"
         assert (
             RealTimeUpdate.query.first().error
-            == 'invalid json, impossible to find "numeroCourse" in json dict {"bad":"one","cots":"toto"}'
-        )
+            == 'invalid json, impossible to find "numeroCourse" in json dict {"bad":"on\\u00e9","cots":"toto"}'
+        )  # also check that only ascii chars are displayed for debug
         assert RealTimeUpdate.query.first().raw_data == bad_cots
 
 

@@ -347,9 +347,6 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         Most of the realtime information parsed is contained in the 'nouvelleVersion' sub-object
         (see fixtures and documentation)
         """
-        # assuming UTF-8 encoding for all input
-        rt_update.raw_data = rt_update.raw_data.encode("utf-8")
-
         try:
             json = ujson.loads(rt_update.raw_data)
         except ValueError as e:
