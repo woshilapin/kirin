@@ -86,4 +86,4 @@ class UnauthorizedOnSubService(SubServiceError):
 
 class UnauthorizedValue(KirinException):
     code = 400
-    message = "Unauthorized value"
+    message = "unauthorized value"

@@ -29,8 +29,8 @@
 # [matrix] channel #navitia:matrix.org (https://app.element.io/#/room/#navitia:matrix.org)
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
-from kirin import manager, app
-from kirin.core.model import Contributor, db
+from kirin import manager, app, new_relic
+from kirin.core.model import db
 from kirin.core.types import ConnectorType
 from kirin.core.abstract_builder import wrap_build
 from kirin.piv import KirinModelBuilder
@@ -43,6 +43,8 @@ from copy import deepcopy
 import logging
 import time
 
+from kirin.utils import log_exception
+
 logger = logging.getLogger(__name__)
 
 CONF_RELOAD_INTERVAL = timedelta(
@@ -51,6 +53,7 @@ CONF_RELOAD_INTERVAL = timedelta(
 
 
 class PivWorker(ConsumerMixin):
+    @new_relic.agent.background_task(name="piv_worker-init", group="Task")
     def __init__(self, contributor):
         if contributor.connector_type != ConnectorType.piv.value:
             raise ValueError(
@@ -69,9 +72,13 @@ class PivWorker(ConsumerMixin):
         if not contributor.queue_name:
             raise ValueError("Missing 'queue_name' configuration for contributor '{0}'".format(contributor.id))
         self.last_config_checked_time = datetime.now()
-        self.broker_url = deepcopy(contributor.broker_url)
         self.builder = KirinModelBuilder(contributor)
+        # store config to spot configuration changes
+        self.broker_url = deepcopy(contributor.broker_url)
+        self.navitia_coverage = deepcopy(contributor.navitia_coverage)
+        self.navitia_token = deepcopy(contributor.navitia_token)
 
+    @new_relic.agent.background_task(name="piv_worker-enter", group="Task")
     def __enter__(self):
         self.connection = Connection(self.builder.contributor.broker_url)
         self.exchange = self._get_exchange(self.builder.contributor.exchange_name)
@@ -99,24 +106,34 @@ class PivWorker(ConsumerMixin):
             )
         ]
 
+    @new_relic.agent.background_task(name="piv_worker-process_message", group="Task")
     def process_message(self, body, message):
-        wrap_build(self.builder, body)
-        # TODO: We might want to not acknowledge the message in case of error in
-        # the processing.
-        message.ack()
+        try:
+            wrap_build(self.builder, body)
+        except Exception as e:
+            log_exception(e, "piv_worker")
+        finally:
+            # We might want to not acknowledge the message in case of error in the processing.
+            # Not simple though as:
+            # * it re-queues message as first to handle
+            # * we do not want to process this message after another one (produced later) on the same train
+            message.ack()
 
+    @new_relic.agent.background_task(name="piv_worker-on_iteration", group="Task")
     def on_iteration(self):
         if datetime.now() - self.last_config_checked_time < CONF_RELOAD_INTERVAL:
             return
         else:
             # SQLAlchemy is not querying the DB for read (uses cache instead),
             # unless we specifically tell that the data is expired.
-            db.session.expire(self.builder.contributor, ["broker_url", "exchange_name", "queue_name"])
+            db.session.expire(self.builder.contributor)
             self.last_config_checked_time = datetime.now()
         contributor = get_piv_contributor(self.builder.contributor.id)
         if (
             not contributor
             or contributor.broker_url != self.broker_url
+            or contributor.navitia_coverage != self.navitia_coverage
+            or contributor.navitia_token != self.navitia_token
             or contributor.exchange_name != self.exchange.name
             or contributor.queue_name != self.queue.name
         ):
@@ -127,7 +144,6 @@ class PivWorker(ConsumerMixin):
             )
             self.should_stop = True
             return
-        self.builder = KirinModelBuilder(contributor)
 
 
 @manager.command
@@ -136,22 +152,29 @@ def piv_worker():
 
     # We assume one and only one PIV contributor is going to exist in the DB
     while True:
-        contributors = get_piv_contributors()
-        if len(contributors) == 0:
-            logger.warning("no PIV contributor")
-            time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
-            continue
-        contributor = contributors[0]
-        if len(contributors) > 1:
-            logger.warning(
-                "more than one PIV contributors: {0}; choosing '{1}'".format(
-                    map(lambda c: c.id, contributors), contributor.id
-                )
-            )
+        should_wait = True
         try:
+            contributors = get_piv_contributors()
+            if len(contributors) == 0:
+                logger.warning("no PIV contributor")
+                time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
+                continue
+            contributor = contributors[0]
+            if len(contributors) > 1:
+                logger.warning(
+                    "more than one PIV contributors: {0}; choosing '{1}'".format(
+                        map(lambda c: c.id, contributors), contributor.id
+                    )
+                )
             with PivWorker(contributor) as worker:
+                should_wait = False  # wait only after init crash
                 logger.info("launching the PIV worker for '{0}'".format(contributor.id))
                 worker.run()
         except Exception as e:
-            logger.warning("worker died unexpectedly: {0}".format(e))
-            time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
+            logger.warning("PIV worker died: {0}".format(e))
+        finally:
+            if should_wait:
+                time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
+            db.session.expire(
+                contributor
+            )  # force db-reload otherwise staying locked on previous contributor's config

@@ -136,7 +136,7 @@ def _extract_navitia_stop_time(uic8, nav_vj):
         nav_vj,
     )
 
-    log_dict = None
+    log_dict = {}
     if not nav_stop_times:
         log_dict = {"log": "missing stop point", "stop_point_code": uic8}
         return None, log_dict
@@ -407,6 +407,6 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
             q={"filter": 'stop_area.has_code("source", "{}")'.format(uic8), "count": "1"}
         )
         if stop_points:
-            return stop_points[0], None
+            return stop_points[0], {}
 
         return None, {"log": "No stop point found", "stop_point_code": uic8}
