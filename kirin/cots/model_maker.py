@@ -123,7 +123,7 @@ def get_navitia_stop_time_sncf(cr, ci, ch, nav_vj):
         nav_vj,
     )
 
-    log_dict = None
+    log_dict = {}
     if not nav_stop_times:
         log_dict = {"log": "missing stop point", "stop_point_code": nav_external_code}
         return None, log_dict
@@ -667,7 +667,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
             q={"filter": 'stop_area.has_code("CR-CI-CH", "{}")'.format(external_code), "count": "1"}
         )
         if stop_points:
-            return stop_points[0], None
+            return stop_points[0], {}
 
         return None, {"log": "No stop point found", "stop_point_code": external_code}
 
