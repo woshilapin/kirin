@@ -47,6 +47,7 @@ from kirin.utils import make_rt_update, get_value, as_utc_naive_dt, record_inter
 
 # The default company for PIV is SNCF (code '1187')
 DEFAULT_COMPANY_CODE = "1187"
+DEFAULT_PHYSICAL_MODE_ID = "physical_mode:LongDistanceTrain"
 TRIP_PIV_ID_FORMAT = "PIV:REALTIME:{}"
 
 STATUS_MAP = {"arrivee": "arrival_status", "depart": "departure_status"}
@@ -317,7 +318,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         company_id = json_train.get("operateur").get("codeOperateur")
         trip_update.company_id = self._get_navitia_company_id(company_id)
         physical_mode = json_train.get("modeTransport").get("typeMode")
-        trip_update.physical_mode_id = self._get_navitia_physical_mode(physical_mode)
+        trip_update.physical_mode_id = self._get_navitia_physical_mode_id(physical_mode)
         trip_status_type = trip_piv_status_to_effect[json_train.get("evenement").get("type")]
         trip_update.message = json_train.get("evenement").get("texte")
         trip_update.effect = trip_status_type.name
@@ -425,21 +426,20 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         )
         return companies[0] if companies else None
 
-    def _get_navitia_physical_mode(self, indicator=None):
+    def _get_navitia_physical_mode_id(self, indicator=None):
         """
         Get a navitia physical_mode for the codes present in PIV (FERRE / ROUTIER)
         """
         uri = {
             "FERRE": "physical_mode:LongDistanceTrain",
             "ROUTIER": "physical_mode:Coach",
-        }.get(indicator)
-        return self._request_navitia_physical_mode(uri)  # confirm it exists
+        }.get(indicator, DEFAULT_PHYSICAL_MODE_ID)
+        physical_mode = self._request_navitia_physical_mode(uri)
+        return physical_mode.get("id", None) if physical_mode else None
 
     def _request_navitia_physical_mode(self, uri):
         physical_modes = self.navitia.physical_modes(uri=uri)
-        if physical_modes:
-            return physical_modes[0].get("id", None)
-        return None
+        physical_modes[0] if physical_modes else None
 
     def _get_navitia_stop_point(self, arret, nav_vj):
         """
