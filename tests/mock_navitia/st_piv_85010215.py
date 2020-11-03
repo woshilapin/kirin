@@ -34,15 +34,41 @@ from tests.mock_navitia import navitia_response
 
 response = navitia_response.NavitiaResponse()
 
-response.queries = [
-    'companies/?filter=company.has_code("RefProd", "1180")&count=1',
-    'companies/?filter=company.has_code("source", "1180")&count=1',
-]
+response.queries = ['stop_points/?filter=stop_area.has_code("source", "85010215")&count=1']
 
 response.response_code = 200
 
 response.json_response = """
 {
-"companies": []
+  "stop_points": [
+    {
+      "name": "Genthod-Bellevue",
+      "links": [],
+      "coord": {
+        "lat": "46.256727",
+        "lon": "6.153964"
+      },
+      "label": "Genthod-Bellevue",
+      "equipments": [],
+      "id": "stop_point:PIVPP:85010215:Train",
+      "stop_area": {
+        "codes": [
+          {
+            "type": "source",
+            "value": "85010215"
+          }
+        ],
+        "name": "Genthod-Bellevue",
+        "links": [],
+        "coord": {
+          "lat": "46.256727",
+          "lon": "6.153964"
+        },
+        "label": "Genthod-Bellevue",
+        "timezone": "Europe/Paris",
+        "id": "stop_area:PIVPP:85010215"
+      }
+    }
+  ]
 }
 """

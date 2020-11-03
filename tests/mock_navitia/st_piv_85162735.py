@@ -34,15 +34,41 @@ from tests.mock_navitia import navitia_response
 
 response = navitia_response.NavitiaResponse()
 
-response.queries = [
-    'companies/?filter=company.has_code("RefProd", "1180")&count=1',
-    'companies/?filter=company.has_code("source", "1180")&count=1',
-]
+response.queries = ['stop_points/?filter=stop_area.has_code("source", "85162735")&count=1']
 
 response.response_code = 200
 
 response.json_response = """
 {
-"companies": []
+  "stop_points": [
+    {
+      "name": "Genève Eaux-Vives",
+      "links": [],
+      "coord": {
+        "lat": "46.201444",
+        "lon": "6.166583"
+      },
+      "label": "Genève Eaux-Vives",
+      "equipments": [],
+      "id": "stop_point:PIVPP:85162735:Coach",
+      "stop_area": {
+        "codes": [
+          {
+            "type": "source",
+            "value": "85162735"
+          }
+        ],
+        "name": "Genève Eaux-Vives",
+        "links": [],
+        "coord": {
+          "lat": "46.201444",
+          "lon": "6.166583"
+        },
+        "label": "Genève Eaux-Vives",
+        "timezone": "Europe/Paris",
+        "id": "stop_area:PIVPP:85162735"
+      }
+    }
+  ]
 }
 """

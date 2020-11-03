@@ -34,15 +34,41 @@ from tests.mock_navitia import navitia_response
 
 response = navitia_response.NavitiaResponse()
 
-response.queries = [
-    'companies/?filter=company.has_code("RefProd", "1180")&count=1',
-    'companies/?filter=company.has_code("source", "1180")&count=1',
-]
+response.queries = ['stop_points/?filter=stop_area.has_code("source", "85010132")&count=1']
 
 response.response_code = 200
 
 response.json_response = """
 {
-"companies": []
+  "stop_points": [
+    {
+      "name": "Pont-Céard",
+      "links": [],
+      "coord": {
+        "lat": "46.287392",
+        "lon": "6.162662"
+      },
+      "label": "Pont-Céard",
+      "equipments": [],
+      "id": "stop_point:PIVPP:85010132:Train",
+      "stop_area": {
+        "codes": [
+          {
+            "type": "source",
+            "value": "85010132"
+          }
+        ],
+        "name": "Pont-Céard",
+        "links": [],
+        "coord": {
+          "lat": "46.287392",
+          "lon": "6.162662"
+        },
+        "label": "Pont-Céard",
+        "timezone": "Europe/Paris",
+        "id": "stop_area:PIVPP:85010132"
+      }
+    }
+  ]
 }
 """

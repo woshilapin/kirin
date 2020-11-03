@@ -34,15 +34,41 @@ from tests.mock_navitia import navitia_response
 
 response = navitia_response.NavitiaResponse()
 
-response.queries = [
-    'companies/?filter=company.has_code("RefProd", "1180")&count=1',
-    'companies/?filter=company.has_code("source", "1180")&count=1',
-]
+response.queries = ['stop_points/?filter=stop_area.has_code("source", "85162834")&count=1']
 
 response.response_code = 200
 
 response.json_response = """
 {
-"companies": []
+  "stop_points": [
+    {
+      "name": "Genève-Sécheron",
+      "links": [],
+      "coord": {
+        "lat": "46.222436",
+        "lon": "6.144555"
+      },
+      "label": "Genève-Sécheron",
+      "equipments": [],
+      "id": "stop_point:PIVPP:85162834:Train",
+      "stop_area": {
+        "codes": [
+          {
+            "type": "source",
+            "value": "85162834"
+          }
+        ],
+        "name": "Genève-Sécheron",
+        "links": [],
+        "coord": {
+          "lat": "46.222436",
+          "lon": "6.144555"
+        },
+        "label": "Genève-Sécheron",
+        "timezone": "Europe/Paris",
+        "id": "stop_area:PIVPP:85162834"
+      }
+    }
+  ]
 }
 """
