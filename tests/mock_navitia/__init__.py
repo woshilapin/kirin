@@ -68,6 +68,7 @@ from tests.mock_navitia import (
     vj_9580,
     st_0087_191981_WL,
     vj_unknown_object,
+    vj_20201029_841252,
 )
 import logging
 
@@ -109,6 +110,7 @@ mocks = [
     vj_unknown_object.response,
     vj_9580.response,
     st_0087_191981_WL.response,
+    vj_20201029_841252.response,
 ]
 _mock_navitia_call = {}
 for r in mocks:

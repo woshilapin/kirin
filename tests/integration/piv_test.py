@@ -196,7 +196,7 @@ def _check_db_stomp_20201022_23186_delayed_5min():
         assert db_trip_delayed.vj_id == db_trip_delayed.vj.id
         assert db_trip_delayed.status == ModificationType.update.name
         assert db_trip_delayed.effect == TripEffect.SIGNIFICANT_DELAYS.name
-        assert db_trip_delayed.message is None  # TODO xfail: to be updated when messages are read
+        assert db_trip_delayed.message == "Absence inopinée d'un agent"
         # PIV contain delayed stop_times only
         assert db_trip_delayed.company_id == "company:PIV:1187"
         assert len(db_trip_delayed.stop_time_updates) == 17
@@ -255,4 +255,54 @@ def test_piv_delayed(mock_rabbitmq):
     db_trip_delayed = _check_db_stomp_20201022_23186_delayed_5min()
     assert db_trip_delayed.effect == "SIGNIFICANT_DELAYS"
     # the rabbit mq has to have been called twice
+    assert mock_rabbitmq.call_count == 1
+
+
+def test_piv_trip_removal_simple_post(mock_rabbitmq):
+    """
+    simple trip removal post
+    """
+    piv_feed = get_fixture_data("piv/stomp_20201029_841252_trip_removal.json")
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    assert "PIV feed processed" in res.get("message")
+
+    with app.app_context():
+        assert RealTimeUpdate.query.count() == 1
+        assert TripUpdate.query.count() == 1
+        assert StopTimeUpdate.query.count() == 0
+
+        db_trip_removal = TripUpdate.query.first()
+        assert db_trip_removal
+        assert db_trip_removal.vj.navitia_trip_id == "PIVPP:2020-10-29:841252:1187:Train"
+        assert db_trip_removal.vj.start_timestamp == datetime(2020, 10, 29, 20, 5)
+        assert db_trip_removal.status == "delete"
+        assert db_trip_removal.effect == "NO_SERVICE"
+        assert db_trip_removal.message == "Indisponibilité d'un matériel"
+        # full trip removal : no stop_time to precise
+        assert len(db_trip_removal.stop_time_updates) == 0
+    assert mock_rabbitmq.call_count == 1
+
+
+def test_piv_event_priority(mock_rabbitmq):
+    """
+    simple trip removal post
+    """
+    piv_feed = get_fixture_data("piv/stomp_20201022_23186_trip_removal_delayed.json")
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    assert "PIV feed processed" in res.get("message")
+
+    with app.app_context():
+        assert RealTimeUpdate.query.count() == 1
+        assert TripUpdate.query.count() == 1
+        assert StopTimeUpdate.query.count() == 0
+
+        db_trip_removal = TripUpdate.query.first()
+        assert db_trip_removal
+        assert db_trip_removal.vj.navitia_trip_id == "PIV:2020-10-22:23186:1187:Train"
+        assert db_trip_removal.vj.start_timestamp == datetime(2020, 10, 22, 20, 34)
+        assert db_trip_removal.status == "delete"
+        assert db_trip_removal.effect == "NO_SERVICE"
+        assert db_trip_removal.message == "Indisponibilité d'un matériel"
+        # full trip removal : no stop_time to precise
+        assert len(db_trip_removal.stop_time_updates) == 0
     assert mock_rabbitmq.call_count == 1

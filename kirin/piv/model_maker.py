@@ -33,6 +33,7 @@ from __future__ import absolute_import, print_function, unicode_literals, divisi
 
 import logging
 from datetime import timedelta, datetime
+from sys import maxint
 
 import jmespath
 import ujson
@@ -41,7 +42,7 @@ from operator import itemgetter
 from kirin.core import model
 from kirin.core.abstract_builder import AbstractKirinModelBuilder
 from kirin.core.types import ModificationType, TripEffect, get_higher_status, get_effect_by_stop_time_status
-from kirin.exceptions import InvalidArguments, UnauthorizedValue, ObjectNotFound
+from kirin.exceptions import InvalidArguments, UnsupportedValue, ObjectNotFound
 from kirin.utils import make_rt_update, get_value, as_utc_naive_dt, record_internal_failure, as_duration
 
 TRIP_PIV_ID_FORMAT = "PIV:REALTIME:{}"
@@ -49,6 +50,37 @@ TRIP_PIV_ID_FORMAT = "PIV:REALTIME:{}"
 STATUS_MAP = {"arrivee": "arrival_status", "depart": "departure_status"}
 DELAY_MAP = {"arrivee": "arrival_delay", "depart": "departure_delay"}
 STOP_EVENT_DATETIME_MAP = {"arrivee": "arrival", "depart": "departure"}
+
+
+trip_piv_status_to_effect = {
+    "SUPPRESSION": TripEffect.NO_SERVICE,
+    "CREATION": TripEffect.ADDITIONAL_SERVICE,
+    "MODIFICATION_DETOURNEMENT": TripEffect.DETOUR,
+    "MODIFICATION_DESSERTE_SUPPRIMEE": TripEffect.REDUCED_SERVICE,
+    "MODIFICATION_LIMITATION": TripEffect.REDUCED_SERVICE,
+    "MODIFICATION_DESSERTE_AJOUTEE": TripEffect.MODIFIED_SERVICE,
+    "MODIFICATION_PROLONGATION": TripEffect.MODIFIED_SERVICE,
+    "RETARD": TripEffect.SIGNIFICANT_DELAYS,
+    "NORMAL": TripEffect.UNKNOWN_EFFECT,
+    "UNDEFINED": TripEffect.UNDEFINED,
+}
+
+trip_effect_order = {
+    TripEffect.ADDITIONAL_SERVICE: 0,
+    TripEffect.NO_SERVICE: 1,
+    TripEffect.DETOUR: 2,
+    TripEffect.REDUCED_SERVICE: 3,
+    TripEffect.MODIFIED_SERVICE: 4,
+    TripEffect.SIGNIFICANT_DELAYS: 5,
+    TripEffect.UNKNOWN_EFFECT: 6,
+    TripEffect.UNDEFINED: maxint,
+}
+
+MANAGED_EVENTS = ["RETARD", "SUPPRESSION"]
+
+
+def _get_trip_effect_order_from_piv_status(status):
+    return trip_effect_order.get(trip_piv_status_to_effect.get(status, TripEffect.UNDEFINED), maxint)
 
 
 def _has_departure(stop):
@@ -193,13 +225,23 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         if not events and not plan_transport_source:
             raise InvalidArguments('No object "evenement" or "planTransportSource" available in feed provided')
 
+        higher_event = ujson.loads('{"type": "UNDEFINED", "texte": ""}')
         if events:
-            event_types = [get_value(event, "type", nullable=True) for event in events]
-            if "RETARD" not in event_types:
-                raise UnauthorizedValue("None of the event-types {} are supported".format(event_types))
+            for event in events:
+                event_type = get_value(event, "type", nullable=True)
+                if event_type and event_type in trip_piv_status_to_effect and event_type in MANAGED_EVENTS:
+                    higher_event = (
+                        event
+                        if _get_trip_effect_order_from_piv_status(event_type)
+                        < _get_trip_effect_order_from_piv_status(get_value(higher_event, "type"))
+                        else higher_event
+                    )
+            if trip_piv_status_to_effect[higher_event.get("type")] == TripEffect.UNDEFINED:
+                raise UnsupportedValue("None of the event-types {} are supported".format(events))
         elif plan_transport_source and plan_transport_source not in ["PTP", "OPE"]:
-            raise UnauthorizedValue("planTransportSource {} is not supported".format(plan_transport_source))
+            raise UnsupportedValue("planTransportSource {} is not supported".format(plan_transport_source))
 
+        json_train["evenement"] = higher_event
         train_date = get_value(json_train, "dateCirculation")
         train_numbers = get_value(json_train, "numero")
         train_company = get_value(get_value(json_train, "operateur"), "codeOperateur")
@@ -222,6 +264,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         json_train["listeArretsDesserte"]["arret"] = ads
 
         vj = self._get_navitia_vj(piv_key, ads)
+
         trip_updates = [self._make_trip_update(json_train, vj)]
 
         log_dict = {}
@@ -268,15 +311,23 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
 
     def _make_trip_update(self, json_train, vj):
         trip_update = model.TripUpdate(vj=vj, contributor_id=self.contributor.id)
-        trip_update.headsign = get_value(json_train, "numero", nullable=True)
-        company_id = get_value(get_value(json_train, "operateur"), "codeOperateur")
+        trip_update.headsign = json_train.get("numero")
+        company_id = json_train.get("operateur").get("codeOperateur")
         trip_update.company_id = self._get_navitia_company(company_id)
-        physical_mode = get_value(get_value(json_train, "modeTransport"), "typeMode")
+        physical_mode = json_train.get("modeTransport").get("typeMode")
         trip_update.physical_mode_id = self._get_navitia_physical_mode(physical_mode)
+        trip_status_type = trip_piv_status_to_effect[json_train.get("evenement").get("type")]
+        trip_update.message = json_train.get("evenement").get("texte")
+        trip_update.effect = trip_status_type.name
 
-        # TODO: handle status/effect for creation, deletion, detour, back-to-normal
+        # TODO: handle status/effect for creation, detour, back-to-normal
+        if trip_status_type == TripEffect.NO_SERVICE:
+            # the whole trip is deleted
+            trip_update.status = ModificationType.delete.name
+            trip_update.stop_time_updates = []
+            return trip_update
+
         trip_update.status = ModificationType.update.name
-        trip_update.effect = TripEffect.MODIFIED_SERVICE.name
 
         highest_st_status = ModificationType.none.name
         ads = get_value(get_value(json_train, "listeArretsDesserte"), "arret")
