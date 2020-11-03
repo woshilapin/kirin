@@ -198,7 +198,7 @@ def _check_db_stomp_20201022_23186_delayed_5min():
         assert db_trip_delayed.effect == TripEffect.SIGNIFICANT_DELAYS.name
         assert db_trip_delayed.message == "Absence inopinée d'un agent"
         # PIV contain delayed stop_times only
-        assert db_trip_delayed.company_id == "company:PIV:1187"
+        assert db_trip_delayed.company_id == "company:PIVPP:1187"
         assert len(db_trip_delayed.stop_time_updates) == 17
 
         first_st = db_trip_delayed.stop_time_updates[0]

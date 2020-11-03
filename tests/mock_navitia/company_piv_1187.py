@@ -40,12 +40,17 @@ response.response_code = 200
 
 response.json_response = """
 {
-"companies": [
-    {
-        "codes": [],
-        "id": "company:PIV:1187",
-        "name": "SNCF"
-    }
-  ]
+    "companies":[
+        {
+            "codes":[
+                {
+                    "type":"source",
+                    "value":"1187"
+                }
+            ],
+            "id":"company:PIVPP:1187",
+            "name":"SNCF"
+        }
+    ]
 }
 """
