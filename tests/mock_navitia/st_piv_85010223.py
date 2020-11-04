@@ -34,15 +34,41 @@ from tests.mock_navitia import navitia_response
 
 response = navitia_response.NavitiaResponse()
 
-response.queries = [
-    'companies/?filter=company.has_code("RefProd", "1180")&count=1',
-    'companies/?filter=company.has_code("source", "1180")&count=1',
-]
+response.queries = ['stop_points/?filter=stop_area.has_code("source", "85010223")&count=1']
 
 response.response_code = 200
 
 response.json_response = """
 {
-"companies": []
+  "stop_points": [
+    {
+      "name": "Versoix",
+      "links": [],
+      "coord": {
+        "lat": "46.279713",
+        "lon": "6.165747"
+      },
+      "label": "Versoix",
+      "equipments": [],
+      "id": "stop_point:PIVPP:85010223:Train",
+      "stop_area": {
+        "codes": [
+          {
+            "type": "source",
+            "value": "85010223"
+          }
+        ],
+        "name": "Versoix",
+        "links": [],
+        "coord": {
+          "lat": "46.279713",
+          "lon": "6.165747"
+        },
+        "label": "Versoix",
+        "timezone": "Europe/Paris",
+        "id": "stop_area:PIVPP:85010223"
+      }
+    }
+  ]
 }
 """

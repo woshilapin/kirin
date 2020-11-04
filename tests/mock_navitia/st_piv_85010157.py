@@ -34,15 +34,41 @@ from tests.mock_navitia import navitia_response
 
 response = navitia_response.NavitiaResponse()
 
-response.queries = [
-    'companies/?filter=company.has_code("RefProd", "1180")&count=1',
-    'companies/?filter=company.has_code("source", "1180")&count=1',
-]
+response.queries = ['stop_points/?filter=stop_area.has_code("source", "85010157")&count=1']
 
 response.response_code = 200
 
 response.json_response = """
 {
-"companies": []
+  "stop_points": [
+    {
+      "name": "Tannay",
+      "links": [],
+      "coord": {
+        "lat": "46.307638",
+        "lon": "6.181126"
+      },
+      "label": "Tannay",
+      "equipments": [],
+      "id": "stop_point:PIVPP:85010157:Train",
+      "stop_area": {
+        "codes": [
+          {
+            "type": "source",
+            "value": "85010157"
+          }
+        ],
+        "name": "Tannay",
+        "links": [],
+        "coord": {
+          "lat": "46.307638",
+          "lon": "6.181126"
+        },
+        "label": "Tannay",
+        "timezone": "Europe/Paris",
+        "id": "stop_area:PIVPP:85010157"
+      }
+    }
+  ]
 }
 """

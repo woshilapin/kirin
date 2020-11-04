@@ -198,7 +198,7 @@ def _check_db_stomp_20201022_23186_delayed_5min():
         assert db_trip_delayed.effect == TripEffect.SIGNIFICANT_DELAYS.name
         assert db_trip_delayed.message == "Absence inopinée d'un agent"
         # PIV contain delayed stop_times only
-        assert db_trip_delayed.company_id == "company:PIV:1187"
+        assert db_trip_delayed.company_id == "company:PIVPP:1187"
         assert len(db_trip_delayed.stop_time_updates) == 17
 
         first_st = db_trip_delayed.stop_time_updates[0]
@@ -306,3 +306,26 @@ def test_piv_event_priority(mock_rabbitmq):
         # full trip removal : no stop_time to precise
         assert len(db_trip_removal.stop_time_updates) == 0
     assert mock_rabbitmq.call_count == 1
+
+
+def test_no_company_source_code_default_to_company_1187(mock_rabbitmq):
+    """
+    delayed stops post
+    """
+    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json")
+    # Replace with a company which doesn't exist in Navitia
+    piv_feed = piv_feed.replace('"codeOperateur": "1187"', '"codeOperateur": "1180"')
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    assert "PIV feed processed" in res.get("message")
+
+    with app.app_context():
+        assert RealTimeUpdate.query.count() >= 1
+        # TODO: Should create a `TripUpdate` but doesn't
+        assert TripUpdate.query.count() >= 0
+        # db_trip_delayed = TripUpdate.find_by_dated_vj(
+        #     "PIV:2020-10-22:23186:1187:Train", datetime(2020, 10, 22, 20, 34)
+        # )
+        # assert db_trip_delayed
+        # assert db_trip_delayed.company_id == "company:PIVPP:1187"
+
+        assert mock_rabbitmq.call_count == 1

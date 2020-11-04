@@ -34,15 +34,41 @@ from tests.mock_navitia import navitia_response
 
 response = navitia_response.NavitiaResponse()
 
-response.queries = [
-    'companies/?filter=company.has_code("RefProd", "1180")&count=1',
-    'companies/?filter=company.has_code("source", "1180")&count=1',
-]
+response.queries = ['stop_points/?filter=stop_area.has_code("source", "85010082")&count=1']
 
 response.response_code = 200
 
 response.json_response = """
 {
-"companies": []
+  "stop_points": [
+    {
+      "name": "Genève",
+      "links": [],
+      "coord": {
+        "lat": "46.210558",
+        "lon": "6.143155"
+      },
+      "label": "Genève",
+      "equipments": [],
+      "id": "stop_point:PIVPP:85010082:Coach",
+      "stop_area": {
+        "codes": [
+          {
+            "type": "source",
+            "value": "85010082"
+          }
+        ],
+        "name": "Genève",
+        "links": [],
+        "coord": {
+          "lat": "46.210558",
+          "lon": "6.143155"
+        },
+        "label": "Genève",
+        "timezone": "Europe/Paris",
+        "id": "stop_area:PIVPP:85010082"
+      }
+    }
+  ]
 }
 """

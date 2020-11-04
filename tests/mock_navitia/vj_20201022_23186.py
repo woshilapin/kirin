@@ -35,7 +35,7 @@ from tests.mock_navitia import navitia_response
 response = navitia_response.NavitiaResponse()
 
 response.queries = [
-    'vehicle_journeys/?filter=vehicle_journey.has_code("rt_piv", "2020-10-22:23186:1187:rail:regionalRail:FERRE")&depth=2&show_codes=true'
+    'vehicle_journeys/?filter=vehicle_journey.has_code("rt_piv", "2020-10-22:23186:1187:rail:regionalRail:FERRE")&depth=2&show_codes=true',
 ]
 
 response.response_code = 200
