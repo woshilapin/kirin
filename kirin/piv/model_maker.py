@@ -223,29 +223,33 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
 
         dict_objects = get_value(json, "objects")
         json_train = get_value(dict_objects[0], "object")  # TODO: can we get more than 1 relevant in objects[]?
-        events = get_value(json_train, "evenement", nullable=True)
+        piv_disruptions = get_value(json_train, "evenement", nullable=True)
         plan_transport_source = get_value(json_train, "planTransportSource", nullable=True)
 
-        if not events and not plan_transport_source:
+        if not piv_disruptions and not plan_transport_source:
             raise InvalidArguments('No object "evenement" or "planTransportSource" available in feed provided')
 
-        higher_event = ujson.loads('{"type": "UNDEFINED", "texte": ""}')
-        if events:
-            for event in events:
-                event_type = get_value(event, "type", nullable=True)
-                if event_type and event_type in trip_piv_status_to_effect and event_type in MANAGED_EVENTS:
-                    higher_event = (
-                        event
-                        if _get_trip_effect_order_from_piv_status(event_type)
-                        < _get_trip_effect_order_from_piv_status(get_value(higher_event, "type"))
-                        else higher_event
+        higher_disruption = ujson.loads('{"type": "UNDEFINED", "texte": ""}')
+        if piv_disruptions:
+            for piv_disruption in piv_disruptions:
+                piv_disruption_type = get_value(piv_disruption, "type", nullable=True)
+                if (
+                    piv_disruption_type
+                    and piv_disruption_type in trip_piv_status_to_effect
+                    and piv_disruption_type in MANAGED_EVENTS
+                ):
+                    higher_disruption = (
+                        piv_disruption
+                        if _get_trip_effect_order_from_piv_status(piv_disruption_type)
+                        < _get_trip_effect_order_from_piv_status(get_value(higher_disruption, "type"))
+                        else higher_disruption
                     )
-            if trip_piv_status_to_effect[higher_event.get("type")] == TripEffect.UNDEFINED:
-                raise UnsupportedValue("None of the event-types {} are supported".format(events))
+            if trip_piv_status_to_effect[higher_disruption.get("type")] == TripEffect.UNDEFINED:
+                raise UnsupportedValue("None of the disruption-types {} are supported".format(piv_disruptions))
         elif plan_transport_source and plan_transport_source not in ["PTP", "OPE"]:
             raise UnsupportedValue("planTransportSource {} is not supported".format(plan_transport_source))
 
-        json_train["evenement"] = higher_event
+        json_train["evenement"] = higher_disruption
         train_date = get_value(json_train, "dateCirculation")
         train_numbers = get_value(json_train, "numero")
         train_company = get_value(get_value(json_train, "operateur"), "codeOperateur")
