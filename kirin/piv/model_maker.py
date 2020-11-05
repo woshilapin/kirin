@@ -79,7 +79,8 @@ trip_effect_order = {
     TripEffect.UNDEFINED: maxint,
 }
 
-MANAGED_EVENTS = ["RETARD", "SUPPRESSION"]
+MANAGED_EVENTS = ["RETARD", "SUPPRESSION", "MODIFICATION_DESSERTE_SUPPRIMEE"]
+MANAGED_STOP_EVENTS = ["RETARD_OBSERVE", "RETARD_PROJETE", "NORMAL", "SUPPRESSION_PARTIELLE"]
 
 
 def _get_trip_effect_order_from_piv_status(status):
@@ -366,21 +367,24 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
                 if not piv_event_status and piv_disruption:
                     piv_event_status = get_value(piv_disruption, "type")
 
-                if not piv_event_status or piv_event_status in ["RETARD_OBSERVE", "RETARD_PROJETE", "NORMAL"]:
+                if not piv_event_status or piv_event_status in MANAGED_STOP_EVENTS:
                     piv_event_datetime = get_value(event, "dateHeureReelle", nullable=True)
                     event_datetime = as_utc_naive_dt(piv_event_datetime) if piv_event_datetime else None
                     if event_datetime:
                         rt_stop_time[event_toggle] = event_datetime
                         setattr(st_update, STOP_EVENT_DATETIME_MAP[event_toggle], event_datetime)
-                    piv_event_delay = 0
                     if piv_disruption:
                         piv_delay = get_value(piv_disruption, "retard", nullable=True)
                         if piv_delay:
                             piv_event_delay = get_value(piv_delay, "duree", nullable=True) or 0
+                            setattr(st_update, STATUS_MAP[event_toggle], ModificationType.update.name)
+                            setattr(
+                                st_update, DELAY_MAP[event_toggle], as_duration(piv_event_delay * 60)
+                            )  # minutes
+                        piv_stop_time_status = get_value(piv_disruption, "type", nullable=True)
+                        if piv_stop_time_status and piv_stop_time_status == "SUPPRESSION_PARTIELLE":
+                            setattr(st_update, STATUS_MAP[event_toggle], ModificationType.delete.name)
 
-                    if piv_event_delay:
-                        setattr(st_update, STATUS_MAP[event_toggle], ModificationType.update.name)
-                        setattr(st_update, DELAY_MAP[event_toggle], as_duration(piv_event_delay * 60))  # minutes
                     # otherwise let those be none
 
                 else:

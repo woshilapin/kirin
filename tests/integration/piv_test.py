@@ -305,6 +305,7 @@ def test_piv_event_priority(mock_rabbitmq):
         assert db_trip_removal.message == "Indisponibilité d'un matériel"
         # full trip removal : no stop_time to precise
         assert len(db_trip_removal.stop_time_updates) == 0
+
     assert mock_rabbitmq.call_count == 1
 
 
@@ -329,3 +330,69 @@ def test_no_company_source_code_default_to_company_1187(mock_rabbitmq):
         # assert db_trip_delayed.company_id == "company:PIVPP:1187"
 
         assert mock_rabbitmq.call_count == 1
+
+
+def test_piv_partial_removal(mock_rabbitmq):
+    """
+    the trip 23186 is partially deleted
+
+    Normally there are 17 stops in this VJ, but 2 (Mies, Pont-Céard) are
+    removed (departure from Tannay deleted)
+    """
+    # Simple partial removal
+    piv_23186_removal = get_fixture_data("piv/stomp_20201022_23186_partial_removal.json")
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_23186_removal)
+    assert "PIV feed processed" in res.get("message")
+
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 1
+        assert len(TripUpdate.query.all()) == 1
+        assert len(StopTimeUpdate.query.all()) == 17
+        assert RealTimeUpdate.query.first().status == "OK"
+
+        with app.app_context():
+            db_trip_partial_removed = TripUpdate.find_by_dated_vj(
+                "PIV:2020-10-22:23186:1187:Train", datetime(2020, 10, 22, 20, 34)
+            )
+            assert db_trip_partial_removed
+
+            assert db_trip_partial_removed.vj.navitia_trip_id == "PIV:2020-10-22:23186:1187:Train"
+            assert db_trip_partial_removed.vj.start_timestamp == datetime(2020, 10, 22, 20, 34)
+            assert db_trip_partial_removed.vj_id == db_trip_partial_removed.vj.id
+            assert db_trip_partial_removed.status == "update"
+            assert db_trip_partial_removed.effect == "REDUCED_SERVICE"
+
+            # 17 stop times must have been created
+            assert len(db_trip_partial_removed.stop_time_updates) == 17
+
+            # the first stop have not been changed
+            first_st = db_trip_partial_removed.stop_time_updates[0]
+            assert first_st.stop_id == "stop_point:PIV:85010231:Train"
+            assert first_st.arrival_status == "none"
+            assert first_st.departure_status == "none"
+            assert first_st.message is None
+
+            for s in db_trip_partial_removed.stop_time_updates[4:16]:
+                assert s.arrival_status == "none"
+                assert s.departure_status == "none"
+                assert s.message is None
+
+            # # the stops Tannay, Mies and Pont-Céard should have been marked as deleted
+            tannay_st = db_trip_partial_removed.stop_time_updates[1]
+            assert tannay_st.stop_id == "stop_point:PIV:85010157:Train"  # Tannay
+            assert tannay_st.arrival_status == "none"  # the train still arrives in this stop
+            assert tannay_st.departure_status == "delete"
+
+            mies_st = db_trip_partial_removed.stop_time_updates[2]
+            assert mies_st.stop_id == "stop_point:PIV:85010140:Train"  # Mies
+            assert mies_st.arrival_status == "delete"
+            assert mies_st.departure_status == "delete"
+
+            pc_st = db_trip_partial_removed.stop_time_updates[3]
+            assert pc_st.stop_id == "stop_point:PIV:85010132:Train"  # Pont-Céard
+            assert pc_st.arrival_status == "delete"
+            assert pc_st.departure_status == "delete"
+
+            assert db_trip_partial_removed.contributor_id == PIV_CONTRIBUTOR_ID
+
+    assert mock_rabbitmq.call_count == 1
