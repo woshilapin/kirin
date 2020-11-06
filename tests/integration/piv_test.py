@@ -266,6 +266,25 @@ def test_piv_delayed(mock_rabbitmq):
     assert mock_rabbitmq.call_count == 1
 
 
+def test_piv_delayed_post_twice(mock_rabbitmq):
+    """
+    double delayed stops post
+    """
+    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json")
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    assert "PIV feed processed" in res.get("message")
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    assert "PIV feed processed" in res.get("message")
+
+    with app.app_context():
+        assert len(RealTimeUpdate.query.all()) == 2
+    db_trip_delayed = _check_db_stomp_20201022_23186_delayed_5min()
+    assert db_trip_delayed.effect == "SIGNIFICANT_DELAYS"
+    assert len(db_trip_delayed.stop_time_updates) == 17
+    # the rabbit mq has to have been called twice
+    assert mock_rabbitmq.call_count == 2
+
+
 def test_piv_trip_removal_simple_post(mock_rabbitmq):
     """
     simple trip removal post
