@@ -198,6 +198,21 @@ def _check_stop_time_consistency(previous_rt_stop_time_dep, current_rt_stop_time
         raise InvalidArguments("invalid feed: stop_point's({}) time is not consistent".format(uic8))
 
 
+def _get_message(arret):
+    arrival_stop = get_value(arret, "arrivee", nullable=True)
+    departure_stop = get_value(arret, "depart", nullable=True)
+    motif = None
+    if departure_stop:
+        motif = get_value(departure_stop, "motifModification", nullable=True)
+    if not motif and arrival_stop:
+        motif = get_value(arrival_stop, "motifModification", nullable=True)
+    if not motif and departure_stop:
+        motif = departure_stop.get("evenement", {}).get("texte", None)
+    if not motif and arrival_stop:
+        motif = arrival_stop.get("evenement", {}).get("texte", None)
+    return motif
+
+
 class KirinModelBuilder(AbstractKirinModelBuilder):
     def __init__(self, contributor):
         super(KirinModelBuilder, self).__init__(contributor, is_new_complete=True)
@@ -360,6 +375,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
             st_update = model.StopTimeUpdate(nav_stop)
             trip_update.stop_time_updates.append(st_update)
 
+            st_update.message = _get_message(arret)
             for event_toggle in ["arrivee", "depart"]:
                 event = get_value(arret, event_toggle, nullable=True)
                 if event is None:

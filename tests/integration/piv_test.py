@@ -208,7 +208,7 @@ def _check_db_stomp_20201022_23186_delayed_5min():
         assert first_st.departure == datetime(2020, 10, 22, 20, 39)
         assert first_st.departure_delay == timedelta(minutes=5)
         assert first_st.departure_status == ModificationType.update.name
-        assert first_st.message is None  # TODO xfail: to be updated when messages are read
+        assert first_st.message == "Absence inopinée d'un agent"
 
         second_st = db_trip_delayed.stop_time_updates[1]
         assert second_st.stop_id == "stop_point:PIV:85010157:Train"
@@ -218,7 +218,7 @@ def _check_db_stomp_20201022_23186_delayed_5min():
         assert second_st.departure == datetime(2020, 10, 22, 20, 40, 30)
         assert second_st.departure_delay == timedelta(minutes=5)
         assert second_st.departure_status == ModificationType.update.name
-        assert second_st.message is None  # TODO xfail: to be updated when messages are read
+        assert second_st.message == "Absence inopinée d'un agent (motifModification depart)"
 
         for st in db_trip_delayed.stop_time_updates[2:-1]:
             assert st.stop_id
@@ -228,7 +228,15 @@ def _check_db_stomp_20201022_23186_delayed_5min():
             assert datetime(2020, 10, 22, 20, 43) <= st.departure <= datetime(2020, 10, 22, 21, 25)
             assert st.departure_status == ModificationType.update.name
             assert st.departure_delay == timedelta(minutes=5)
-            assert st.message is None  # TODO xfail: to be updated when messages are read
+
+        db_trip_delayed.stop_time_updates[2].message = "Absence inopinée d'un agent (motifModification arrivee)"
+        db_trip_delayed.stop_time_updates[3].message = "Absence inopinée d'un agent (evenement depart)"
+        db_trip_delayed.stop_time_updates[4].message = "Absence inopinée d'un agent (evenement arrivee)"
+        db_trip_delayed.stop_time_updates[5].message = "Absence inopinée d'un agent (motifModification depart)"
+        db_trip_delayed.stop_time_updates[6].message = "Absence inopinée d'un agent (motifModification arrivee)"
+        db_trip_delayed.stop_time_updates[7].message = "Absence inopinée d'un agent (evenement depart)"
+        db_trip_delayed.stop_time_updates[8].message = "Absence inopinée d'un agent (evenement arrivee)"
+        db_trip_delayed.stop_time_updates[9].message = "Absence inopinée d'un agent"
 
         last_st = db_trip_delayed.stop_time_updates[-1]
         assert last_st.stop_id == "stop_point:PIV:87745497:Train"
@@ -237,7 +245,7 @@ def _check_db_stomp_20201022_23186_delayed_5min():
         assert last_st.arrival_delay == timedelta(minutes=5)
         # no specific functional constraint on last departure, except time consistency
         assert last_st.arrival <= last_st.departure
-        assert second_st.message is None  # TODO xfail: to be updated when messages are read
+        assert last_st.message == "Absence inopinée d'un agent"
 
         assert db_trip_delayed.contributor_id == PIV_CONTRIBUTOR_ID
 
@@ -280,6 +288,7 @@ def test_piv_trip_removal_simple_post(mock_rabbitmq):
         assert db_trip_removal.message == "Indisponibilité d'un matériel"
         # full trip removal : no stop_time to precise
         assert len(db_trip_removal.stop_time_updates) == 0
+
     assert mock_rabbitmq.call_count == 1
 
 
