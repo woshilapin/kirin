@@ -402,6 +402,8 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
                             setattr(st_update, STATUS_MAP[event_toggle], ModificationType.update.name)
                         elif piv_stop_time_status == "SUPPRESSION_PARTIELLE":
                             setattr(st_update, STATUS_MAP[event_toggle], ModificationType.delete.name)
+                        else:
+                            setattr(st_update, STATUS_MAP[event_toggle], ModificationType.none.name)
                     # otherwise let those be none
 
                 else:

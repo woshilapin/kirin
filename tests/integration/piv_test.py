@@ -181,7 +181,7 @@ def test_piv_purge(mock_rabbitmq):
         assert RealTimeUpdate.query.count() == 0
 
 
-def _check_db_stomp_20201022_23186_delayed_5min():
+def _assert_db_stomp_20201022_23186_delayed_5min():
     with app.app_context():
         assert RealTimeUpdate.query.count() >= 1
         assert TripUpdate.query.count() >= 1
@@ -252,7 +252,7 @@ def _check_db_stomp_20201022_23186_delayed_5min():
         return db_trip_delayed  # for additional testing if needed
 
 
-def _check_db_stomp_20201022_23187_partial_delayed():
+def _assert_db_stomp_20201022_23187_partial_delayed():
     with app.app_context():
         assert RealTimeUpdate.query.count() >= 1
         assert TripUpdate.query.count() >= 1
@@ -322,7 +322,7 @@ def _check_db_stomp_20201022_23187_partial_delayed():
         assert fifth_st.departure == datetime(2020, 10, 22, 21, 20)
         assert fifth_st.departure_delay == timedelta(minutes=0)
         assert fifth_st.departure_status == ModificationType.none.name
-        assert fifth_st.message == None
+        assert fifth_st.message is None
 
         last_st = db_trip_delayed.stop_time_updates[5]
         assert last_st.stop_id == "stop_point:PIV:87745497:Train"
@@ -331,14 +331,14 @@ def _check_db_stomp_20201022_23187_partial_delayed():
         assert last_st.arrival_delay == timedelta(minutes=0)
         # no specific functional constraint on last departure, except time consistency
         assert last_st.arrival <= last_st.departure
-        assert last_st.message == None
+        assert last_st.message is None
 
         assert db_trip_delayed.contributor_id == PIV_CONTRIBUTOR_ID
 
         return db_trip_delayed  # for additional testing if needed
 
 
-def _check_db_stomp_20201022_23187_delayed_5min():
+def _assert_db_stomp_20201022_23187_delayed_5min():
     with app.app_context():
         assert RealTimeUpdate.query.count() >= 1
         assert TripUpdate.query.count() >= 1
@@ -429,8 +429,7 @@ def test_piv_delayed(mock_rabbitmq):
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 
-    db_trip_delayed = _check_db_stomp_20201022_23186_delayed_5min()
-    assert db_trip_delayed.effect == "SIGNIFICANT_DELAYS"
+    _assert_db_stomp_20201022_23186_delayed_5min()
     # the rabbit mq has to have been called twice
     assert mock_rabbitmq.call_count == 1
 
@@ -446,10 +445,8 @@ def test_piv_delayed_post_twice(mock_rabbitmq):
     assert "PIV feed processed" in res.get("message")
 
     with app.app_context():
-        assert len(RealTimeUpdate.query.all()) == 2
-    db_trip_delayed = _check_db_stomp_20201022_23186_delayed_5min()
-    assert db_trip_delayed.effect == "SIGNIFICANT_DELAYS"
-    assert len(db_trip_delayed.stop_time_updates) == 17
+        assert RealTimeUpdate.query.count() == 2
+    _assert_db_stomp_20201022_23186_delayed_5min()
     # the rabbit mq has to have been called twice
     assert mock_rabbitmq.call_count == 2
 
@@ -462,16 +459,14 @@ def test_piv_partial_delayed_then_delayed(mock_rabbitmq):
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 
-    db_trip_delayed = _check_db_stomp_20201022_23187_partial_delayed()
-    assert db_trip_delayed.effect == "SIGNIFICANT_DELAYS"
+    _assert_db_stomp_20201022_23187_partial_delayed()
     assert mock_rabbitmq.call_count == 1
 
     piv_feed = get_fixture_data("piv/stomp_20201022_23187_delayed_5min.json")
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 
-    db_trip_delayed = _check_db_stomp_20201022_23187_delayed_5min()
-    assert db_trip_delayed.effect == "SIGNIFICANT_DELAYS"
+    _assert_db_stomp_20201022_23187_delayed_5min()
     # the rabbit mq has to have been called twice
     assert mock_rabbitmq.call_count == 2
 
