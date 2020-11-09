@@ -610,3 +610,56 @@ def test_piv_partial_removal(mock_rabbitmq):
             assert db_trip_partial_removed.contributor_id == PIV_CONTRIBUTOR_ID
 
     assert mock_rabbitmq.call_count == 1
+
+
+def test_piv_modification_limitation(mock_rabbitmq):
+    """
+    the trip 23186 is deleted except the first two stop
+    """
+    # Simple modification limitation
+    piv_23186_removal = get_fixture_data("piv/stomp_20201022_23186_modification_limitation.json")
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_23186_removal)
+    assert "PIV feed processed" in res.get("message")
+
+    with app.app_context():
+        assert RealTimeUpdate.query.count() == 1
+        assert TripUpdate.query.count() == 1
+        assert StopTimeUpdate.query.count() == 17
+        assert RealTimeUpdate.query.first().status == "OK"
+
+        with app.app_context():
+            db_trip_partial_removed = TripUpdate.find_by_dated_vj(
+                "PIV:2020-10-22:23186:1187:Train", datetime(2020, 10, 22, 20, 34)
+            )
+            assert db_trip_partial_removed
+
+            assert db_trip_partial_removed.vj.navitia_trip_id == "PIV:2020-10-22:23186:1187:Train"
+            assert db_trip_partial_removed.vj.start_timestamp == datetime(2020, 10, 22, 20, 34)
+            assert db_trip_partial_removed.vj_id == db_trip_partial_removed.vj.id
+            assert db_trip_partial_removed.status == "update"
+            assert db_trip_partial_removed.effect == "REDUCED_SERVICE"
+
+            # 17 stop times must have been created
+            assert len(db_trip_partial_removed.stop_time_updates) == 17
+
+            # the first stop have not been changed
+            first_st = db_trip_partial_removed.stop_time_updates[0]
+            assert first_st.stop_id == "stop_point:PIV:85010231:Train"
+            assert first_st.arrival_status == "none"
+            assert first_st.departure_status == "none"
+            assert first_st.message is None
+
+            # the second stop's departure have been marked as deleted
+            second_st = db_trip_partial_removed.stop_time_updates[1]
+            assert second_st.arrival_status == "none"
+            assert second_st.departure_status == "delete"
+            assert second_st.message is None
+
+            for s in db_trip_partial_removed.stop_time_updates[2:16]:
+                assert s.arrival_status == "delete"
+                assert s.departure_status == "delete"
+                assert s.message is None
+
+            assert db_trip_partial_removed.contributor_id == PIV_CONTRIBUTOR_ID
+
+    assert mock_rabbitmq.call_count == 1
