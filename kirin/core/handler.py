@@ -426,7 +426,7 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete):
 
     The mechanism is quite simple:
         * the result trip status is the new_trip_update's status
-            (ie in the db the trip was cancelled, and a new update is only an update, the trip update is
+            (ie if in the db the trip was cancelled, and a new update is only an update, the trip update is
             not cancelled anymore, only updated)
 
         * for each navitia's stop_time and for departure|arrival:
@@ -607,7 +607,7 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete):
         elif db_trip_update is not None and new_st is None:
             """
             Third case: we have already recorded a delay but nothing is mentioned in the new trip update
-            Then      : For IRE, we do nothing but only update stop time's order
+            Then      : For cots, we do nothing but only update stop time's order
                         For gtfs-rt, according to the specification, we should use the delay from the previous
                         stop time, which will be handled sooner by the connector-specified model maker
 

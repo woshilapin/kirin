@@ -100,7 +100,7 @@ class PivWorker(ConsumerMixin):
         return [
             Consumer(
                 queues=[self.queue],
-                accept=["plain/text"],
+                accept=["plain/text"],  # avoid deserializing to json dict
                 prefetch_count=1,
                 callbacks=[self.process_message],
             )

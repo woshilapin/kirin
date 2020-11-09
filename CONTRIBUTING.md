@@ -216,3 +216,6 @@ To generate a new release:
    ```sh
    git push canaltp release master --tags
    ```
+
+5. the pipe https://ci.navitia.io/view/kirin_release_deployment/ should be
+   triggered (and release the new docker among other things)
