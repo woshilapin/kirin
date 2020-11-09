@@ -394,17 +394,16 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
                         rt_stop_time[event_toggle] = event_datetime
                         setattr(st_update, STOP_EVENT_DATETIME_MAP[event_toggle], event_datetime)
                     if piv_disruption:
-                        piv_delay = get_value(piv_disruption, "retard", nullable=True)
-                        if piv_delay:
-                            piv_event_delay = get_value(piv_delay, "duree", nullable=True) or 0
-                            setattr(st_update, STATUS_MAP[event_toggle], ModificationType.update.name)
-                            setattr(
-                                st_update, DELAY_MAP[event_toggle], as_duration(piv_event_delay * 60)
-                            )  # minutes
-                        piv_stop_time_status = get_value(piv_disruption, "type", nullable=True)
-                        if piv_stop_time_status and piv_stop_time_status == "SUPPRESSION_PARTIELLE":
-                            setattr(st_update, STATUS_MAP[event_toggle], ModificationType.delete.name)
+                        piv_event_delay = piv_disruption.get("retard", {}).get("duree", 0)
+                        setattr(st_update, DELAY_MAP[event_toggle], as_duration(piv_event_delay * 60))  # minutes
 
+                        piv_stop_time_status = get_value(piv_disruption, "type", nullable=True)
+                        if piv_stop_time_status in ["RETARD_OBSERVE", "RETARD_PROJETE"]:
+                            setattr(st_update, STATUS_MAP[event_toggle], ModificationType.update.name)
+                        elif piv_stop_time_status == "SUPPRESSION_PARTIELLE":
+                            setattr(st_update, STATUS_MAP[event_toggle], ModificationType.delete.name)
+                        else:
+                            setattr(st_update, STATUS_MAP[event_toggle], ModificationType.none.name)
                     # otherwise let those be none
 
                 else:
