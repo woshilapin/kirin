@@ -33,6 +33,7 @@ from __future__ import absolute_import, print_function, unicode_literals, divisi
 from datetime import timedelta, datetime
 
 import pytest
+import ujson
 
 from kirin import app, db
 from kirin.core.model import (
@@ -45,7 +46,7 @@ from kirin.core.model import (
 )
 from kirin.core.types import ConnectorType, TripEffect, ModificationType
 from kirin.tasks import purge_trip_update, purge_rt_update
-from tests.check_utils import api_post, api_get, get_fixture_data
+from tests.check_utils import api_post, api_get, get_fixture_data, get_fixture_data_as_dict
 from tests import mock_navitia
 from tests.integration.conftest import PIV_CONTRIBUTOR_ID
 
@@ -56,6 +57,42 @@ def navitia(monkeypatch):
     Mock all calls to navitia for this fixture
     """
     monkeypatch.setattr("navitia_wrapper._NavitiaWrapper.query", mock_navitia.mock_navitia_query)
+
+
+def _set_piv_disruption(fixture, evt_type, message):
+    evenement = fixture["objects"][0]["object"].get("evenement")
+    if evenement:
+        fixture["objects"][0]["object"]["evenement"].append({"type": evt_type, "texte": message})
+    else:
+        fixture["objects"][0]["object"]["evenement"] = [{"type": evt_type, "texte": message}]
+
+
+def _set_event_on_stop(fixture, evt_type, dep_or_arr, rang, message=None, motif_modification=None, retard=None):
+    ads = fixture["objects"][0]["object"]["listeArretsDesserte"]["arret"]
+    for desserte in ads:
+        if desserte["rang"] == rang:
+            if desserte.get(dep_or_arr):
+                desserte[dep_or_arr]["evenement"] = {"type": evt_type, "texte": message}
+                if retard:
+                    desserte[dep_or_arr]["evenement"]["retard"] = retard
+                if motif_modification:
+                    desserte[dep_or_arr]["motifModification"] = motif_modification
+
+
+def _set_event_on_stops(
+    fixture, evt_type, rang_min, rang_max, message=None, motif_modification=None, retard=None
+):
+    for event_toggle in ["arrivee", "depart"]:
+        for rang in range(rang_min, rang_max + 1):
+            _set_event_on_stop(
+                fixture=fixture,
+                evt_type=evt_type,
+                dep_or_arr=event_toggle,
+                rang=rang,
+                message=message,
+                motif_modification=motif_modification,
+                retard=retard
+            )
 
 
 def test_wrong_get_piv_with_id():
