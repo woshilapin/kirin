@@ -91,7 +91,7 @@ def _set_event_on_stops(
                 rang=rang,
                 message=message,
                 motif_modification=motif_modification,
-                retard=retard
+                retard=retard,
             )
 
 
@@ -512,8 +512,17 @@ def test_piv_trip_removal_simple_post(mock_rabbitmq):
     """
     simple trip removal post
     """
-    piv_feed = get_fixture_data("piv/stomp_20201029_841252_trip_removal.json")
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_feed = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
+    _set_piv_disruption(piv_feed, evt_type="SUPPRESSION", message="Indisponibilité d'un matériel")
+    _set_event_on_stops(
+        fixture=piv_feed,
+        evt_type="SUPPRESSION_TOTALE",
+        motif_modification="Indisponibilité d'un matériel",
+        rang_min=0,
+        rang_max=5,
+    )
+
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
     assert "PIV feed processed" in res.get("message")
 
     with app.app_context():
@@ -523,8 +532,8 @@ def test_piv_trip_removal_simple_post(mock_rabbitmq):
 
         db_trip_removal = TripUpdate.query.first()
         assert db_trip_removal
-        assert db_trip_removal.vj.navitia_trip_id == "PIVPP:2020-10-29:841252:1187:Train"
-        assert db_trip_removal.vj.start_timestamp == datetime(2020, 10, 29, 20, 5)
+        assert db_trip_removal.vj.navitia_trip_id == "PIV:2020-10-22:23187:1187:Train"
+        assert db_trip_removal.vj.start_timestamp == datetime(2020, 10, 22, 20, 34)
         assert db_trip_removal.status == "delete"
         assert db_trip_removal.effect == "NO_SERVICE"
         assert db_trip_removal.message == "Indisponibilité d'un matériel"
