@@ -99,7 +99,7 @@ def _set_event_on_stops(
             )
 
 
-def get_stomp_20201022_23187_partial_delayed_fixture():
+def _get_stomp_20201022_23187_partial_delayed_fixture():
     piv_feed = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
     _set_piv_disruption(piv_feed, evt_type="RETARD", message="Absence inopinée d'un agent")
     retard = {"duree": 5, "dureeInterne": 8}
@@ -168,7 +168,7 @@ def get_stomp_20201022_23187_partial_delayed_fixture():
     return piv_feed
 
 
-def get_stomp_20201022_23187_delayed_5min_fixture():
+def _get_stomp_20201022_23187_delayed_5min_fixture():
     piv_feed = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
     _set_piv_disruption(piv_feed, evt_type="RETARD", message="Absence inopinée d'un agent")
     retard = {"duree": 5, "dureeInterne": 8}
@@ -287,7 +287,7 @@ def test_piv_simple_post(mock_rabbitmq):
     """
     simple PIV post should be stored in db as a RealTimeUpdate
     """
-    piv_feed = ujson.dumps(get_stomp_20201022_23187_delayed_5min_fixture())
+    piv_feed = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 
@@ -309,7 +309,7 @@ def test_piv_purge(mock_rabbitmq):
     """
     Simple PIV post, then test the purge
     """
-    piv_feed = ujson.dumps(get_stomp_20201022_23187_delayed_5min_fixture())
+    piv_feed = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 
@@ -596,7 +596,7 @@ def test_piv_delayed(mock_rabbitmq):
     """
     delayed stops post
     """
-    piv_feed = ujson.dumps(get_stomp_20201022_23187_delayed_5min_fixture())
+    piv_feed = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 
@@ -609,7 +609,7 @@ def test_piv_delayed_post_twice(mock_rabbitmq):
     """
     double delayed stops post
     """
-    piv_feed = ujson.dumps(get_stomp_20201022_23187_delayed_5min_fixture())
+    piv_feed = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
@@ -626,15 +626,15 @@ def test_piv_partial_delayed_then_delayed(mock_rabbitmq):
     """
     partial delayed stops post
     """
-    piv_feed = get_stomp_20201022_23187_partial_delayed_fixture()
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
+    piv_feed = ujson.dumps(_get_stomp_20201022_23187_partial_delayed_fixture())
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 
     _assert_db_stomp_20201022_23187_partial_delayed()
     assert mock_rabbitmq.call_count == 1
 
-    piv_feed = get_stomp_20201022_23187_delayed_5min_fixture()
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
+    piv_feed = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 
     _assert_db_stomp_20201022_23187_delayed_5min()
@@ -717,8 +717,7 @@ def test_no_company_source_code_default_to_company_1187(mock_rabbitmq):
     """
     delayed stops post
     """
-    piv_feed = get_stomp_20201022_23187_delayed_5min_fixture()
-    piv_feed = ujson.dumps(piv_feed)
+    piv_feed = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
     # Replace with a company which doesn't exist in Navitia
     piv_feed = piv_feed.replace('"codeOperateur": "1187"', '"codeOperateur": "1180"')
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
