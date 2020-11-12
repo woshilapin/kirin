@@ -309,7 +309,7 @@ def test_piv_purge(mock_rabbitmq):
     """
     Simple PIV post, then test the purge
     """
-    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json")
+    piv_feed = ujson.dumps(get_stomp_20201022_23187_delayed_5min_fixture())
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 
