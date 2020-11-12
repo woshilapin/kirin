@@ -609,7 +609,7 @@ def test_piv_delayed_post_twice(mock_rabbitmq):
     """
     double delayed stops post
     """
-    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json")
+    piv_feed = ujson.dumps(get_stomp_20201022_23187_delayed_5min_fixture())
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
@@ -617,7 +617,7 @@ def test_piv_delayed_post_twice(mock_rabbitmq):
 
     with app.app_context():
         assert RealTimeUpdate.query.count() == 2
-    _assert_db_stomp_20201022_23186_delayed_5min()
+    _assert_db_stomp_20201022_23187_delayed_5min()
     # the rabbit mq has to have been called twice
     assert mock_rabbitmq.call_count == 2
 
