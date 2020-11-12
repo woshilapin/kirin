@@ -47,7 +47,6 @@ from kirin.core.model import (
 )
 from kirin.core.types import ConnectorType, TripEffect, ModificationType
 from kirin.tasks import purge_trip_update, purge_rt_update
-from kirin.utils import as_utc_naive_dt
 from tests.check_utils import api_post, api_get, get_fixture_data, get_fixture_data_as_dict
 from tests import mock_navitia
 from tests.integration.conftest import PIV_CONTRIBUTOR_ID
@@ -288,7 +287,7 @@ def test_piv_simple_post(mock_rabbitmq):
     """
     simple PIV post should be stored in db as a RealTimeUpdate
     """
-    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json")
+    piv_feed = ujson.dumps(get_stomp_20201022_23187_delayed_5min_fixture())
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
     assert "PIV feed processed" in res.get("message")
 
