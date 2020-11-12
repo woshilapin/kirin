@@ -31,6 +31,7 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 
 from datetime import timedelta, datetime
+from dateutil import parser
 
 import pytest
 import ujson
@@ -46,6 +47,7 @@ from kirin.core.model import (
 )
 from kirin.core.types import ConnectorType, TripEffect, ModificationType
 from kirin.tasks import purge_trip_update, purge_rt_update
+from kirin.utils import as_utc_naive_dt
 from tests.check_utils import api_post, api_get, get_fixture_data, get_fixture_data_as_dict
 from tests import mock_navitia
 from tests.integration.conftest import PIV_CONTRIBUTOR_ID
@@ -75,6 +77,9 @@ def _set_event_on_stop(fixture, evt_type, dep_or_arr, rang, message=None, motif_
                 desserte[dep_or_arr]["evenement"] = {"type": evt_type, "texte": message}
                 if retard:
                     desserte[dep_or_arr]["evenement"]["retard"] = retard
+                    date_heure = parser.parse(desserte[dep_or_arr]["dateHeure"], dayfirst=False, yearfirst=True, ignoretz=False)
+                    date_heure_reelle = date_heure + timedelta(minutes=retard["duree"])
+                    desserte[dep_or_arr]["dateHeureReelle"] = date_heure_reelle.isoformat()
                 if motif_modification:
                     desserte[dep_or_arr]["motifModification"] = motif_modification
 
@@ -93,6 +98,136 @@ def _set_event_on_stops(
                 motif_modification=motif_modification,
                 retard=retard,
             )
+
+
+def get_stomp_20201022_23187_partial_delayed_fixture():
+    piv_feed = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
+    _set_piv_disruption(piv_feed, evt_type="RETARD", message="Absence inopinée d'un agent")
+    retard = {"duree": 5, "dureeInterne": 8}
+    _set_event_on_stop(
+        fixture=piv_feed,
+        evt_type="RETARD_PROJETE",
+        dep_or_arr="depart",
+        motif_modification="Absence inopinée d'un agent",
+        message="Absence inopinée d'un agent (evenement depart)",
+        retard=retard,
+        rang=0,
+    )
+    _set_event_on_stop(
+        fixture=piv_feed,
+        evt_type="RETARD_PROJETE",
+        dep_or_arr="arrivee",
+        motif_modification="Absence inopinée d'un agent (motifModification arrivee)",
+        message="Absence inopinée d'un agent (evenement arrivee)",
+        retard=retard,
+        rang=1,
+    )
+    _set_event_on_stop(
+        fixture=piv_feed,
+        evt_type="RETARD_PROJETE",
+        dep_or_arr="depart",
+        motif_modification="Absence inopinée d'un agent (motifModification depart)",
+        message="Absence inopinée d'un agent (evenement depart)",
+        retard=retard,
+        rang=1,
+    )
+    retard = {"duree": 0, "dureeInterne": 2}
+    _set_event_on_stop(
+        fixture=piv_feed,
+        evt_type="RETARD_PROJETE",
+        dep_or_arr="arrivee",
+        motif_modification="Absence inopinée d'un agent (motifModification arrivee)",
+        message="Absence inopinée d'un agent (evenement arrivee)",
+        retard=retard,
+        rang=2,
+    )
+    _set_event_on_stop(
+        fixture=piv_feed,
+        evt_type="RETARD_PROJETE",
+        dep_or_arr="depart",
+        message="Absence inopinée d'un agent (evenement depart)",
+        retard=retard,
+        rang=2,
+    )
+    retard = {"duree": 0, "dureeInterne": 0}
+    _set_event_on_stop(
+        fixture=piv_feed,
+        evt_type="NORMAL",
+        dep_or_arr="arrivee",
+        message="Absence inopinée d'un agent",
+        retard=retard,
+        rang=3,
+    )
+    _set_event_on_stop(
+        fixture=piv_feed,
+        evt_type="NORMAL",
+        dep_or_arr="depart",
+        message="Absence inopinée d'un agent",
+        retard=retard,
+        rang=3,
+    )
+    return piv_feed
+
+
+def get_stomp_20201022_23187_delayed_5min_fixture():
+    piv_feed = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
+    _set_piv_disruption(piv_feed, evt_type="RETARD", message="Absence inopinée d'un agent")
+    retard = {"duree": 5, "dureeInterne": 8}
+    _set_event_on_stop(
+        fixture=piv_feed,
+        evt_type="RETARD_PROJETE",
+        dep_or_arr="depart",
+        motif_modification="Absence inopinée d'un agent",
+        message="Absence inopinée d'un agent (evenement depart)",
+        retard=retard,
+        rang=0,
+    )
+    _set_event_on_stop(
+        fixture=piv_feed,
+        evt_type="RETARD_PROJETE",
+        dep_or_arr="arrivee",
+        motif_modification="Absence inopinée d'un agent (motifModification arrivee)",
+        message="Absence inopinée d'un agent (evenement arrivee)",
+        retard=retard,
+        rang=1,
+    )
+    _set_event_on_stop(
+        fixture=piv_feed,
+        evt_type="RETARD_PROJETE",
+        dep_or_arr="depart",
+        motif_modification="Absence inopinée d'un agent (motifModification depart)",
+        message="Absence inopinée d'un agent (evenement depart)",
+        retard=retard,
+        rang=1,
+    )
+    _set_event_on_stop(
+        fixture=piv_feed,
+        evt_type="RETARD_PROJETE",
+        dep_or_arr="arrivee",
+        motif_modification="Absence inopinée d'un agent (motifModification arrivee)",
+        message="Absence inopinée d'un agent (evenement arrivee)",
+        retard=retard,
+        rang=2,
+    )
+    _set_event_on_stop(
+        fixture=piv_feed,
+        evt_type="RETARD_PROJETE",
+        dep_or_arr="depart",
+        message="Absence inopinée d'un agent (evenement depart)",
+        retard=retard,
+        rang=2,
+    )
+    _set_event_on_stops(
+        fixture=piv_feed,
+        evt_type="RETARD_PROJETE",
+        motif_modification="",
+        message="Absence inopinée d'un agent",
+        retard=retard,
+        rang_min=3,
+        rang_max=5,
+    )
+
+    return piv_feed
 
 
 def test_wrong_get_piv_with_id():
@@ -492,15 +627,15 @@ def test_piv_partial_delayed_then_delayed(mock_rabbitmq):
     """
     partial delayed stops post
     """
-    piv_feed = get_fixture_data("piv/stomp_20201022_23187_partial_delayed.json")
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_feed = get_stomp_20201022_23187_partial_delayed_fixture()
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
     assert "PIV feed processed" in res.get("message")
 
     _assert_db_stomp_20201022_23187_partial_delayed()
     assert mock_rabbitmq.call_count == 1
 
-    piv_feed = get_fixture_data("piv/stomp_20201022_23187_delayed_5min.json")
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_feed = get_stomp_20201022_23187_delayed_5min_fixture()
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
     assert "PIV feed processed" in res.get("message")
 
     _assert_db_stomp_20201022_23187_delayed_5min()
