@@ -718,7 +718,8 @@ def test_no_company_source_code_default_to_company_1187(mock_rabbitmq):
     """
     delayed stops post
     """
-    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json")
+    piv_feed = get_stomp_20201022_23187_delayed_5min_fixture()
+    piv_feed = ujson.dumps(piv_feed)
     # Replace with a company which doesn't exist in Navitia
     piv_feed = piv_feed.replace('"codeOperateur": "1187"', '"codeOperateur": "1180"')
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
@@ -729,7 +730,7 @@ def test_no_company_source_code_default_to_company_1187(mock_rabbitmq):
         # TODO: Should create a `TripUpdate` but doesn't
         assert TripUpdate.query.count() >= 0
         # db_trip_delayed = TripUpdate.find_by_dated_vj(
-        #     "PIV:2020-10-22:23186:1187:Train", datetime(2020, 10, 22, 20, 34)
+        #     "PIV:2020-10-22:23187:1187:Train", datetime(2020, 10, 22, 20, 34)
         # )
         # assert db_trip_delayed
         # assert db_trip_delayed.company_id == "company:PIVPP:1187"
