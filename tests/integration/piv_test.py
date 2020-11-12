@@ -76,7 +76,9 @@ def _set_event_on_stop(fixture, evt_type, dep_or_arr, rang, message=None, motif_
                 desserte[dep_or_arr]["evenement"] = {"type": evt_type, "texte": message}
                 if retard:
                     desserte[dep_or_arr]["evenement"]["retard"] = retard
-                    date_heure = parser.parse(desserte[dep_or_arr]["dateHeure"], dayfirst=False, yearfirst=True, ignoretz=False)
+                    date_heure = parser.parse(
+                        desserte[dep_or_arr]["dateHeure"], dayfirst=False, yearfirst=True, ignoretz=False
+                    )
                     date_heure_reelle = date_heure + timedelta(minutes=retard["duree"])
                     desserte[dep_or_arr]["dateHeureReelle"] = date_heure_reelle.isoformat()
                 if motif_modification:
@@ -350,77 +352,6 @@ def test_piv_purge(mock_rabbitmq):
         assert StopTimeUpdate.query.count() == 0
         assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 0
         assert RealTimeUpdate.query.count() == 0
-
-
-def _assert_db_stomp_20201022_23186_delayed_5min():
-    with app.app_context():
-        assert RealTimeUpdate.query.count() >= 1
-        assert TripUpdate.query.count() >= 1
-        assert StopTimeUpdate.query.count() >= 17
-        db_trip_delayed = TripUpdate.find_by_dated_vj(
-            "PIV:2020-10-22:23186:1187:Train", datetime(2020, 10, 22, 20, 34)
-        )
-        assert db_trip_delayed
-
-        assert db_trip_delayed.vj.navitia_trip_id == "PIV:2020-10-22:23186:1187:Train"
-        assert db_trip_delayed.vj.start_timestamp == datetime(2020, 10, 22, 20, 34)
-        assert db_trip_delayed.vj_id == db_trip_delayed.vj.id
-        assert db_trip_delayed.status == ModificationType.update.name
-        assert db_trip_delayed.effect == TripEffect.SIGNIFICANT_DELAYS.name
-        assert db_trip_delayed.message == "Absence inopinée d'un agent"
-        # PIV feed contains delayed stop_times only
-        assert db_trip_delayed.company_id == "company:PIVPP:1187"
-        assert len(db_trip_delayed.stop_time_updates) == 17
-
-        first_st = db_trip_delayed.stop_time_updates[0]
-        assert first_st.stop_id == "stop_point:PIV:85010231:Train"
-        # no specific functional constraint on first arrival, except time consistency
-        assert first_st.arrival <= first_st.departure
-        assert first_st.departure == datetime(2020, 10, 22, 20, 39)
-        assert first_st.departure_delay == timedelta(minutes=5)
-        assert first_st.departure_status == ModificationType.update.name
-        assert first_st.message == "Absence inopinée d'un agent"
-
-        second_st = db_trip_delayed.stop_time_updates[1]
-        assert second_st.stop_id == "stop_point:PIV:85010157:Train"
-        assert second_st.arrival == datetime(2020, 10, 22, 20, 40)
-        assert second_st.arrival_status == ModificationType.update.name
-        assert second_st.arrival_delay == timedelta(minutes=5)
-        assert second_st.departure == datetime(2020, 10, 22, 20, 40, 30)
-        assert second_st.departure_delay == timedelta(minutes=5)
-        assert second_st.departure_status == ModificationType.update.name
-        assert second_st.message == "Absence inopinée d'un agent (motifModification depart)"
-
-        for st in db_trip_delayed.stop_time_updates[2:-1]:
-            assert st.stop_id
-            assert datetime(2020, 10, 22, 20, 42) <= st.arrival <= datetime(2020, 10, 22, 21, 24)
-            assert st.arrival_status == ModificationType.update.name
-            assert st.arrival_delay == timedelta(minutes=5)
-            assert datetime(2020, 10, 22, 20, 43) <= st.departure <= datetime(2020, 10, 22, 21, 25)
-            assert st.departure_status == ModificationType.update.name
-            assert st.departure_delay == timedelta(minutes=5)
-
-        db_trip_delayed.stop_time_updates[2].message = "Absence inopinée d'un agent (motifModification arrivee)"
-        db_trip_delayed.stop_time_updates[3].message = "Absence inopinée d'un agent (evenement depart)"
-        db_trip_delayed.stop_time_updates[4].message = "Absence inopinée d'un agent (evenement arrivee)"
-        db_trip_delayed.stop_time_updates[5].message = "Absence inopinée d'un agent (motifModification depart)"
-        db_trip_delayed.stop_time_updates[6].message = "Absence inopinée d'un agent (motifModification arrivee)"
-        db_trip_delayed.stop_time_updates[7].message = "Absence inopinée d'un agent (evenement depart)"
-        db_trip_delayed.stop_time_updates[8].message = "Absence inopinée d'un agent (evenement arrivee)"
-        db_trip_delayed.stop_time_updates[9].message = "Absence inopinée d'un agent"
-
-        last_st = db_trip_delayed.stop_time_updates[-1]
-        assert last_st.stop_id == "stop_point:PIV:87745497:Train"
-        assert last_st.arrival == datetime(2020, 10, 22, 21, 30)
-        assert last_st.arrival_status == ModificationType.update.name
-        assert last_st.arrival_delay == timedelta(minutes=5)
-        # no specific functional constraint on last departure, except time consistency
-        assert last_st.arrival <= last_st.departure
-        assert last_st.message == "Absence inopinée d'un agent"
-
-        assert db_trip_delayed.contributor_id == PIV_CONTRIBUTOR_ID
-
-        return db_trip_delayed  # for additional testing if needed
 
 
 def _assert_db_stomp_20201022_23187_partial_delayed():
