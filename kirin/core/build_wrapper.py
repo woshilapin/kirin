@@ -42,7 +42,11 @@ from kirin import gtfs_realtime_pb2
 from kirin.core.model import TripUpdate
 from kirin.core.populate_pb import convert_to_gtfsrt
 from kirin.exceptions import MessageNotPublished, KirinException
-from kirin.new_relic import is_invalid_input_exception, record_custom_parameter
+from kirin.new_relic import (
+    record_custom_parameter,
+    is_only_warning_exception,
+    is_reprocess_allowed,
+)
 from kirin.utils import set_rtu_status_ko, allow_reprocess_same_data, record_call, db_commit
 
 TimeDelayTuple = namedtuple("TimeDelayTuple", ["time", "delay"])
@@ -168,11 +172,8 @@ def wrap_build(builder, input_raw):
         log_dict.update(handler_log_dict)
 
     except Exception as e:
-        status = "failure"
-        allow_reprocess = True
-        if is_invalid_input_exception(e):
-            status = "warning"  # Kirin did his job correctly if the input is invalid and rejected
-            allow_reprocess = False  # reprocess is useless if input is invalid
+        status = "warning" if is_only_warning_exception(e) else "failure"
+        allow_reprocess = is_reprocess_allowed(e)
 
         if rt_update is not None:
             error = e.data["error"] if (isinstance(e, KirinException) and "error" in e.data) else e.message
@@ -185,7 +186,7 @@ def wrap_build(builder, input_raw):
         log_dict.update({"exc_summary": six.text_type(e), "reason": e})
 
         record_custom_parameter("reason", e)  # using __str__() here to have complete details
-        raise  # filters later for APM (auto.)
+        raise  # filters later for errors in newrelic's summary (auto for flask)
 
     finally:
         log_dict.update({"duration": (datetime.datetime.utcnow() - start_datetime).total_seconds()})
