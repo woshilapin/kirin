@@ -28,21 +28,9 @@
                "arret":[
                   {
                      "depart":{
-                        "evenement":{
-                           "texte":"Absence inopinée d'un agent",
-                           "retard":{
-                              "duree":5,
-                              "dureeInterne":8
-                           },
-                           "type":"RETARD_PROJETE",
-                           "codeCategorie":"2",
-                           "libelleCategorie":"RETARD",
-                           "codeMotifExterne":9,
-                           "codeMotifInterne":97
-                        },
                         "numeroCirculation":"23187",
                         "dateHeure":"2020-10-22T22:34:00+02:00",
-                        "dateHeureReelle":"2020-10-22T22:39:00+02:00",
+                        "dateHeureReelle":"2020-10-22T22:34:00+02:00",
                         "sourceHoraire":"CO",
                         "typeAffichage":"HORAIRE",
                         "indicateurAdaptation":false,
@@ -56,48 +44,22 @@
                   },
                   {
                      "arrivee":{
-                        "evenement":{
-                           "texte":"Absence inopinée d'un agent (evenement arrivee)",
-                           "retard":{
-                              "duree":5,
-                              "dureeInterne":8
-                           },
-                           "type":"RETARD_PROJETE",
-                           "codeCategorie":"2",
-                           "libelleCategorie":"RETARD",
-                           "codeMotifExterne":9,
-                           "codeMotifInterne":97
-                        },
                         "numeroCirculation":"23187",
                         "dateHeure":"2020-10-22T22:35:00+02:00",
-                        "dateHeureReelle":"2020-10-22T22:40:00+02:00",
+                        "dateHeureReelle":"2020-10-22T22:35:00+02:00",
                         "sourceHoraire":"CO",
                         "typeAffichage":"HORAIRE",
                         "indicateurAdaptation":false,
-                        "planTransportSource":"PTA",
-                        "motifModification":"Absence inopinée d'un agent (motifModification arrivee)"
+                        "planTransportSource":"PTA"
                      },
                      "depart":{
-                        "evenement":{
-                           "texte":"Absence inopinée d'un agent (evenement depart)",
-                           "retard":{
-                              "duree":5,
-                              "dureeInterne":8
-                           },
-                           "type":"RETARD_PROJETE",
-                           "codeCategorie":"2",
-                           "libelleCategorie":"RETARD",
-                           "codeMotifExterne":9,
-                           "codeMotifInterne":97
-                        },
                         "numeroCirculation":"23187",
                         "dateHeure":"2020-10-22T22:35:30+02:00",
-                        "dateHeureReelle":"2020-10-22T22:40:30+02:00",
+                        "dateHeureReelle":"2020-10-22T22:35:30+02:00",
                         "sourceHoraire":"CO",
                         "typeAffichage":"HORAIRE",
                         "indicateurAdaptation":false,
-                        "planTransportSource":"PTA",
-                        "motifModification":"Absence inopinée d'un agent (motifModification depart)"
+                        "planTransportSource":"PTA"
                      },
                      "emplacement":{
                         "code":"85010157"
@@ -108,40 +70,15 @@
                   },
                   {
                      "arrivee":{
-                        "evenement":{
-                           "texte":"Absence inopinée d'un agent (evenement arrivee)",
-                           "retard":{
-                              "duree":0,
-                              "dureeInterne":2
-                           },
-                           "type":"RETARD_PROJETE",
-                           "codeCategorie":"2",
-                           "libelleCategorie":"RETARD",
-                           "codeMotifExterne":9,
-                           "codeMotifInterne":97
-                        },
                         "numeroCirculation":"23187",
                         "dateHeure":"2020-10-22T22:47:00+02:00",
                         "dateHeureReelle":"2020-10-22T22:47:00+02:00",
                         "sourceHoraire":"CO",
                         "typeAffichage":"HORAIRE",
                         "indicateurAdaptation":false,
-                        "planTransportSource":"PTA",
-                        "motifModification":"Absence inopinée d'un agent (motifModification arrivee)"
+                        "planTransportSource":"PTA"
                      },
                      "depart":{
-                        "evenement":{
-                           "texte":"Absence inopinée d'un agent (evenement depart)",
-                           "retard":{
-                              "duree":0,
-                              "dureeInterne":2
-                           },
-                           "type":"RETARD_PROJETE",
-                           "codeCategorie":"2",
-                           "libelleCategorie":"RETARD",
-                           "codeMotifExterne":9,
-                           "codeMotifInterne":97
-                        },
                         "numeroCirculation":"23187",
                         "dateHeure":"2020-10-22T22:48:00+02:00",
                         "dateHeureReelle":"2020-10-22T22:48:00+02:00",
@@ -159,18 +96,6 @@
                   },
                   {
                      "arrivee":{
-                        "evenement":{
-                           "texte":"Absence inopinée d'un agent",
-                           "retard":{
-                              "duree":0,
-                              "dureeInterne":0
-                           },
-                           "type":"NORMAL",
-                           "codeCategorie":"2",
-                           "libelleCategorie":"NORMAL",
-                           "codeMotifExterne":9,
-                           "codeMotifInterne":97
-                        },
                         "numeroCirculation":"23187",
                         "dateHeure":"2020-10-22T23:16:00+02:00",
                         "dateHeureReelle":"2020-10-22T23:16:00+02:00",
@@ -180,18 +105,6 @@
                         "planTransportSource":"PTA"
                      },
                      "depart":{
-                        "evenement":{
-                           "texte":"Absence inopinée d'un agent",
-                           "retard":{
-                              "duree":0,
-                              "dureeInterne":0
-                           },
-                           "type":"NORMAL",
-                           "codeCategorie":"2",
-                           "libelleCategorie":"NORMAL",
-                           "codeMotifExterne":9,
-                           "codeMotifInterne":97
-                        },
                         "numeroCirculation":"23187",
                         "dateHeure":"2020-10-22T23:17:00+02:00",
                         "dateHeureReelle":"2020-10-22T23:17:00+02:00",
@@ -252,24 +165,6 @@
                ],
                "nombreEscales":4
             },
-            "evenement":[
-               {
-                  "texte":"Absence inopinée d'un agent",
-                  "rangDesserte":[
-                     0,
-                     1,
-                     2,
-                     3,
-                     4,
-                     5
-                  ],
-                  "type":"RETARD",
-                  "codeCategorie":"2",
-                  "libelleCategorie":"RETARD",
-                  "codeMotifExterne":9,
-                  "codeMotifInterne":97
-               }
-            ],
             "operateur":{
                "codeOperateur":"1187",
                "libelleOperateur":"SNCF"

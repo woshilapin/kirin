@@ -31,8 +31,10 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 
 from datetime import timedelta, datetime
+from dateutil import parser
 
 import pytest
+import ujson
 
 from kirin import app, db
 from kirin.core.model import (
@@ -45,7 +47,7 @@ from kirin.core.model import (
 )
 from kirin.core.types import ConnectorType, TripEffect, ModificationType
 from kirin.tasks import purge_trip_update, purge_rt_update
-from tests.check_utils import api_post, api_get, get_fixture_data
+from tests.check_utils import api_post, api_get, get_fixture_data_as_dict
 from tests import mock_navitia
 from tests.integration.conftest import PIV_CONTRIBUTOR_ID
 
@@ -56,6 +58,178 @@ def navitia(monkeypatch):
     Mock all calls to navitia for this fixture
     """
     monkeypatch.setattr("navitia_wrapper._NavitiaWrapper.query", mock_navitia.mock_navitia_query)
+
+
+def _set_piv_disruption(fixture, disruption_type, message):
+    obj = fixture["objects"][0]["object"]
+    if not obj.get("evenement"):
+        obj["evenement"] = []
+    obj["evenement"].append({"type": disruption_type, "texte": message})
+
+
+def _set_event_on_stop(
+    fixture, disruption_type, dep_or_arr_key, rang, message=None, motif_modification=None, retard_dict=None
+):
+    ads = fixture["objects"][0]["object"]["listeArretsDesserte"]["arret"]
+    for desserte in ads:
+        if desserte["rang"] == rang:
+            if desserte.get(dep_or_arr_key):
+                desserte[dep_or_arr_key]["evenement"] = {"type": disruption_type, "texte": message}
+                if retard_dict:
+                    desserte[dep_or_arr_key]["evenement"]["retard"] = retard_dict
+                    date_heure = parser.parse(
+                        desserte[dep_or_arr_key]["dateHeure"], dayfirst=False, yearfirst=True, ignoretz=False
+                    )
+                    date_heure_reelle = date_heure + timedelta(minutes=retard_dict["duree"])
+                    desserte[dep_or_arr_key]["dateHeureReelle"] = date_heure_reelle.isoformat()
+                if motif_modification:
+                    desserte[dep_or_arr_key]["motifModification"] = motif_modification
+
+
+def _set_event_on_stops(
+    fixture, disruption_type, rang_min, rang_max, message=None, motif_modification=None, retard_dict=None
+):
+    for event_toggle in ["arrivee", "depart"]:
+        for rang in range(rang_min, rang_max + 1):
+            _set_event_on_stop(
+                fixture=fixture,
+                disruption_type=disruption_type,
+                dep_or_arr_key=event_toggle,
+                rang=rang,
+                message=message,
+                motif_modification=motif_modification,
+                retard_dict=retard_dict,
+            )
+
+
+def _get_stomp_20201022_23187_partial_delayed_fixture():
+    piv_feed = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
+    _set_piv_disruption(piv_feed, disruption_type="RETARD", message="Absence inopinée d'un agent")
+    retard = {"duree": 5, "dureeInterne": 8}
+    _set_event_on_stop(
+        fixture=piv_feed,
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="depart",
+        motif_modification="Absence inopinée d'un agent",
+        message="Absence inopinée d'un agent (evenement depart)",
+        retard_dict=retard,
+        rang=0,
+    )
+    _set_event_on_stop(
+        fixture=piv_feed,
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="arrivee",
+        motif_modification="Absence inopinée d'un agent (motifModification arrivee)",
+        message="Absence inopinée d'un agent (evenement arrivee)",
+        retard_dict=retard,
+        rang=1,
+    )
+    _set_event_on_stop(
+        fixture=piv_feed,
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="depart",
+        motif_modification="Absence inopinée d'un agent (motifModification depart)",
+        message="Absence inopinée d'un agent (evenement depart)",
+        retard_dict=retard,
+        rang=1,
+    )
+    retard = {"duree": 0, "dureeInterne": 2}
+    _set_event_on_stop(
+        fixture=piv_feed,
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="arrivee",
+        motif_modification="Absence inopinée d'un agent (motifModification arrivee)",
+        message="Absence inopinée d'un agent (evenement arrivee)",
+        retard_dict=retard,
+        rang=2,
+    )
+    _set_event_on_stop(
+        fixture=piv_feed,
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="depart",
+        message="Absence inopinée d'un agent (evenement depart)",
+        retard_dict=retard,
+        rang=2,
+    )
+    retard = {"duree": 0, "dureeInterne": 0}
+    _set_event_on_stop(
+        fixture=piv_feed,
+        disruption_type="NORMAL",
+        dep_or_arr_key="arrivee",
+        message="Absence inopinée d'un agent",
+        retard_dict=retard,
+        rang=3,
+    )
+    _set_event_on_stop(
+        fixture=piv_feed,
+        disruption_type="NORMAL",
+        dep_or_arr_key="depart",
+        message="Absence inopinée d'un agent",
+        retard_dict=retard,
+        rang=3,
+    )
+    return piv_feed
+
+
+def _get_stomp_20201022_23187_delayed_5min_fixture():
+    piv_feed = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
+    _set_piv_disruption(piv_feed, disruption_type="RETARD", message="Absence inopinée d'un agent")
+    retard = {"duree": 5, "dureeInterne": 8}
+    _set_event_on_stop(
+        fixture=piv_feed,
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="depart",
+        motif_modification="Absence inopinée d'un agent",
+        message="Absence inopinée d'un agent (evenement depart)",
+        retard_dict=retard,
+        rang=0,
+    )
+    _set_event_on_stop(
+        fixture=piv_feed,
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="arrivee",
+        motif_modification="Absence inopinée d'un agent (motifModification arrivee)",
+        message="Absence inopinée d'un agent (evenement arrivee)",
+        retard_dict=retard,
+        rang=1,
+    )
+    _set_event_on_stop(
+        fixture=piv_feed,
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="depart",
+        motif_modification="Absence inopinée d'un agent (motifModification depart)",
+        message="Absence inopinée d'un agent (evenement depart)",
+        retard_dict=retard,
+        rang=1,
+    )
+    _set_event_on_stop(
+        fixture=piv_feed,
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="arrivee",
+        motif_modification="Absence inopinée d'un agent (motifModification arrivee)",
+        message="Absence inopinée d'un agent (evenement arrivee)",
+        retard_dict=retard,
+        rang=2,
+    )
+    _set_event_on_stop(
+        fixture=piv_feed,
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="depart",
+        message="Absence inopinée d'un agent (evenement depart)",
+        retard_dict=retard,
+        rang=2,
+    )
+    _set_event_on_stops(
+        fixture=piv_feed,
+        disruption_type="RETARD_PROJETE",
+        motif_modification="",
+        message="Absence inopinée d'un agent",
+        retard_dict=retard,
+        rang_min=3,
+        rang_max=5,
+    )
+
+    return piv_feed
 
 
 def test_wrong_get_piv_with_id():
@@ -116,8 +290,8 @@ def test_piv_simple_post(mock_rabbitmq):
     """
     simple PIV post should be stored in db as a RealTimeUpdate
     """
-    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json")
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_str = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_str)
     assert "PIV feed processed" in res.get("message")
 
     with app.app_context():
@@ -130,7 +304,7 @@ def test_piv_simple_post(mock_rabbitmq):
         assert rtu.error is None
         assert rtu.contributor_id == PIV_CONTRIBUTOR_ID
         assert rtu.connector == ConnectorType.piv.value
-        assert rtu.raw_data == piv_feed
+        assert rtu.raw_data == piv_str
     assert mock_rabbitmq.call_count == 1
 
 
@@ -138,8 +312,8 @@ def test_piv_purge(mock_rabbitmq):
     """
     Simple PIV post, then test the purge
     """
-    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json")
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_feed = _get_stomp_20201022_23187_delayed_5min_fixture()
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
     assert "PIV feed processed" in res.get("message")
 
     with app.app_context():
@@ -179,77 +353,6 @@ def test_piv_purge(mock_rabbitmq):
         assert StopTimeUpdate.query.count() == 0
         assert db.session.execute("select * from associate_realtimeupdate_tripupdate").rowcount == 0
         assert RealTimeUpdate.query.count() == 0
-
-
-def _assert_db_stomp_20201022_23186_delayed_5min():
-    with app.app_context():
-        assert RealTimeUpdate.query.count() >= 1
-        assert TripUpdate.query.count() >= 1
-        assert StopTimeUpdate.query.count() >= 17
-        db_trip_delayed = TripUpdate.find_by_dated_vj(
-            "PIV:2020-10-22:23186:1187:Train", datetime(2020, 10, 22, 20, 34)
-        )
-        assert db_trip_delayed
-
-        assert db_trip_delayed.vj.navitia_trip_id == "PIV:2020-10-22:23186:1187:Train"
-        assert db_trip_delayed.vj.start_timestamp == datetime(2020, 10, 22, 20, 34)
-        assert db_trip_delayed.vj_id == db_trip_delayed.vj.id
-        assert db_trip_delayed.status == ModificationType.update.name
-        assert db_trip_delayed.effect == TripEffect.SIGNIFICANT_DELAYS.name
-        assert db_trip_delayed.message == "Absence inopinée d'un agent"
-        # PIV feed contains delayed stop_times only
-        assert db_trip_delayed.company_id == "company:PIVPP:1187"
-        assert len(db_trip_delayed.stop_time_updates) == 17
-
-        first_st = db_trip_delayed.stop_time_updates[0]
-        assert first_st.stop_id == "stop_point:PIV:85010231:Train"
-        # no specific functional constraint on first arrival, except time consistency
-        assert first_st.arrival <= first_st.departure
-        assert first_st.departure == datetime(2020, 10, 22, 20, 39)
-        assert first_st.departure_delay == timedelta(minutes=5)
-        assert first_st.departure_status == ModificationType.update.name
-        assert first_st.message == "Absence inopinée d'un agent"
-
-        second_st = db_trip_delayed.stop_time_updates[1]
-        assert second_st.stop_id == "stop_point:PIV:85010157:Train"
-        assert second_st.arrival == datetime(2020, 10, 22, 20, 40)
-        assert second_st.arrival_status == ModificationType.update.name
-        assert second_st.arrival_delay == timedelta(minutes=5)
-        assert second_st.departure == datetime(2020, 10, 22, 20, 40, 30)
-        assert second_st.departure_delay == timedelta(minutes=5)
-        assert second_st.departure_status == ModificationType.update.name
-        assert second_st.message == "Absence inopinée d'un agent (motifModification depart)"
-
-        for st in db_trip_delayed.stop_time_updates[2:-1]:
-            assert st.stop_id
-            assert datetime(2020, 10, 22, 20, 42) <= st.arrival <= datetime(2020, 10, 22, 21, 24)
-            assert st.arrival_status == ModificationType.update.name
-            assert st.arrival_delay == timedelta(minutes=5)
-            assert datetime(2020, 10, 22, 20, 43) <= st.departure <= datetime(2020, 10, 22, 21, 25)
-            assert st.departure_status == ModificationType.update.name
-            assert st.departure_delay == timedelta(minutes=5)
-
-        db_trip_delayed.stop_time_updates[2].message = "Absence inopinée d'un agent (motifModification arrivee)"
-        db_trip_delayed.stop_time_updates[3].message = "Absence inopinée d'un agent (evenement depart)"
-        db_trip_delayed.stop_time_updates[4].message = "Absence inopinée d'un agent (evenement arrivee)"
-        db_trip_delayed.stop_time_updates[5].message = "Absence inopinée d'un agent (motifModification depart)"
-        db_trip_delayed.stop_time_updates[6].message = "Absence inopinée d'un agent (motifModification arrivee)"
-        db_trip_delayed.stop_time_updates[7].message = "Absence inopinée d'un agent (evenement depart)"
-        db_trip_delayed.stop_time_updates[8].message = "Absence inopinée d'un agent (evenement arrivee)"
-        db_trip_delayed.stop_time_updates[9].message = "Absence inopinée d'un agent"
-
-        last_st = db_trip_delayed.stop_time_updates[-1]
-        assert last_st.stop_id == "stop_point:PIV:87745497:Train"
-        assert last_st.arrival == datetime(2020, 10, 22, 21, 30)
-        assert last_st.arrival_status == ModificationType.update.name
-        assert last_st.arrival_delay == timedelta(minutes=5)
-        # no specific functional constraint on last departure, except time consistency
-        assert last_st.arrival <= last_st.departure
-        assert last_st.message == "Absence inopinée d'un agent"
-
-        assert db_trip_delayed.contributor_id == PIV_CONTRIBUTOR_ID
-
-        return db_trip_delayed  # for additional testing if needed
 
 
 def _assert_db_stomp_20201022_23187_partial_delayed():
@@ -425,11 +528,11 @@ def test_piv_delayed(mock_rabbitmq):
     """
     delayed stops post
     """
-    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json")
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_feed = _get_stomp_20201022_23187_delayed_5min_fixture()
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
     assert "PIV feed processed" in res.get("message")
 
-    _assert_db_stomp_20201022_23186_delayed_5min()
+    _assert_db_stomp_20201022_23187_delayed_5min()
     # the rabbit mq has to have been called twice
     assert mock_rabbitmq.call_count == 1
 
@@ -438,15 +541,15 @@ def test_piv_delayed_post_twice(mock_rabbitmq):
     """
     double delayed stops post
     """
-    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json")
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_str = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_str)
     assert "PIV feed processed" in res.get("message")
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_str)
     assert "PIV feed processed" in res.get("message")
 
     with app.app_context():
         assert RealTimeUpdate.query.count() == 2
-    _assert_db_stomp_20201022_23186_delayed_5min()
+    _assert_db_stomp_20201022_23187_delayed_5min()
     # the rabbit mq has to have been called twice
     assert mock_rabbitmq.call_count == 2
 
@@ -455,15 +558,15 @@ def test_piv_partial_delayed_then_delayed(mock_rabbitmq):
     """
     partial delayed stops post
     """
-    piv_feed = get_fixture_data("piv/stomp_20201022_23187_partial_delayed.json")
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_feed = _get_stomp_20201022_23187_partial_delayed_fixture()
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
     assert "PIV feed processed" in res.get("message")
 
     _assert_db_stomp_20201022_23187_partial_delayed()
     assert mock_rabbitmq.call_count == 1
 
-    piv_feed = get_fixture_data("piv/stomp_20201022_23187_delayed_5min.json")
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_feed = _get_stomp_20201022_23187_delayed_5min_fixture()
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
     assert "PIV feed processed" in res.get("message")
 
     _assert_db_stomp_20201022_23187_delayed_5min()
@@ -475,8 +578,17 @@ def test_piv_trip_removal_simple_post(mock_rabbitmq):
     """
     simple trip removal post
     """
-    piv_feed = get_fixture_data("piv/stomp_20201029_841252_trip_removal.json")
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_feed = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
+    _set_piv_disruption(piv_feed, disruption_type="SUPPRESSION", message="Indisponibilité d'un matériel")
+    _set_event_on_stops(
+        fixture=piv_feed,
+        disruption_type="SUPPRESSION_TOTALE",
+        motif_modification="Indisponibilité d'un matériel",
+        rang_min=0,
+        rang_max=5,
+    )
+
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
     assert "PIV feed processed" in res.get("message")
 
     with app.app_context():
@@ -486,8 +598,8 @@ def test_piv_trip_removal_simple_post(mock_rabbitmq):
 
         db_trip_removal = TripUpdate.query.first()
         assert db_trip_removal
-        assert db_trip_removal.vj.navitia_trip_id == "PIVPP:2020-10-29:841252:1187:Train"
-        assert db_trip_removal.vj.start_timestamp == datetime(2020, 10, 29, 20, 5)
+        assert db_trip_removal.vj.navitia_trip_id == "PIV:2020-10-22:23187:1187:Train"
+        assert db_trip_removal.vj.start_timestamp == datetime(2020, 10, 22, 20, 34)
         assert db_trip_removal.status == "delete"
         assert db_trip_removal.effect == "NO_SERVICE"
         assert db_trip_removal.message == "Indisponibilité d'un matériel"
@@ -501,8 +613,18 @@ def test_piv_event_priority(mock_rabbitmq):
     """
     simple trip removal post
     """
-    piv_feed = get_fixture_data("piv/stomp_20201022_23186_trip_removal_delayed.json")
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_feed = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
+    _set_piv_disruption(piv_feed, disruption_type="SUPPRESSION", message="Indisponibilité d'un matériel")
+    _set_piv_disruption(piv_feed, disruption_type="RETARD", message="Absence inopinée d'un agent")
+    _set_event_on_stops(
+        fixture=piv_feed,
+        disruption_type="RETARD_PROJETE",
+        motif_modification="Indisponibilité d'un matériel",
+        rang_min=0,
+        rang_max=5,
+    )
+
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
     assert "PIV feed processed" in res.get("message")
 
     with app.app_context():
@@ -512,7 +634,7 @@ def test_piv_event_priority(mock_rabbitmq):
 
         db_trip_removal = TripUpdate.query.first()
         assert db_trip_removal
-        assert db_trip_removal.vj.navitia_trip_id == "PIV:2020-10-22:23186:1187:Train"
+        assert db_trip_removal.vj.navitia_trip_id == "PIV:2020-10-22:23187:1187:Train"
         assert db_trip_removal.vj.start_timestamp == datetime(2020, 10, 22, 20, 34)
         assert db_trip_removal.status == "delete"
         assert db_trip_removal.effect == "NO_SERVICE"
@@ -527,10 +649,10 @@ def test_no_company_source_code_default_to_company_1187(mock_rabbitmq):
     """
     delayed stops post
     """
-    piv_feed = get_fixture_data("piv/stomp_20201022_23186_delayed_5min.json")
+    piv_str = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
     # Replace with a company which doesn't exist in Navitia
-    piv_feed = piv_feed.replace('"codeOperateur": "1187"', '"codeOperateur": "1180"')
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_str = piv_str.replace('"codeOperateur": "1187"', '"codeOperateur": "1180"')
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_str)
     assert "PIV feed processed" in res.get("message")
 
     with app.app_context():
@@ -538,7 +660,7 @@ def test_no_company_source_code_default_to_company_1187(mock_rabbitmq):
         # TODO: Should create a `TripUpdate` but doesn't
         assert TripUpdate.query.count() >= 0
         # db_trip_delayed = TripUpdate.find_by_dated_vj(
-        #     "PIV:2020-10-22:23186:1187:Train", datetime(2020, 10, 22, 20, 34)
+        #     "PIV:2020-10-22:23187:1187:Train", datetime(2020, 10, 22, 20, 34)
         # )
         # assert db_trip_delayed
         # assert db_trip_delayed.company_id == "company:PIVPP:1187"
@@ -548,64 +670,67 @@ def test_no_company_source_code_default_to_company_1187(mock_rabbitmq):
 
 def test_piv_partial_removal(mock_rabbitmq):
     """
-    the trip 23186 is partially deleted
+    the trip 23187 is partially deleted
 
-    Normally there are 17 stops in this VJ, but 2 (Mies, Pont-Céard) are
-    removed (departure from Tannay deleted)
+    Normally there are 6 stops in this VJ, but 2 (Mies, Genève Eaux-Vives),
+    respectively rang 2 and 3, are removed.
     """
     # Simple partial removal
-    piv_23186_removal = get_fixture_data("piv/stomp_20201022_23186_partial_removal.json")
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_23186_removal)
+    piv_23187_removal = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
+    _set_piv_disruption(piv_23187_removal, disruption_type="MODIFICATION_DESSERTE_SUPPRIMEE", message="")
+    _set_event_on_stops(
+        fixture=piv_23187_removal,
+        disruption_type="SUPPRESSION_PARTIELLE",
+        motif_modification="Absence inopinée d'un agent",
+        rang_min=2,
+        rang_max=3,
+    )
+
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_23187_removal))
     assert "PIV feed processed" in res.get("message")
 
     with app.app_context():
-        assert len(RealTimeUpdate.query.all()) == 1
-        assert len(TripUpdate.query.all()) == 1
-        assert len(StopTimeUpdate.query.all()) == 17
+        assert RealTimeUpdate.query.count() == 1
+        assert TripUpdate.query.count() == 1
+        assert StopTimeUpdate.query.count() == 6
         assert RealTimeUpdate.query.first().status == "OK"
 
         with app.app_context():
             db_trip_partial_removed = TripUpdate.find_by_dated_vj(
-                "PIV:2020-10-22:23186:1187:Train", datetime(2020, 10, 22, 20, 34)
+                "PIV:2020-10-22:23187:1187:Train", datetime(2020, 10, 22, 20, 34)
             )
             assert db_trip_partial_removed
 
-            assert db_trip_partial_removed.vj.navitia_trip_id == "PIV:2020-10-22:23186:1187:Train"
+            assert db_trip_partial_removed.vj.navitia_trip_id == "PIV:2020-10-22:23187:1187:Train"
             assert db_trip_partial_removed.vj.start_timestamp == datetime(2020, 10, 22, 20, 34)
             assert db_trip_partial_removed.vj_id == db_trip_partial_removed.vj.id
             assert db_trip_partial_removed.status == "update"
             assert db_trip_partial_removed.effect == "REDUCED_SERVICE"
 
-            # 17 stop times must have been created
-            assert len(db_trip_partial_removed.stop_time_updates) == 17
+            # 6 stop times must have been created
+            assert len(db_trip_partial_removed.stop_time_updates) == 6
 
-            # the first stop have not been changed
-            first_st = db_trip_partial_removed.stop_time_updates[0]
-            assert first_st.stop_id == "stop_point:PIV:85010231:Train"
-            assert first_st.arrival_status == "none"
-            assert first_st.departure_status == "none"
-            assert first_st.message is None
-
-            for s in db_trip_partial_removed.stop_time_updates[4:16]:
+            # the first two stop have not been changed
+            for s in db_trip_partial_removed.stop_time_updates[0:1]:
                 assert s.arrival_status == "none"
                 assert s.departure_status == "none"
                 assert s.message is None
 
-            # # the stops Tannay, Mies and Pont-Céard should have been marked as deleted
-            tannay_st = db_trip_partial_removed.stop_time_updates[1]
-            assert tannay_st.stop_id == "stop_point:PIV:85010157:Train"  # Tannay
-            assert tannay_st.arrival_status == "none"  # the train still arrives in this stop
-            assert tannay_st.departure_status == "delete"
-
+            # # the stops Mies and Genève Eaux-Vives should have been marked as deleted
             mies_st = db_trip_partial_removed.stop_time_updates[2]
             assert mies_st.stop_id == "stop_point:PIV:85010140:Train"  # Mies
             assert mies_st.arrival_status == "delete"
             assert mies_st.departure_status == "delete"
 
-            pc_st = db_trip_partial_removed.stop_time_updates[3]
-            assert pc_st.stop_id == "stop_point:PIV:85010132:Train"  # Pont-Céard
-            assert pc_st.arrival_status == "delete"
-            assert pc_st.departure_status == "delete"
+            gev_st = db_trip_partial_removed.stop_time_updates[3]
+            assert gev_st.stop_id == "stop_point:PIV:85162735:Train"  # Genève Eaux-Vives
+            assert gev_st.arrival_status == "delete"
+            assert gev_st.departure_status == "delete"
+
+            for s in db_trip_partial_removed.stop_time_updates[4:5]:
+                assert s.arrival_status == "none"
+                assert s.departure_status == "none"
+                assert s.message is None
 
             assert db_trip_partial_removed.contributor_id == PIV_CONTRIBUTOR_ID
 
@@ -614,33 +739,50 @@ def test_piv_partial_removal(mock_rabbitmq):
 
 def test_piv_modification_limitation(mock_rabbitmq):
     """
-    the trip 23186 is deleted except the first two stop
+    the trip 23187 is deleted except the first two stop
     """
     # Simple modification limitation
-    piv_23186_removal = get_fixture_data("piv/stomp_20201022_23186_modification_limitation.json")
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_23186_removal)
+    piv_23187_removal = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
+
+    _set_piv_disruption(piv_23187_removal, disruption_type="MODIFICATION_LIMITATION", message="")
+    _set_event_on_stop(
+        fixture=piv_23187_removal,
+        disruption_type="SUPPRESSION_PARTIELLE",
+        dep_or_arr_key="depart",
+        motif_modification="Absence inopinée d'un agent",
+        rang=1,
+    )
+    _set_event_on_stops(
+        fixture=piv_23187_removal,
+        disruption_type="SUPPRESSION_PARTIELLE",
+        motif_modification="Absence inopinée d'un agent",
+        rang_min=2,
+        rang_max=5,
+    )
+
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_23187_removal))
     assert "PIV feed processed" in res.get("message")
 
     with app.app_context():
         assert RealTimeUpdate.query.count() == 1
         assert TripUpdate.query.count() == 1
-        assert StopTimeUpdate.query.count() == 17
+        assert StopTimeUpdate.query.count() == 6
         assert RealTimeUpdate.query.first().status == "OK"
 
         with app.app_context():
             db_trip_partial_removed = TripUpdate.find_by_dated_vj(
-                "PIV:2020-10-22:23186:1187:Train", datetime(2020, 10, 22, 20, 34)
+                "PIV:2020-10-22:23187:1187:Train", datetime(2020, 10, 22, 20, 34)
             )
             assert db_trip_partial_removed
 
-            assert db_trip_partial_removed.vj.navitia_trip_id == "PIV:2020-10-22:23186:1187:Train"
+            assert db_trip_partial_removed.vj.navitia_trip_id == "PIV:2020-10-22:23187:1187:Train"
             assert db_trip_partial_removed.vj.start_timestamp == datetime(2020, 10, 22, 20, 34)
             assert db_trip_partial_removed.vj_id == db_trip_partial_removed.vj.id
             assert db_trip_partial_removed.status == "update"
             assert db_trip_partial_removed.effect == "REDUCED_SERVICE"
 
-            # 17 stop times must have been created
-            assert len(db_trip_partial_removed.stop_time_updates) == 17
+            # 6 stop times must have been created
+            assert len(db_trip_partial_removed.stop_time_updates) == 6
 
             # the first stop have not been changed
             first_st = db_trip_partial_removed.stop_time_updates[0]
@@ -653,12 +795,12 @@ def test_piv_modification_limitation(mock_rabbitmq):
             second_st = db_trip_partial_removed.stop_time_updates[1]
             assert second_st.arrival_status == "none"
             assert second_st.departure_status == "delete"
-            assert second_st.message is None
+            assert second_st.message == "Absence inopinée d'un agent"
 
-            for s in db_trip_partial_removed.stop_time_updates[2:16]:
+            for s in db_trip_partial_removed.stop_time_updates[2:5]:
                 assert s.arrival_status == "delete"
                 assert s.departure_status == "delete"
-                assert s.message is None
+                assert s.message == "Absence inopinée d'un agent"
 
             assert db_trip_partial_removed.contributor_id == PIV_CONTRIBUTOR_ID
 
