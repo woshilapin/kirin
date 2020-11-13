@@ -40,7 +40,7 @@ from kirin.cots import KirinModelBuilder, model_maker
 from kirin.cots.model_maker import ActionOnTrip
 from tests.check_utils import get_fixture_data
 from tests.integration.utils_cots_test import requests_mock_cause_message
-from tests.integration.conftest import clean_db, COTS_CONTRIBUTOR_ID
+from tests.integration.conftest import COTS_CONTRIBUTOR_ID
 import json
 
 

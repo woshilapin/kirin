@@ -38,7 +38,7 @@ from kirin import app, db
 from kirin import gtfs_realtime_pb2, kirin_pb2
 from kirin.core.types import ConnectorType
 from kirin.cots.model_maker import make_navitia_empty_vj
-from kirin.utils import make_rt_update
+from kirin.utils import make_rt_update, persist
 from tests.check_utils import _dt
 from tests.integration.conftest import COTS_CONTRIBUTOR_ID
 
@@ -77,8 +77,7 @@ def test_populate_pb_with_one_stop_time():
         real_time_update.trip_updates.append(trip_update)
         trip_update.stop_time_updates.append(st)
 
-        db.session.add(real_time_update)
-        db.session.commit()
+        persist(real_time_update)
 
         feed_entity = convert_to_gtfsrt(real_time_update.trip_updates)
 
@@ -143,8 +142,7 @@ def test_populate_pb_with_two_stop_time():
         )
         real_time_update.trip_updates[0].stop_time_updates.append(st)
 
-        db.session.add(real_time_update)
-        db.session.commit()
+        persist(real_time_update)
 
         feed_entity = convert_to_gtfsrt(real_time_update.trip_updates)
 
@@ -267,8 +265,7 @@ def test_populate_pb_with_deleted_stop_time():
         )
         real_time_update.trip_updates[0].stop_time_updates.append(st)
 
-        db.session.add(real_time_update)
-        db.session.commit()
+        persist(real_time_update)
 
         feed_entity = convert_to_gtfsrt(real_time_update.trip_updates)
 
@@ -372,8 +369,7 @@ def test_populate_pb_with_cancelation():
         trip_update.effect = "REDUCED_SERVICE"
         real_time_update.trip_updates.append(trip_update)
 
-        db.session.add(real_time_update)
-        db.session.commit()
+        persist(real_time_update)
 
         feed_entity = convert_to_gtfsrt(real_time_update.trip_updates)
 
@@ -417,8 +413,7 @@ def test_populate_pb_with_full_dataset():
         trip_update.effect = "DETOUR"
         real_time_update.trip_updates.append(trip_update)
 
-        db.session.add(real_time_update)
-        db.session.commit()
+        persist(real_time_update)
 
         feed_entity = convert_to_gtfsrt(real_time_update.trip_updates, gtfs_realtime_pb2.FeedHeader.FULL_DATASET)
 
@@ -537,8 +532,7 @@ def test_populate_pb_for_added_trip():
         )
         trip_update.stop_time_updates.append(st)
 
-        db.session.add(real_time_update)
-        db.session.commit()
+        persist(real_time_update)
 
         feed_entity = convert_to_gtfsrt(real_time_update.trip_updates)
 

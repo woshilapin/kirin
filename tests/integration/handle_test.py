@@ -36,7 +36,7 @@ import pytest
 from kirin.core.handler import handle
 from kirin.core.model import RealTimeUpdate, TripUpdate, VehicleJourney, StopTimeUpdate
 from kirin.core.types import ConnectorType
-from kirin.utils import make_rt_update
+from kirin.utils import make_rt_update, persist
 from tests.integration.conftest import COTS_CONTRIBUTOR_ID
 import datetime
 from kirin import app, db
@@ -141,8 +141,7 @@ def setup_database():
         rtu = make_rt_update(None, ConnectorType.cots.value, contributor_id=COTS_CONTRIBUTOR_ID)
         rtu.id = "20866ce8-0638-4fa1-8556-1ddfa22d09d3"
         rtu.trip_updates.append(vju)
-        db.session.add(rtu)
-        db.session.commit()
+        persist(rtu)
 
 
 @pytest.fixture()
@@ -762,8 +761,7 @@ def test_cancellation_then_delay(navitia_vj):
         rtu = make_rt_update(None, ConnectorType.cots.value, contributor_id=COTS_CONTRIBUTOR_ID)
         rtu.id = "10866ce8-0638-4fa1-8556-1ddfa22d09d3"
         rtu.trip_updates.append(vju)
-        db.session.add(rtu)
-        db.session.commit()
+        persist(rtu)
 
     with app.app_context():
         trip_update = TripUpdate(_create_db_vj(navitia_vj), status="update", contributor_id=COTS_CONTRIBUTOR_ID)

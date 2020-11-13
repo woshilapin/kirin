@@ -48,6 +48,7 @@ from kirin.core.model import (
 )
 from kirin.command.purge_rt import purge_contributor
 from kirin.core.types import ConnectorType
+from kirin.utils import persist
 from tests.integration.gtfs_rt_test import basic_gtfs_rt_data, navitia
 
 
@@ -269,7 +270,7 @@ def test_post_new_valid_contributor_with_unknown_parameter_should_work(test_clie
 
 
 def test_put_contributor_with_id(test_client):
-    db.session.add(
+    persist(
         model.Contributor(
             id="SaintMeuMeu",
             navitia_coverage="ca",
@@ -278,7 +279,6 @@ def test_put_contributor_with_id(test_client):
             feed_url="http://feed.url",
         )
     )
-    db.session.commit()
 
     resp = test_client.put(
         "/contributors/SaintMeuMeu",
@@ -302,7 +302,7 @@ def test_put_contributor_with_id(test_client):
 
 
 def test_put_partial_contributor(test_client):
-    db.session.add(
+    persist(
         model.Contributor(
             id="SaintMeuMeu",
             navitia_coverage="ca",
@@ -311,7 +311,6 @@ def test_put_partial_contributor(test_client):
             feed_url="http://feed.url",
         )
     )
-    db.session.commit()
 
     put_resp = test_client.put("/contributors/SaintMeuMeu", json={"navitia_coverage": "qb"})
     assert put_resp.status_code == 200
@@ -324,7 +323,7 @@ def test_put_partial_contributor(test_client):
 
 
 def test_put_contributor_with_no_data(test_client):
-    db.session.add(
+    persist(
         model.Contributor(
             id="SaintMeuMeu",
             navitia_coverage="ca",
@@ -333,7 +332,6 @@ def test_put_contributor_with_no_data(test_client):
             feed_url="http://feed.url",
         )
     )
-    db.session.commit()
 
     resp = test_client.put("/contributors/SaintMeuMeu")
     assert resp.status_code == 400

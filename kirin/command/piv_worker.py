@@ -29,6 +29,9 @@
 # [matrix] channel #navitia:matrix.org (https://app.element.io/#/room/#navitia:matrix.org)
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+
+from __future__ import absolute_import, print_function, unicode_literals, division
+
 from kirin import manager, app, new_relic
 from kirin.core.model import db
 from kirin.core.types import ConnectorType
@@ -48,7 +51,7 @@ from kirin.utils import log_exception
 logger = logging.getLogger(__name__)
 
 CONF_RELOAD_INTERVAL = timedelta(
-    seconds=float(str(app.config.get("BROKER_CONSUMER_CONFIGURATION_RELOAD_INTERVAL")))
+    seconds=float(str(app.config.get(str("BROKER_CONSUMER_CONFIGURATION_RELOAD_INTERVAL"))))
 )
 
 
