@@ -47,7 +47,7 @@ from kirin.core.model import (
 )
 from kirin.core.types import ConnectorType, TripEffect, ModificationType
 from kirin.tasks import purge_trip_update, purge_rt_update
-from tests.check_utils import api_post, api_get, get_fixture_data, get_fixture_data_as_dict
+from tests.check_utils import api_post, api_get, get_fixture_data_as_dict
 from tests import mock_navitia
 from tests.integration.conftest import PIV_CONTRIBUTOR_ID
 
@@ -60,111 +60,112 @@ def navitia(monkeypatch):
     monkeypatch.setattr("navitia_wrapper._NavitiaWrapper.query", mock_navitia.mock_navitia_query)
 
 
-def _set_piv_disruption(fixture, evt_type, message):
-    evenement = fixture["objects"][0]["object"].get("evenement")
-    if evenement:
-        fixture["objects"][0]["object"]["evenement"].append({"type": evt_type, "texte": message})
-    else:
-        fixture["objects"][0]["object"]["evenement"] = [{"type": evt_type, "texte": message}]
+def _set_piv_disruption(fixture, disruption_type, message):
+    obj = fixture["objects"][0]["object"]
+    if not obj.get("evenement"):
+        obj["evenement"] = []
+    obj["evenement"].append({"type": disruption_type, "texte": message})
 
 
-def _set_event_on_stop(fixture, evt_type, dep_or_arr, rang, message=None, motif_modification=None, retard=None):
+def _set_event_on_stop(
+    fixture, disruption_type, dep_or_arr_key, rang, message=None, motif_modification=None, retard_dict=None
+):
     ads = fixture["objects"][0]["object"]["listeArretsDesserte"]["arret"]
     for desserte in ads:
         if desserte["rang"] == rang:
-            if desserte.get(dep_or_arr):
-                desserte[dep_or_arr]["evenement"] = {"type": evt_type, "texte": message}
-                if retard:
-                    desserte[dep_or_arr]["evenement"]["retard"] = retard
+            if desserte.get(dep_or_arr_key):
+                desserte[dep_or_arr_key]["evenement"] = {"type": disruption_type, "texte": message}
+                if retard_dict:
+                    desserte[dep_or_arr_key]["evenement"]["retard"] = retard_dict
                     date_heure = parser.parse(
-                        desserte[dep_or_arr]["dateHeure"], dayfirst=False, yearfirst=True, ignoretz=False
+                        desserte[dep_or_arr_key]["dateHeure"], dayfirst=False, yearfirst=True, ignoretz=False
                     )
-                    date_heure_reelle = date_heure + timedelta(minutes=retard["duree"])
-                    desserte[dep_or_arr]["dateHeureReelle"] = date_heure_reelle.isoformat()
+                    date_heure_reelle = date_heure + timedelta(minutes=retard_dict["duree"])
+                    desserte[dep_or_arr_key]["dateHeureReelle"] = date_heure_reelle.isoformat()
                 if motif_modification:
-                    desserte[dep_or_arr]["motifModification"] = motif_modification
+                    desserte[dep_or_arr_key]["motifModification"] = motif_modification
 
 
 def _set_event_on_stops(
-    fixture, evt_type, rang_min, rang_max, message=None, motif_modification=None, retard=None
+    fixture, disruption_type, rang_min, rang_max, message=None, motif_modification=None, retard_dict=None
 ):
     for event_toggle in ["arrivee", "depart"]:
         for rang in range(rang_min, rang_max + 1):
             _set_event_on_stop(
                 fixture=fixture,
-                evt_type=evt_type,
-                dep_or_arr=event_toggle,
+                disruption_type=disruption_type,
+                dep_or_arr_key=event_toggle,
                 rang=rang,
                 message=message,
                 motif_modification=motif_modification,
-                retard=retard,
+                retard_dict=retard_dict,
             )
 
 
 def _get_stomp_20201022_23187_partial_delayed_fixture():
     piv_feed = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
-    _set_piv_disruption(piv_feed, evt_type="RETARD", message="Absence inopinée d'un agent")
+    _set_piv_disruption(piv_feed, disruption_type="RETARD", message="Absence inopinée d'un agent")
     retard = {"duree": 5, "dureeInterne": 8}
     _set_event_on_stop(
         fixture=piv_feed,
-        evt_type="RETARD_PROJETE",
-        dep_or_arr="depart",
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="depart",
         motif_modification="Absence inopinée d'un agent",
         message="Absence inopinée d'un agent (evenement depart)",
-        retard=retard,
+        retard_dict=retard,
         rang=0,
     )
     _set_event_on_stop(
         fixture=piv_feed,
-        evt_type="RETARD_PROJETE",
-        dep_or_arr="arrivee",
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="arrivee",
         motif_modification="Absence inopinée d'un agent (motifModification arrivee)",
         message="Absence inopinée d'un agent (evenement arrivee)",
-        retard=retard,
+        retard_dict=retard,
         rang=1,
     )
     _set_event_on_stop(
         fixture=piv_feed,
-        evt_type="RETARD_PROJETE",
-        dep_or_arr="depart",
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="depart",
         motif_modification="Absence inopinée d'un agent (motifModification depart)",
         message="Absence inopinée d'un agent (evenement depart)",
-        retard=retard,
+        retard_dict=retard,
         rang=1,
     )
     retard = {"duree": 0, "dureeInterne": 2}
     _set_event_on_stop(
         fixture=piv_feed,
-        evt_type="RETARD_PROJETE",
-        dep_or_arr="arrivee",
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="arrivee",
         motif_modification="Absence inopinée d'un agent (motifModification arrivee)",
         message="Absence inopinée d'un agent (evenement arrivee)",
-        retard=retard,
+        retard_dict=retard,
         rang=2,
     )
     _set_event_on_stop(
         fixture=piv_feed,
-        evt_type="RETARD_PROJETE",
-        dep_or_arr="depart",
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="depart",
         message="Absence inopinée d'un agent (evenement depart)",
-        retard=retard,
+        retard_dict=retard,
         rang=2,
     )
     retard = {"duree": 0, "dureeInterne": 0}
     _set_event_on_stop(
         fixture=piv_feed,
-        evt_type="NORMAL",
-        dep_or_arr="arrivee",
+        disruption_type="NORMAL",
+        dep_or_arr_key="arrivee",
         message="Absence inopinée d'un agent",
-        retard=retard,
+        retard_dict=retard,
         rang=3,
     )
     _set_event_on_stop(
         fixture=piv_feed,
-        evt_type="NORMAL",
-        dep_or_arr="depart",
+        disruption_type="NORMAL",
+        dep_or_arr_key="depart",
         message="Absence inopinée d'un agent",
-        retard=retard,
+        retard_dict=retard,
         rang=3,
     )
     return piv_feed
@@ -172,58 +173,58 @@ def _get_stomp_20201022_23187_partial_delayed_fixture():
 
 def _get_stomp_20201022_23187_delayed_5min_fixture():
     piv_feed = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
-    _set_piv_disruption(piv_feed, evt_type="RETARD", message="Absence inopinée d'un agent")
+    _set_piv_disruption(piv_feed, disruption_type="RETARD", message="Absence inopinée d'un agent")
     retard = {"duree": 5, "dureeInterne": 8}
     _set_event_on_stop(
         fixture=piv_feed,
-        evt_type="RETARD_PROJETE",
-        dep_or_arr="depart",
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="depart",
         motif_modification="Absence inopinée d'un agent",
         message="Absence inopinée d'un agent (evenement depart)",
-        retard=retard,
+        retard_dict=retard,
         rang=0,
     )
     _set_event_on_stop(
         fixture=piv_feed,
-        evt_type="RETARD_PROJETE",
-        dep_or_arr="arrivee",
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="arrivee",
         motif_modification="Absence inopinée d'un agent (motifModification arrivee)",
         message="Absence inopinée d'un agent (evenement arrivee)",
-        retard=retard,
+        retard_dict=retard,
         rang=1,
     )
     _set_event_on_stop(
         fixture=piv_feed,
-        evt_type="RETARD_PROJETE",
-        dep_or_arr="depart",
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="depart",
         motif_modification="Absence inopinée d'un agent (motifModification depart)",
         message="Absence inopinée d'un agent (evenement depart)",
-        retard=retard,
+        retard_dict=retard,
         rang=1,
     )
     _set_event_on_stop(
         fixture=piv_feed,
-        evt_type="RETARD_PROJETE",
-        dep_or_arr="arrivee",
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="arrivee",
         motif_modification="Absence inopinée d'un agent (motifModification arrivee)",
         message="Absence inopinée d'un agent (evenement arrivee)",
-        retard=retard,
+        retard_dict=retard,
         rang=2,
     )
     _set_event_on_stop(
         fixture=piv_feed,
-        evt_type="RETARD_PROJETE",
-        dep_or_arr="depart",
+        disruption_type="RETARD_PROJETE",
+        dep_or_arr_key="depart",
         message="Absence inopinée d'un agent (evenement depart)",
-        retard=retard,
+        retard_dict=retard,
         rang=2,
     )
     _set_event_on_stops(
         fixture=piv_feed,
-        evt_type="RETARD_PROJETE",
+        disruption_type="RETARD_PROJETE",
         motif_modification="",
         message="Absence inopinée d'un agent",
-        retard=retard,
+        retard_dict=retard,
         rang_min=3,
         rang_max=5,
     )
@@ -289,8 +290,8 @@ def test_piv_simple_post(mock_rabbitmq):
     """
     simple PIV post should be stored in db as a RealTimeUpdate
     """
-    piv_feed = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_str = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_str)
     assert "PIV feed processed" in res.get("message")
 
     with app.app_context():
@@ -303,7 +304,7 @@ def test_piv_simple_post(mock_rabbitmq):
         assert rtu.error is None
         assert rtu.contributor_id == PIV_CONTRIBUTOR_ID
         assert rtu.connector == ConnectorType.piv.value
-        assert rtu.raw_data == piv_feed
+        assert rtu.raw_data == piv_str
     assert mock_rabbitmq.call_count == 1
 
 
@@ -311,8 +312,8 @@ def test_piv_purge(mock_rabbitmq):
     """
     Simple PIV post, then test the purge
     """
-    piv_feed = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_feed = _get_stomp_20201022_23187_delayed_5min_fixture()
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
     assert "PIV feed processed" in res.get("message")
 
     with app.app_context():
@@ -527,8 +528,8 @@ def test_piv_delayed(mock_rabbitmq):
     """
     delayed stops post
     """
-    piv_feed = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_feed = _get_stomp_20201022_23187_delayed_5min_fixture()
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
     assert "PIV feed processed" in res.get("message")
 
     _assert_db_stomp_20201022_23187_delayed_5min()
@@ -540,10 +541,10 @@ def test_piv_delayed_post_twice(mock_rabbitmq):
     """
     double delayed stops post
     """
-    piv_feed = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_str = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_str)
     assert "PIV feed processed" in res.get("message")
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_str)
     assert "PIV feed processed" in res.get("message")
 
     with app.app_context():
@@ -557,15 +558,15 @@ def test_piv_partial_delayed_then_delayed(mock_rabbitmq):
     """
     partial delayed stops post
     """
-    piv_feed = ujson.dumps(_get_stomp_20201022_23187_partial_delayed_fixture())
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_feed = _get_stomp_20201022_23187_partial_delayed_fixture()
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
     assert "PIV feed processed" in res.get("message")
 
     _assert_db_stomp_20201022_23187_partial_delayed()
     assert mock_rabbitmq.call_count == 1
 
-    piv_feed = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_feed = _get_stomp_20201022_23187_delayed_5min_fixture()
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
     assert "PIV feed processed" in res.get("message")
 
     _assert_db_stomp_20201022_23187_delayed_5min()
@@ -578,10 +579,10 @@ def test_piv_trip_removal_simple_post(mock_rabbitmq):
     simple trip removal post
     """
     piv_feed = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
-    _set_piv_disruption(piv_feed, evt_type="SUPPRESSION", message="Indisponibilité d'un matériel")
+    _set_piv_disruption(piv_feed, disruption_type="SUPPRESSION", message="Indisponibilité d'un matériel")
     _set_event_on_stops(
         fixture=piv_feed,
-        evt_type="SUPPRESSION_TOTALE",
+        disruption_type="SUPPRESSION_TOTALE",
         motif_modification="Indisponibilité d'un matériel",
         rang_min=0,
         rang_max=5,
@@ -613,11 +614,11 @@ def test_piv_event_priority(mock_rabbitmq):
     simple trip removal post
     """
     piv_feed = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
-    _set_piv_disruption(piv_feed, evt_type="SUPPRESSION", message="Indisponibilité d'un matériel")
-    _set_piv_disruption(piv_feed, evt_type="RETARD", message="Absence inopinée d'un agent")
+    _set_piv_disruption(piv_feed, disruption_type="SUPPRESSION", message="Indisponibilité d'un matériel")
+    _set_piv_disruption(piv_feed, disruption_type="RETARD", message="Absence inopinée d'un agent")
     _set_event_on_stops(
         fixture=piv_feed,
-        evt_type="RETARD_PROJETE",
+        disruption_type="RETARD_PROJETE",
         motif_modification="Indisponibilité d'un matériel",
         rang_min=0,
         rang_max=5,
@@ -648,10 +649,10 @@ def test_no_company_source_code_default_to_company_1187(mock_rabbitmq):
     """
     delayed stops post
     """
-    piv_feed = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
+    piv_str = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
     # Replace with a company which doesn't exist in Navitia
-    piv_feed = piv_feed.replace('"codeOperateur": "1187"', '"codeOperateur": "1180"')
-    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_feed)
+    piv_str = piv_str.replace('"codeOperateur": "1187"', '"codeOperateur": "1180"')
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_str)
     assert "PIV feed processed" in res.get("message")
 
     with app.app_context():
@@ -671,15 +672,15 @@ def test_piv_partial_removal(mock_rabbitmq):
     """
     the trip 23187 is partially deleted
 
-    Normally there are 6 stops in this VJ, but 2 (Mies, Genève Eaux-Vives)
-    respectively rang 2 and 3
+    Normally there are 6 stops in this VJ, but 2 (Mies, Genève Eaux-Vives),
+    respectively rang 2 and 3, are removed.
     """
     # Simple partial removal
     piv_23187_removal = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
-    _set_piv_disruption(piv_23187_removal, evt_type="MODIFICATION_DESSERTE_SUPPRIMEE", message="")
+    _set_piv_disruption(piv_23187_removal, disruption_type="MODIFICATION_DESSERTE_SUPPRIMEE", message="")
     _set_event_on_stops(
         fixture=piv_23187_removal,
-        evt_type="SUPPRESSION_PARTIELLE",
+        disruption_type="SUPPRESSION_PARTIELLE",
         motif_modification="Absence inopinée d'un agent",
         rang_min=2,
         rang_max=3,
@@ -743,17 +744,17 @@ def test_piv_modification_limitation(mock_rabbitmq):
     # Simple modification limitation
     piv_23187_removal = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
 
-    _set_piv_disruption(piv_23187_removal, evt_type="MODIFICATION_LIMITATION", message="")
+    _set_piv_disruption(piv_23187_removal, disruption_type="MODIFICATION_LIMITATION", message="")
     _set_event_on_stop(
         fixture=piv_23187_removal,
-        evt_type="SUPPRESSION_PARTIELLE",
-        dep_or_arr="depart",
+        disruption_type="SUPPRESSION_PARTIELLE",
+        dep_or_arr_key="depart",
         motif_modification="Absence inopinée d'un agent",
         rang=1,
     )
     _set_event_on_stops(
         fixture=piv_23187_removal,
-        evt_type="SUPPRESSION_PARTIELLE",
+        disruption_type="SUPPRESSION_PARTIELLE",
         motif_modification="Absence inopinée d'un agent",
         rang_min=2,
         rang_max=5,
