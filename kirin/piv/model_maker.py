@@ -85,9 +85,11 @@ MANAGED_EVENTS = [
     "SUPPRESSION",
     "MODIFICATION_DESSERTE_SUPPRIMEE",
     "MODIFICATION_LIMITATION",
+    "MODIFICATION_DESSERTE_AJOUTEE",
+    "MODIFICATION_PROLONGATION",
     "NORMAL",
 ]
-MANAGED_STOP_EVENTS = ["RETARD_OBSERVE", "RETARD_PROJETE", "NORMAL", "SUPPRESSION_PARTIELLE"]
+MANAGED_STOP_EVENTS = ["RETARD_OBSERVE", "RETARD_PROJETE", "NORMAL", "SUPPRESSION_PARTIELLE", "CREATION"]
 
 
 def _get_trip_effect_order_from_piv_status(status):
@@ -350,7 +352,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         trip_update.message = json_train.get("evenement").get("texte")
         trip_update.effect = trip_status_type.name
 
-        # TODO: handle status/effect for creation, detour
+        # TODO: handle status/effect for detour
         if trip_status_type == TripEffect.NO_SERVICE:
             # the whole trip is deleted
             trip_update.status = ModificationType.delete.name
@@ -388,11 +390,8 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
                 if event is None:
                     continue
 
-                piv_disruption = get_value(event, "evenement", nullable=True)
-
-                piv_event_status = get_value(event, "statutModification", nullable=True)
-                if not piv_event_status and piv_disruption:
-                    piv_event_status = get_value(piv_disruption, "type")
+                piv_disruption = event.get("evenement", {})
+                piv_event_status = event.get("statutModification", piv_disruption.get("type", None))
 
                 if not piv_event_status or piv_event_status in MANAGED_STOP_EVENTS:
                     piv_event_datetime = get_value(event, "dateHeureReelle", nullable=True)
@@ -404,13 +403,14 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
                         piv_event_delay = piv_disruption.get("retard", {}).get("duree", 0)
                         setattr(st_update, DELAY_MAP[event_toggle], as_duration(piv_event_delay * 60))  # minutes
 
-                        piv_stop_time_status = get_value(piv_disruption, "type", nullable=True)
-                        if piv_stop_time_status in ["RETARD_OBSERVE", "RETARD_PROJETE"]:
-                            setattr(st_update, STATUS_MAP[event_toggle], ModificationType.update.name)
-                        elif piv_stop_time_status == "SUPPRESSION_PARTIELLE":
-                            setattr(st_update, STATUS_MAP[event_toggle], ModificationType.delete.name)
-                        else:
-                            setattr(st_update, STATUS_MAP[event_toggle], ModificationType.none.name)
+                    if piv_event_status in ["RETARD_OBSERVE", "RETARD_PROJETE"]:
+                        setattr(st_update, STATUS_MAP[event_toggle], ModificationType.update.name)
+                    elif piv_event_status == "SUPPRESSION_PARTIELLE":
+                        setattr(st_update, STATUS_MAP[event_toggle], ModificationType.delete.name)
+                    elif piv_event_status == "CREATION":
+                        setattr(st_update, STATUS_MAP[event_toggle], ModificationType.add.name)
+                    else:
+                        setattr(st_update, STATUS_MAP[event_toggle], ModificationType.none.name)
                     # otherwise let those be none
 
                 else:
