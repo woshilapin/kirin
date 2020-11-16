@@ -36,7 +36,7 @@ import logging
 
 from flask_restful import Resource
 
-from kirin.core.abstract_builder import wrap_build
+from kirin.core.build_wrapper import wrap_build
 from kirin.cots import KirinModelBuilder
 from kirin.exceptions import InvalidArguments, SubServiceError
 from kirin.core import model

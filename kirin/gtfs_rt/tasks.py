@@ -37,7 +37,7 @@ import requests
 import six
 
 from kirin.core import model
-from kirin.core.abstract_builder import wrap_build
+from kirin.core.build_wrapper import wrap_build
 from kirin.core.types import ConnectorType
 from kirin.cots.model_maker import as_duration
 

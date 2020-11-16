@@ -33,7 +33,7 @@ import pytest
 
 from kirin import app
 from kirin.core import model
-from kirin.core.abstract_builder import wrap_build
+from kirin.core.build_wrapper import wrap_build
 from kirin.core.model import TripUpdate
 from kirin.core.types import ConnectorType
 from kirin.cots import KirinModelBuilder, model_maker

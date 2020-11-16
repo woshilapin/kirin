@@ -35,7 +35,7 @@ from __future__ import absolute_import, print_function, unicode_literals, divisi
 from kirin import manager, app, new_relic
 from kirin.core.model import db
 from kirin.core.types import ConnectorType
-from kirin.core.abstract_builder import wrap_build
+from kirin.core.build_wrapper import wrap_build
 from kirin.piv import KirinModelBuilder
 from kirin.piv.piv import get_piv_contributors, get_piv_contributor
 
