@@ -524,6 +524,145 @@ def _assert_db_stomp_20201022_23187_delayed_5min():
         return db_trip_delayed  # for additional testing if needed
 
 
+def _assert_partial_back_ok_simple():
+    with app.app_context():
+        assert RealTimeUpdate.query.count() >= 1
+        assert TripUpdate.query.count() >= 1
+        assert StopTimeUpdate.query.count() >= 6
+        db_trip_delayed = TripUpdate.find_by_dated_vj(
+            "PIV:2020-10-22:23187:1187:Train", datetime(2020, 10, 22, 20, 34)
+        )
+        assert db_trip_delayed
+
+        assert db_trip_delayed.vj.navitia_trip_id == "PIV:2020-10-22:23187:1187:Train"
+        assert db_trip_delayed.vj.start_timestamp == datetime(2020, 10, 22, 20, 34)
+        assert db_trip_delayed.vj_id == db_trip_delayed.vj.id
+        assert db_trip_delayed.status == ModificationType.update.name
+        assert db_trip_delayed.effect == TripEffect.SIGNIFICANT_DELAYS.name
+        assert db_trip_delayed.message == "Absence inopinée d'un agent"
+        # PIV feed contains delayed stop_times only
+        assert db_trip_delayed.company_id == "company:PIVPP:1187"
+        assert len(db_trip_delayed.stop_time_updates) == 6
+
+        first_st = db_trip_delayed.stop_time_updates[0]
+        assert first_st.stop_id == "stop_point:PIV:85010231:Train"
+        # no specific functional constraint on first arrival, except time consistency
+        assert first_st.arrival <= first_st.departure
+        assert first_st.departure == datetime(2020, 10, 22, 20, 39)
+        assert first_st.departure_delay == timedelta(minutes=5)
+        assert first_st.departure_status == ModificationType.update.name
+        assert first_st.message == "Absence inopinée d'un agent"
+
+        second_st = db_trip_delayed.stop_time_updates[1]
+        assert second_st.stop_id == "stop_point:PIV:85010157:Train"
+        assert second_st.arrival == datetime(2020, 10, 22, 20, 40)
+        assert second_st.arrival_status == ModificationType.update.name
+        assert second_st.arrival_delay == timedelta(minutes=5)
+        assert second_st.departure == datetime(2020, 10, 22, 20, 40, 30)
+        assert second_st.departure_delay == timedelta(minutes=5)
+        assert second_st.departure_status == ModificationType.update.name
+        assert second_st.message == "Absence inopinée d'un agent (motifModification depart)"
+
+        third_st = db_trip_delayed.stop_time_updates[2]
+        assert third_st.stop_id == "stop_point:PIV:85010140:Train"
+        assert third_st.arrival == datetime(2020, 10, 22, 20, 52)
+        assert third_st.arrival_status == ModificationType.update.name
+        assert third_st.arrival_delay == timedelta(minutes=5)
+        assert third_st.departure == datetime(2020, 10, 22, 20, 53)
+        assert third_st.departure_delay == timedelta(minutes=5)
+        assert third_st.departure_status == ModificationType.update.name
+        assert third_st.message == "Absence inopinée d'un agent (motifModification arrivee)"
+
+        fourth_st = db_trip_delayed.stop_time_updates[3]
+        assert fourth_st.stop_id == "stop_point:PIV:85162735:Train"
+        assert fourth_st.arrival == datetime(2020, 10, 22, 21, 16)
+        assert fourth_st.arrival_status == ModificationType.none.name
+        assert fourth_st.arrival_delay == timedelta(minutes=0)
+        assert fourth_st.departure == datetime(2020, 10, 22, 21, 17)
+        assert fourth_st.departure_delay == timedelta(minutes=0)
+        assert fourth_st.departure_status == ModificationType.none.name
+        assert fourth_st.message == "Régulation du trafic"
+
+        fifth_st = db_trip_delayed.stop_time_updates[4]
+        assert fifth_st.stop_id == "stop_point:PIV:85162750:Train"
+        assert fifth_st.arrival == datetime(2020, 10, 22, 21, 19)
+        assert fifth_st.arrival_status == ModificationType.none.name
+        assert fifth_st.arrival_delay == timedelta(minutes=0)
+        assert fifth_st.departure == datetime(2020, 10, 22, 21, 20)
+        assert fifth_st.departure_delay == timedelta(minutes=0)
+        assert fifth_st.departure_status == ModificationType.none.name
+        assert fifth_st.message == "Régulation du trafic"
+
+        last_st = db_trip_delayed.stop_time_updates[5]
+        assert last_st.stop_id == "stop_point:PIV:87745497:Train"
+        assert last_st.arrival == datetime(2020, 10, 22, 21, 25)
+        assert last_st.arrival_status == ModificationType.none.name
+        assert last_st.arrival_delay == timedelta(minutes=0)
+        # no specific functional constraint on last departure, except time consistency
+        assert last_st.arrival <= last_st.departure
+        assert last_st.message == "Régulation du trafic"
+
+        assert db_trip_delayed.contributor_id == PIV_CONTRIBUTOR_ID
+
+
+def _assert_db_stomp_20201022_23187_normal():
+    with app.app_context():
+        assert RealTimeUpdate.query.count() >= 1
+        assert TripUpdate.query.count() >= 1
+        assert StopTimeUpdate.query.count() >= 6
+        db_trip = TripUpdate.find_by_dated_vj("PIV:2020-10-22:23187:1187:Train", datetime(2020, 10, 22, 20, 34))
+        assert db_trip
+
+        assert db_trip.vj.navitia_trip_id == "PIV:2020-10-22:23187:1187:Train"
+        assert db_trip.vj.start_timestamp == datetime(2020, 10, 22, 20, 34)
+        assert db_trip.vj_id == db_trip.vj.id
+        assert db_trip.status == ModificationType.update.name
+        assert db_trip.effect == TripEffect.UNKNOWN_EFFECT.name
+        assert db_trip.message == ""
+        assert db_trip.company_id == "company:PIVPP:1187"
+        assert len(db_trip.stop_time_updates) == 6
+
+        for stop_time in db_trip.stop_time_updates:
+            assert stop_time.arrival_status == ModificationType.none.name
+            assert stop_time.arrival_delay == timedelta(minutes=0)
+            assert stop_time.departure_delay == timedelta(minutes=0)
+            assert stop_time.departure_status == ModificationType.none.name
+            assert stop_time.arrival <= stop_time.departure
+            assert stop_time.message is None
+
+        first_st = db_trip.stop_time_updates[0]
+        assert first_st.stop_id == "stop_point:PIV:85010231:Train"
+        assert first_st.departure == datetime(2020, 10, 22, 20, 34)
+
+        second_st = db_trip.stop_time_updates[1]
+        assert second_st.stop_id == "stop_point:PIV:85010157:Train"
+        assert second_st.arrival == datetime(2020, 10, 22, 20, 35)
+        assert second_st.departure == datetime(2020, 10, 22, 20, 35, 30)
+
+        third_st = db_trip.stop_time_updates[2]
+        assert third_st.stop_id == "stop_point:PIV:85010140:Train"
+        assert third_st.arrival == datetime(2020, 10, 22, 20, 47)
+        assert third_st.departure == datetime(2020, 10, 22, 20, 48)
+
+        fourth_st = db_trip.stop_time_updates[3]
+        assert fourth_st.stop_id == "stop_point:PIV:85162735:Train"
+        assert fourth_st.arrival == datetime(2020, 10, 22, 21, 16)
+        assert fourth_st.departure == datetime(2020, 10, 22, 21, 17)
+
+        fifth_st = db_trip.stop_time_updates[4]
+        assert fifth_st.stop_id == "stop_point:PIV:85162750:Train"
+        assert fifth_st.arrival == datetime(2020, 10, 22, 21, 19)
+        assert fifth_st.departure == datetime(2020, 10, 22, 21, 20)
+
+        last_st = db_trip.stop_time_updates[5]
+        assert last_st.stop_id == "stop_point:PIV:87745497:Train"
+        assert last_st.arrival == datetime(2020, 10, 22, 21, 25)
+
+        assert db_trip.contributor_id == PIV_CONTRIBUTOR_ID
+
+        return db_trip  # for additional testing if needed
+
+
 def test_piv_delayed(mock_rabbitmq):
     """
     delayed stops post
@@ -805,3 +944,104 @@ def test_piv_modification_limitation(mock_rabbitmq):
             assert db_trip_partial_removed.contributor_id == PIV_CONTRIBUTOR_ID
 
     assert mock_rabbitmq.call_count == 1
+
+
+def test_piv_partial_back_ok_simple_case(mock_rabbitmq):
+    piv_feed = _get_stomp_20201022_23187_delayed_5min_fixture()
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
+
+    assert "PIV feed processed" in res.get("message")
+
+    _assert_db_stomp_20201022_23187_delayed_5min()
+    assert mock_rabbitmq.call_count == 1
+
+    retard = {"duree": 0, "dureeInterne": 0}
+    _set_event_on_stops(
+        fixture=piv_feed,
+        disruption_type="NORMAL",
+        motif_modification="",
+        message="Régulation du trafic",
+        retard_dict=retard,
+        rang_min=3,
+        rang_max=5,
+    )
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
+    assert "PIV feed processed" in res.get("message")
+
+    _assert_partial_back_ok_simple()
+    # the rabbit mq has to have been called twice
+    assert mock_rabbitmq.call_count == 2
+
+
+def test_piv_partial_back_ok_complex_case(mock_rabbitmq):
+    piv_feed = _get_stomp_20201022_23187_delayed_5min_fixture()
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
+
+    assert "PIV feed processed" in res.get("message")
+
+    _assert_db_stomp_20201022_23187_delayed_5min()
+    assert mock_rabbitmq.call_count == 1
+
+    piv_feed = _get_stomp_20201022_23187_partial_delayed_fixture()
+    retard = {"duree": 0, "dureeInterne": 3}
+    _set_event_on_stops(
+        fixture=piv_feed,
+        disruption_type="NORMAL",
+        retard_dict=retard,
+        rang_min=4,
+        rang_max=5,
+    )
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
+    assert "PIV feed processed" in res.get("message")
+
+    _assert_db_stomp_20201022_23187_partial_delayed()
+    # the rabbit mq has to have been called twice
+    assert mock_rabbitmq.call_count == 2
+
+
+def test_piv_full_back_ok(mock_rabbitmq):
+    piv_feed = _get_stomp_20201022_23187_delayed_5min_fixture()
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
+
+    assert "PIV feed processed" in res.get("message")
+
+    _assert_db_stomp_20201022_23187_delayed_5min()
+    assert mock_rabbitmq.call_count == 1
+
+    piv_feed = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
+    _set_piv_disruption(piv_feed, disruption_type="NORMAL", message="")
+
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
+    assert "PIV feed processed" in res.get("message")
+
+    _assert_db_stomp_20201022_23187_normal()
+    # the rabbit mq has to have been called twice
+    assert mock_rabbitmq.call_count == 2
+
+
+def test_piv_full_back_ok_on_stops(mock_rabbitmq):
+    piv_feed = _get_stomp_20201022_23187_delayed_5min_fixture()
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
+
+    assert "PIV feed processed" in res.get("message")
+
+    _assert_db_stomp_20201022_23187_delayed_5min()
+    assert mock_rabbitmq.call_count == 1
+
+    piv_feed = get_fixture_data_as_dict("piv/stomp_20201022_23187_blank_fixture.json")
+    _set_piv_disruption(piv_feed, disruption_type="NORMAL", message="")
+    retard = {"duree": 0, "dureeInterne": 3}
+    _set_event_on_stops(
+        fixture=piv_feed,
+        disruption_type="NORMAL",
+        retard_dict=retard,
+        rang_min=0,
+        rang_max=5,
+    )
+
+    res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=ujson.dumps(piv_feed))
+    assert "PIV feed processed" in res.get("message")
+
+    _assert_db_stomp_20201022_23187_normal()
+    # the rabbit mq has to have been called twice
+    assert mock_rabbitmq.call_count == 2
