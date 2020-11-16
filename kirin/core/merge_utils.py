@@ -161,12 +161,6 @@ def make_fake_realtime_stop_time(order, sp_id, new_stu, db_trip_update):
     }
 
 
-def _get_datetime(circulation_date, time):
-    # in the db, dt with timezone cannot coexist with dt without timezone
-    # since at the beginning there was dt without tz, we keep naive dt
-    return datetime.datetime.combine(circulation_date, time)
-
-
 def _get_update_info_of_stop_event(base_time, input_time, input_status, input_delay):
     """
     Process information for a given stop event: given information available, compute info to be stored in db.
@@ -238,6 +232,58 @@ def _make_stop_time_update(base_arrival, base_departure, last_departure, input_s
     )
 
 
+def yield_next_stop_from_trip_update(new_trip_update, db_trip_update):
+    # Iterate on the new trip update stop_times if it is complete (all stop_times present in it)
+    for order, new_stu in enumerate(new_trip_update.stop_time_updates):
+        # Find corresponding stop_time in the theoretical VJ
+        vj_st = find_st_in_vj(new_stu.stop_id, new_trip_update.vj.navitia_vj.get("stop_times", []))
+        if vj_st:
+            yield order, vj_st
+        else:
+            # selection of extra iterable stop-times
+            sp_id = new_stu.stop_id
+            if is_new_stop_event_valid(
+                event_name="arrival",
+                stop_id=sp_id,
+                stop_order=order,
+                nav_stop=None,
+                db_tu=db_trip_update,
+                new_stu=new_stu,
+            ) or is_new_stop_event_valid(
+                event_name="departure",
+                stop_id=sp_id,
+                stop_order=order,
+                nav_stop=None,
+                db_tu=db_trip_update,
+                new_stu=new_stu,
+            ):
+                # It is an added stop_time or a modification on a previously added stop_time, create a
+                # new "fake" Navitia stop time (even if it's not in navitia,
+                #  kirin needs to iterate on it)
+                yield order, make_fake_realtime_stop_time(order, sp_id, new_stu, db_trip_update)
+
+
+def yield_next_stop_from_base_schedule_vj(navitia_vj):
+    # Iterate on the theoretical VJ if the new trip update doesn't list all stop_times
+    for order, vj_st in enumerate(navitia_vj.get("stop_times", [])):
+        yield order, vj_st
+
+
+def is_past_midnight(prev_stop_event, next_stop_event):
+    if prev_stop_event.time is None or next_stop_event.time is None:
+        return False
+
+    # it is not a pass-midnight if pure base-schedule is consistent
+    # (after delay it may be inconsistent but it is corrected later in the process)
+    # it is not a pass-midnight if after delay it is consistent
+    # (in case of stop add, comparing before delay is pointless)
+    date = datetime.date(2000, 1, 1)
+    return (prev_stop_event.time > next_stop_event.time) and (
+        datetime.datetime.combine(date, prev_stop_event.time) + prev_stop_event.delay
+        > datetime.datetime.combine(date, next_stop_event.time) + next_stop_event.delay
+    )
+
+
 def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete):
     """
     We need to merge the info from 3 sources:
@@ -288,61 +334,18 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete):
         res.stop_time_updates = []
         return res
 
-    def get_next_stop():
-        if is_new_complete:
-            # Iterate on the new trip update stop_times if it is complete (all stop_times present in it)
-            for order, new_stu in enumerate(new_trip_update.stop_time_updates):
-                # Find corresponding stop_time in the theoretical VJ
-                vj_st = find_st_in_vj(new_stu.stop_id, new_trip_update.vj.navitia_vj.get("stop_times", []))
-                if vj_st:
-                    yield order, vj_st
-                else:
-                    # selection of extra iterable stop-times
-                    sp_id = new_stu.stop_id
-                    if is_new_stop_event_valid(
-                        event_name="arrival",
-                        stop_id=sp_id,
-                        stop_order=order,
-                        nav_stop=None,
-                        db_tu=db_trip_update,
-                        new_stu=new_stu,
-                    ) or is_new_stop_event_valid(
-                        event_name="departure",
-                        stop_id=sp_id,
-                        stop_order=order,
-                        nav_stop=None,
-                        db_tu=db_trip_update,
-                        new_stu=new_stu,
-                    ):
-                        # It is an added stop_time or a modification on a previously added stop_time, create a
-                        # new "fake" Navitia stop time (even if it's not in navitia,
-                        #  kirin needs to iterate on it)
-                        yield order, make_fake_realtime_stop_time(order, sp_id, new_stu, db_trip_update)
-        else:
-            # Iterate on the theoretical VJ if the new trip update doesn't list all stop_times
-            for order, vj_st in enumerate(navitia_vj.get("stop_times", [])):
-                yield order, vj_st
-
-    def is_past_midnight(prev_stop_event, next_stop_event):
-        if prev_stop_event.time is None or next_stop_event.time is None:
-            return False
-
-        # it is not a pass-midnight if pure base-schedule is consistent
-        # (after delay it may be inconsistent but it is corrected later in the process)
-        # it is not a pass-midnight if after delay it is consistent
-        # (in case of stop add, comparing before delay is pointless)
-        date = datetime.date(2000, 1, 1)
-        return (prev_stop_event.time > next_stop_event.time) and (
-            datetime.datetime.combine(date, prev_stop_event.time) + prev_stop_event.delay
-            > datetime.datetime.combine(date, next_stop_event.time) + next_stop_event.delay
-        )
-
     has_changes = False
     previous_stop_event = TimeDelayTuple(time=None, delay=None)
     last_departure = None
     circulation_date = new_trip_update.vj.get_circulation_date()
 
-    for nav_order, navitia_stop in get_next_stop():
+    yield_next_stop = (
+        yield_next_stop_from_trip_update(new_trip_update, db_trip_update)
+        if is_new_complete
+        else yield_next_stop_from_base_schedule_vj(navitia_vj)
+    )
+
+    for nav_order, navitia_stop in yield_next_stop:
         if navitia_stop is None:
             logging.getLogger(__name__).warning("No stop point found (order:{}".format(nav_order))
             continue
@@ -376,7 +379,7 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete):
                 if is_past_midnight(previous_stop_event, arrival_stop_event):
                     # last departure is after arrival, it's a past-midnight
                     circulation_date += datetime.timedelta(days=1)
-                base_arrival = _get_datetime(circulation_date, nav_arrival_time)
+                base_arrival = datetime.datetime.combine(circulation_date, nav_arrival_time)
 
             # store arrival as previous stop-event
             previous_stop_event = arrival_stop_event
@@ -399,7 +402,7 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete):
                 if is_past_midnight(previous_stop_event, departure_stop_event):
                     # departure is before arrival, it's a past-midnight
                     circulation_date += datetime.timedelta(days=1)
-                base_departure = _get_datetime(circulation_date, nav_departure_time)
+                base_departure = datetime.datetime.combine(circulation_date, nav_departure_time)
 
             # store departure as previous stop-event
             previous_stop_event = departure_stop_event
