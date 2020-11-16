@@ -39,7 +39,6 @@ import six
 from flask import current_app
 
 from kirin import redis_client
-from kirin.core.merge_utils import merge
 from kirin.core.model import Contributor, RealTimeUpdate, TripUpdate
 
 
@@ -53,8 +52,8 @@ class AbstractKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
     This allows the KirinModelBuilder to be wrapped by wrap_build() function
     """
 
-    def __init__(self, contributor, is_new_complete):
-        # type: (Contributor, bool) -> None
+    def __init__(self, contributor):
+        # type: (Contributor) -> None
         self.navitia = navitia_wrapper.Navitia(
             url=current_app.config.get(str("NAVITIA_URL")),
             token=contributor.navitia_token,
@@ -64,7 +63,6 @@ class AbstractKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
             pubdate_timeout=current_app.config.get(str("NAVITIA_PUBDATE_CACHE_TIMEOUT"), 600),
         ).instance(contributor.navitia_coverage)
         self.contributor = contributor
-        self.is_new_complete = is_new_complete
 
     def build_rt_update(self, input_raw):
         # type: (Any) -> Tuple[RealTimeUpdate, Dict[unicode, unicode]]
@@ -94,4 +92,4 @@ class AbstractKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
         Returns resulting TripUpdate:
         usually update of the last known realtime VJ, or completed version of new_trip_update
         """
-        return merge(navitia_vj, db_trip_update, new_trip_update, self.is_new_complete)
+        raise NotImplementedError("Please implement this method")

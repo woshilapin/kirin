@@ -39,6 +39,7 @@ from google.protobuf.message import DecodeError
 from kirin import gtfs_realtime_pb2
 from kirin.core import model
 from kirin.core.abstract_builder import AbstractKirinModelBuilder
+from kirin.core.merge_utils import merge
 from kirin.core.types import ModificationType, get_higher_status, get_effect_by_stop_time_status, ConnectorType
 from kirin.exceptions import InternalException, InvalidArguments
 from kirin.utils import make_rt_update, floor_datetime, to_navitia_utc_str, set_rtu_status_ko, manage_db_error
@@ -50,7 +51,7 @@ import calendar
 
 class KirinModelBuilder(AbstractKirinModelBuilder):
     def __init__(self, contributor):
-        super(KirinModelBuilder, self).__init__(contributor, is_new_complete=False)
+        super(KirinModelBuilder, self).__init__(contributor)
         self.log = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": self.contributor.id})
         self.period_filter_tolerance = datetime.timedelta(hours=3)  # TODO better period handling
         self.stop_code_key = "source"  # TODO conf
@@ -252,6 +253,9 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         self.log.debug("searching for vj {} on [{}, {}] in navitia".format(vj_source_code, since_dt, until_dt))
 
         return self._make_db_vj(vj_source_code, since_dt, until_dt)
+
+    def merge_trip_updates(self, navitia_vj, db_trip_update, new_trip_update):
+        return merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=False)
 
 
 def _init_stop_update(nav_stop, stop_sequence):
