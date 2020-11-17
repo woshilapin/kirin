@@ -25,7 +25,7 @@
 #
 # Stay tuned using
 # twitter @navitia
-# IRC #navitia on freenode
+# [matrix] channel #navitia:matrix.org (https://app.element.io/#/room/#navitia:matrix.org)
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
 
@@ -41,6 +41,7 @@ from operator import itemgetter
 
 from kirin.core import model
 from kirin.core.abstract_builder import AbstractKirinModelBuilder
+from kirin.core.merge_utils import merge
 from kirin.core.types import ModificationType, TripEffect, get_higher_status, get_effect_by_stop_time_status
 from kirin.exceptions import InvalidArguments, UnsupportedValue, ObjectNotFound
 from kirin.utils import make_rt_update, get_value, as_utc_naive_dt, record_internal_failure, as_duration
@@ -221,7 +222,7 @@ def _get_message(arret):
 
 class KirinModelBuilder(AbstractKirinModelBuilder):
     def __init__(self, contributor):
-        super(KirinModelBuilder, self).__init__(contributor, is_new_complete=True)
+        super(KirinModelBuilder, self).__init__(contributor)
 
     def build_rt_update(self, input_raw):
         rt_update = make_rt_update(
@@ -498,3 +499,6 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
             return stop_points[0], {}
 
         return None, {"log": "No stop point found", "stop_point_code": uic8}
+
+    def merge_trip_updates(self, navitia_vj, db_trip_update, new_trip_update):
+        return merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=True)

@@ -35,7 +35,7 @@ from flask import url_for
 from flask.globals import current_app
 from flask_restful import Resource, marshal, abort
 
-from kirin.core.abstract_builder import wrap_build
+from kirin.core.build_wrapper import wrap_build
 from kirin.exceptions import InvalidArguments
 from kirin.core import model
 from kirin.core.types import ConnectorType

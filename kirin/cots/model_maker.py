@@ -44,6 +44,7 @@ import ujson
 
 from kirin.core import model
 from kirin.core.abstract_builder import AbstractKirinModelBuilder
+from kirin.core.merge_utils import merge
 from kirin.cots.message_handler import MessageHandler
 from kirin.exceptions import InvalidArguments, InternalException, ObjectNotFound
 from kirin.utils import (
@@ -319,7 +320,7 @@ def _get_action_on_trip(train_numbers, dict_version, pdps):
 
 class KirinModelBuilder(AbstractKirinModelBuilder):
     def __init__(self, contributor):
-        super(KirinModelBuilder, self).__init__(contributor, is_new_complete=True)
+        super(KirinModelBuilder, self).__init__(contributor)
         self.message_handler = MessageHandler(
             api_key=current_app.config[str("COTS_PAR_IV_API_KEY")],
             resource_server=current_app.config[str("COTS_PAR_IV_MOTIF_RESOURCE_SERVER")],
@@ -700,3 +701,6 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         if physical_modes:
             return physical_modes[0].get("id", None)
         return None
+
+    def merge_trip_updates(self, navitia_vj, db_trip_update, new_trip_update):
+        return merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=True)

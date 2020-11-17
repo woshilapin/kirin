@@ -29,10 +29,13 @@
 # [matrix] channel #navitia:matrix.org (https://app.element.io/#/room/#navitia:matrix.org)
 # https://groups.google.com/d/forum/navitia
 # www.navitia.io
+
+from __future__ import absolute_import, print_function, unicode_literals, division
+
 from kirin import manager, app, new_relic
 from kirin.core.model import db
 from kirin.core.types import ConnectorType
-from kirin.core.abstract_builder import wrap_build
+from kirin.core.build_wrapper import wrap_build
 from kirin.piv import KirinModelBuilder
 from kirin.piv.piv import get_piv_contributors, get_piv_contributor
 
@@ -48,7 +51,7 @@ from kirin.utils import log_exception
 logger = logging.getLogger(__name__)
 
 CONF_RELOAD_INTERVAL = timedelta(
-    seconds=float(str(app.config.get("BROKER_CONSUMER_CONFIGURATION_RELOAD_INTERVAL")))
+    seconds=float(str(app.config.get(str("BROKER_CONSUMER_CONFIGURATION_RELOAD_INTERVAL"))))
 )
 
 
@@ -100,7 +103,7 @@ class PivWorker(ConsumerMixin):
         return [
             Consumer(
                 queues=[self.queue],
-                accept=["plain/text"],
+                accept=["plain/text"],  # avoid deserializing to json dict
                 prefetch_count=1,
                 callbacks=[self.process_message],
             )
