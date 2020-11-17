@@ -79,7 +79,13 @@ trip_effect_order = {
     TripEffect.UNDEFINED: maxint,
 }
 
-MANAGED_EVENTS = ["RETARD", "SUPPRESSION", "MODIFICATION_DESSERTE_SUPPRIMEE", "MODIFICATION_LIMITATION"]
+MANAGED_EVENTS = [
+    "RETARD",
+    "SUPPRESSION",
+    "MODIFICATION_DESSERTE_SUPPRIMEE",
+    "MODIFICATION_LIMITATION",
+    "NORMAL",
+]
 MANAGED_STOP_EVENTS = ["RETARD_OBSERVE", "RETARD_PROJETE", "NORMAL", "SUPPRESSION_PARTIELLE"]
 
 
@@ -343,7 +349,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         trip_update.message = json_train.get("evenement").get("texte")
         trip_update.effect = trip_status_type.name
 
-        # TODO: handle status/effect for creation, detour, back-to-normal
+        # TODO: handle status/effect for creation, detour
         if trip_status_type == TripEffect.NO_SERVICE:
             # the whole trip is deleted
             trip_update.status = ModificationType.delete.name
