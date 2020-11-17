@@ -48,7 +48,7 @@ from kirin.core.model import (
 )
 from kirin.command.purge_rt import purge_contributor
 from kirin.core.types import ConnectorType
-from kirin.utils import persist
+from kirin.utils import db_commit
 from tests.integration.gtfs_rt_test import basic_gtfs_rt_data, navitia
 
 
@@ -270,7 +270,7 @@ def test_post_new_valid_contributor_with_unknown_parameter_should_work(test_clie
 
 
 def test_put_contributor_with_id(test_client):
-    persist(
+    db_commit(
         model.Contributor(
             id="SaintMeuMeu",
             navitia_coverage="ca",
@@ -302,7 +302,7 @@ def test_put_contributor_with_id(test_client):
 
 
 def test_put_partial_contributor(test_client):
-    persist(
+    db_commit(
         model.Contributor(
             id="SaintMeuMeu",
             navitia_coverage="ca",
@@ -323,7 +323,7 @@ def test_put_partial_contributor(test_client):
 
 
 def test_put_contributor_with_no_data(test_client):
-    persist(
+    db_commit(
         model.Contributor(
             id="SaintMeuMeu",
             navitia_coverage="ca",

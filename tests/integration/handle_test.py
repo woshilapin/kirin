@@ -38,7 +38,7 @@ from kirin.core.build_wrapper import handle
 from kirin.core.model import RealTimeUpdate, TripUpdate, VehicleJourney, StopTimeUpdate
 from kirin.core.types import ConnectorType
 from kirin.gtfs_rt import gtfs_rt
-from kirin.utils import make_rt_update, persist
+from kirin.utils import make_rt_update, db_commit
 from tests import mock_navitia
 from tests.integration.conftest import GTFS_CONTRIBUTOR_ID
 import datetime
@@ -155,7 +155,7 @@ def setup_database():
         rtu = make_rt_update(None, ConnectorType.gtfs_rt.value, contributor_id=GTFS_CONTRIBUTOR_ID)
         rtu.id = "20866ce8-0638-4fa1-8556-1ddfa22d09d3"
         rtu.trip_updates.append(vju)
-        persist(rtu)
+        db_commit(rtu)
 
 
 @pytest.fixture()
@@ -811,7 +811,7 @@ def test_cancellation_then_delay(navitia_vj):
         rtu = make_rt_update(None, ConnectorType.gtfs_rt.value, contributor_id=GTFS_CONTRIBUTOR_ID)
         rtu.id = "10866ce8-0638-4fa1-8556-1ddfa22d09d3"
         rtu.trip_updates.append(vju)
-        persist(rtu)
+        db_commit(rtu)
 
     with app.app_context():
         contributor = model.Contributor(

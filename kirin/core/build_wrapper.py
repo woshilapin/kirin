@@ -43,7 +43,7 @@ from kirin.core.model import TripUpdate
 from kirin.core.populate_pb import convert_to_gtfsrt
 from kirin.exceptions import MessageNotPublished, KirinException
 from kirin.new_relic import is_invalid_input_exception, record_custom_parameter
-from kirin.utils import set_rtu_status_ko, allow_reprocess_same_data, record_call, persist
+from kirin.utils import set_rtu_status_ko, allow_reprocess_same_data, record_call, db_commit
 
 TimeDelayTuple = namedtuple("TimeDelayTuple", ["time", "delay"])
 
@@ -197,7 +197,7 @@ def handle(builder, real_time_update, trip_updates):
             # this link is done quite late to avoid too soon persistence of trip_update by sqlalchemy
             current_trip_update.real_time_updates.append(real_time_update)
 
-    persist(real_time_update)
+    db_commit(real_time_update)
 
     feed = convert_to_gtfsrt(real_time_update.trip_updates, gtfs_realtime_pb2.FeedHeader.DIFFERENTIAL)
     feed_str = feed.SerializeToString()
@@ -218,7 +218,7 @@ def handle(builder, real_time_update, trip_updates):
         logging.getLogger(__name__).warning(
             "RealTimeUpdate id={}: {}".format(real_time_update.id, msg), extra=log_dict
         )
-        persist(real_time_update)
+        db_commit(real_time_update)
 
     return real_time_update, log_dict
 
@@ -259,7 +259,7 @@ def wrap_build(builder, input_raw):
         if rt_update is not None:
             error = e.data["error"] if (isinstance(e, KirinException) and "error" in e.data) else e.message
             set_rtu_status_ko(rt_update, error, is_reprocess_same_data_allowed=allow_reprocess)
-            persist(rt_update)
+            db_commit(rt_update)
         else:
             # rt_update is not built, make sure reprocess is allowed
             allow_reprocess_same_data(contributor.id)

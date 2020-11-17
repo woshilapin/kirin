@@ -36,7 +36,7 @@ import sqlalchemy
 from flask_restful import Resource, marshal_with, fields, abort
 from kirin.core import model
 from kirin.core.types import ConnectorType
-from kirin.utils import persist
+from kirin.utils import db_commit
 
 contributor_fields = {
     "id": fields.String,
@@ -138,7 +138,7 @@ class Contributors(Resource):
                 nb_days_to_keep_trip_update,
                 nb_days_to_keep_rt_update,
             )
-            persist(new_contrib)
+            db_commit(new_contrib)
             return {"contributor": new_contrib}, 201
         except KeyError as e:
             err_msg = "Missing attribute '{}' in input data to construct a contributor".format(e)

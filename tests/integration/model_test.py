@@ -35,7 +35,7 @@ from sqlalchemy.orm.exc import FlushError
 
 from kirin.core.model import TripUpdate, StopTimeUpdate, Contributor
 from kirin.core.types import ConnectorType
-from kirin.utils import persist
+from kirin.utils import db_commit
 from tests.integration.conftest import COTS_CONTRIBUTOR_ID, GTFS_CONTRIBUTOR_ID
 from tests.integration.utils_test import create_trip_update, create_rt_update_and_trip_update
 from kirin import db, app
@@ -431,7 +431,7 @@ def test_contributor_creation():
     with app.app_context():
         contrib = Contributor("realtime.george", "idf", ConnectorType.cots.value)
 
-        persist(contrib)
+        db_commit(contrib)
 
         assert contrib.id == "realtime.george"
         assert contrib.navitia_coverage == "idf"
@@ -443,4 +443,4 @@ def test_contributor_creation():
             """
             Adding a second contributor with the same id should fail
             """
-            persist(contrib_with_same_id)
+            db_commit(contrib_with_same_id)

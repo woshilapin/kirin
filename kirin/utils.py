@@ -139,7 +139,7 @@ def as_duration(seconds):
     return datetime.utcfromtimestamp(seconds) - datetime.utcfromtimestamp(0)
 
 
-def persist(orm_object):
+def db_commit(orm_object):
     """
     receive an ORM object (from model.py) and persist it in the database
     """
@@ -156,7 +156,7 @@ def make_rt_update(raw_data, connector_type, contributor_id, status="OK"):
     )
     new_relic.record_custom_parameter("real_time_update_id", rt_update.id)
 
-    persist(rt_update)
+    db_commit(rt_update)
     return rt_update
 
 
@@ -241,7 +241,7 @@ def save_rt_data_with_error(data, connector_type, contributor_id, error, is_repr
     raw_data = six.binary_type(data)
     rt_update = make_rt_update(raw_data, connector_type=connector_type, contributor_id=contributor_id)
     set_rtu_status_ko(rt_update, error, is_reprocess_same_data_allowed)
-    persist(rt_update)
+    db_commit(rt_update)
     return rt_update
 
 
