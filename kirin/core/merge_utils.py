@@ -235,7 +235,7 @@ def _make_stop_time_update(base_arrival, base_departure, last_departure, input_s
 def yield_next_stop_from_trip_update(new_trip_update, db_trip_update):
     # Iterate on the new trip update stop_times if it is complete (all stop_times present in it)
     for order, new_stu in enumerate(new_trip_update.stop_time_updates):
-        # Find corresponding stop_time in the theoretical VJ
+        # Find corresponding stop_time in the base-schedule VJ
         vj_st = find_st_in_vj(new_stu.stop_id, new_trip_update.vj.navitia_vj.get("stop_times", []))
         if vj_st:
             yield order, vj_st
@@ -264,7 +264,7 @@ def yield_next_stop_from_trip_update(new_trip_update, db_trip_update):
 
 
 def yield_next_stop_from_base_schedule_vj(navitia_vj):
-    # Iterate on the theoretical VJ if the new trip update doesn't list all stop_times
+    # Iterate on the base-schedule VJ if the new trip update doesn't list all stop_times
     for order, vj_st in enumerate(navitia_vj.get("stop_times", [])):
         yield order, vj_st
 

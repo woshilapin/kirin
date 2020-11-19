@@ -192,7 +192,7 @@ To generate a new release:
    ```sh
    git checkout release
    git pull
-   git merge canaltp/master
+   git merge <canaltp>/master
    ```
 
 2. tag and annotate the version:
@@ -214,7 +214,7 @@ To generate a new release:
 4. push master, release and tags to central repo
 
    ```sh
-   git push canaltp release master --tags
+   git push <canaltp> release master --tags
    ```
 
 5. the pipe https://ci.navitia.io/view/kirin_release_deployment/ should be

@@ -89,7 +89,7 @@ class AbstractKirinModelBuilder(six.with_metaclass(ABCMeta, object)):
         * navitia_vj (base-schedule VJ - complete, maybe nonexistent)
         * db_trip_update (last known realtime VJ - complete, maybe nonexistent)
         * new_trip_update (VJ information extracted from incoming feed - maybe incomplete)
-        Returns resulting TripUpdate:
+        Returns resulting TripUpdate if different from last known (else None):
         usually update of the last known realtime VJ, or completed version of new_trip_update
         """
         raise NotImplementedError("Please implement this method")
