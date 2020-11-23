@@ -87,9 +87,18 @@ MANAGED_EVENTS = [
     "MODIFICATION_LIMITATION",
     "MODIFICATION_DESSERTE_AJOUTEE",
     "MODIFICATION_PROLONGATION",
+    "MODIFICATION_DETOURNEMENT",
     "NORMAL",
 ]
-MANAGED_STOP_EVENTS = ["RETARD_OBSERVE", "RETARD_PROJETE", "NORMAL", "SUPPRESSION_PARTIELLE", "CREATION"]
+MANAGED_STOP_EVENTS = [
+    "RETARD_OBSERVE",
+    "RETARD_PROJETE",
+    "SUPPRESSION_PARTIELLE",
+    "SUPPRESSION_DETOURNEMENT",
+    "CREATION",
+    "CREATION_DETOURNEMENT",
+    "NORMAL",
+]
 
 
 def _get_trip_effect_order_from_piv_status(status):
@@ -405,10 +414,14 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
 
                     if piv_event_status in ["RETARD_OBSERVE", "RETARD_PROJETE"]:
                         setattr(st_update, STATUS_MAP[event_toggle], ModificationType.update.name)
-                    elif piv_event_status == "SUPPRESSION_PARTIELLE":
+                    elif piv_event_status in ["SUPPRESSION_PARTIELLE"]:
                         setattr(st_update, STATUS_MAP[event_toggle], ModificationType.delete.name)
-                    elif piv_event_status == "CREATION":
+                    elif piv_event_status in ["SUPPRESSION_DETOURNEMENT"]:
+                        setattr(st_update, STATUS_MAP[event_toggle], ModificationType.deleted_for_detour.name)
+                    elif piv_event_status in ["CREATION"]:
                         setattr(st_update, STATUS_MAP[event_toggle], ModificationType.add.name)
+                    elif piv_event_status in ["CREATION_DETOURNEMENT"]:
+                        setattr(st_update, STATUS_MAP[event_toggle], ModificationType.added_for_detour.name)
                     else:
                         setattr(st_update, STATUS_MAP[event_toggle], ModificationType.none.name)
                     # otherwise let those be none
@@ -469,7 +482,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
 
     def _request_navitia_physical_mode(self, uri):
         physical_modes = self.navitia.physical_modes(uri=uri)
-        physical_modes[0] if physical_modes else None
+        return physical_modes[0] if physical_modes else None
 
     def _get_navitia_stop_point(self, arret, nav_vj):
         """
