@@ -571,7 +571,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
             Typically the supposed datetime of last base-schedule stop_time.
         :param action_on_trip: action to be performed on trip. This param is used to do consistency check
         """
-        log = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": self.contributor.id})
+        log = logging.LoggerAdapter(logging.getLogger(__name__), extra={str("contributor"): self.contributor.id})
 
         if (since_dt is None) or (until_dt is None):
             return []

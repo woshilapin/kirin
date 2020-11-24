@@ -52,7 +52,9 @@ import calendar
 class KirinModelBuilder(AbstractKirinModelBuilder):
     def __init__(self, contributor):
         super(KirinModelBuilder, self).__init__(contributor)
-        self.log = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": self.contributor.id})
+        self.log = logging.LoggerAdapter(
+            logging.getLogger(__name__), extra={str("contributor"): self.contributor.id}
+        )
         self.period_filter_tolerance = datetime.timedelta(hours=3)  # TODO better period handling
         self.stop_code_key = "source"  # TODO conf
         self.instance_data_pub_date = self.navitia.get_publication_date()

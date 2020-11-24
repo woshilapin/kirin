@@ -90,7 +90,7 @@ def poller(self):
 def purge_trip_update(self, config):
     func_name = "purge_trip_update"
     contributor = config["contributor"]
-    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": contributor})
+    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={str("contributor"): contributor})
     logger.debug("purge trip update for %s", contributor)
 
     lock_name = make_kirin_lock_name(func_name, contributor)
@@ -111,7 +111,7 @@ def purge_rt_update(self, config):
     func_name = "purge_rt_update"
     contributor = config["contributor"]
 
-    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": contributor})
+    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={str("contributor"): contributor})
     logger.debug("purge realtime update for %s", contributor)
 
     lock_name = make_kirin_lock_name(func_name, contributor)
