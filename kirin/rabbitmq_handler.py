@@ -83,7 +83,7 @@ class RTReloader(ConsumerProducerMixin):
                 log.warning("invalid protobuf: {}".format(six.text_type(e)))
                 return
 
-            log.info("Getting a full feed publication request", extra={"task": task})
+            log.info("Getting a full feed publication request", extra={str("task"): task})
             if task.action != task_pb2.LOAD_REALTIME or not task.load_realtime:
                 return
             start_datetime = datetime.utcnow()
@@ -104,7 +104,7 @@ class RTReloader(ConsumerProducerMixin):
             feed_str = feed.SerializeToString()
             log.info(
                 "Starting of full feed publication {}, {}".format(len(feed_str), task),
-                extra={"size": len(feed_str), "task": task},
+                extra={str("size"): len(feed_str), "task": task},
             )
             # http://docs.celeryproject.org/projects/kombu/en/latest/userguide/producers.html#bypassing-routing-by-using-the-anon-exchange
             self.producer.publish(
@@ -119,7 +119,7 @@ class RTReloader(ConsumerProducerMixin):
                 },
             )
             duration = (datetime.utcnow() - start_datetime).total_seconds()
-            log.info("End of full feed publication", extra={"duration": duration, "task": task})
+            log.info("End of full feed publication", extra={str("duration"): duration, "task": task})
             record_call(
                 "Full feed publication",
                 size=len(feed_str),

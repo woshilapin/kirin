@@ -67,7 +67,9 @@ class InvalidFeed(Exception):
 
 
 def _is_newer(config):
-    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": config["contributor"]})
+    logger = logging.LoggerAdapter(
+        logging.getLogger(__name__), extra={str("contributor"): config["contributor"]}
+    )
     contributor = config["contributor"]
     try:
         head = requests.head(config["feed_url"], timeout=config.get("timeout", 1))
@@ -131,7 +133,7 @@ def gtfs_poller(self, config):
         .first()
     )
 
-    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": contributor.id})
+    logger = logging.LoggerAdapter(logging.getLogger(__name__), extra={str("contributor"): contributor.id})
 
     lock_name = make_kirin_lock_name(func_name, contributor.id)
     with get_lock(logger, lock_name, app.config[str("REDIS_LOCK_TIMEOUT_POLLER")]) as locked:

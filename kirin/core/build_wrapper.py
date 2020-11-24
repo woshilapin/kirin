@@ -160,7 +160,7 @@ def publish(feed, contributor_id):
 
     except socket.error:
         logging.getLogger(__name__).exception(
-            "impossible to publish in rabbitmq", extra={"contributor": contributor_id}
+            "impossible to publish in rabbitmq", extra={str("contributor"): contributor_id}
         )
         raise MessageNotPublished()
 

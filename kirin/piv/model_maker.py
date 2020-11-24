@@ -312,7 +312,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         return trip_updates, log_dict
 
     def _get_navitia_vj(self, piv_key, ads):
-        log = logging.LoggerAdapter(logging.getLogger(__name__), extra={"contributor": self.contributor.id})
+        log = logging.LoggerAdapter(logging.getLogger(__name__), extra={str("contributor"): self.contributor.id})
 
         log.debug("searching for vj {} in navitia".format(piv_key))
         navitia_vjs = self.navitia.vehicle_journeys(
@@ -361,7 +361,6 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         trip_update.message = json_train.get("evenement").get("texte")
         trip_update.effect = trip_status_type.name
 
-        # TODO: handle status/effect for detour
         if trip_status_type == TripEffect.NO_SERVICE:
             # the whole trip is deleted
             trip_update.status = ModificationType.delete.name
