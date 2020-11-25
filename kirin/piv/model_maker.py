@@ -96,6 +96,7 @@ MANAGED_EVENTS = [
     "MODIFICATION_DESSERTE_AJOUTEE",
     "MODIFICATION_PROLONGATION",
     "MODIFICATION_DETOURNEMENT",
+    "CREATION",
     "NORMAL",
 ]
 MANAGED_STOP_EVENTS = [
@@ -272,7 +273,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         if not piv_disruptions and not plan_transport_source:
             raise InvalidArguments('No object "evenement" or "planTransportSource" available in feed provided')
 
-        higher_disruption = ujson.loads('{"type": "UNDEFINED", "texte": ""}')
+        higher_trip_disruption = ujson.loads('{"type": "UNDEFINED", "texte": ""}')
         if piv_disruptions:
             for piv_disruption in piv_disruptions:
                 piv_disruption_type = get_value(piv_disruption, "type", nullable=True)
@@ -281,18 +282,21 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
                     and piv_disruption_type in trip_piv_status_to_effect
                     and piv_disruption_type in MANAGED_EVENTS
                 ):
-                    higher_disruption = (
+                    higher_trip_disruption = (
                         piv_disruption
                         if _get_trip_effect_order_from_piv_status(piv_disruption_type)
-                        < _get_trip_effect_order_from_piv_status(get_value(higher_disruption, "type"))
-                        else higher_disruption
+                        < _get_trip_effect_order_from_piv_status(get_value(higher_trip_disruption, "type"))
+                        else higher_trip_disruption
                     )
-            if trip_piv_status_to_effect[higher_disruption.get("type")] == TripEffect.UNDEFINED:
+            if trip_piv_status_to_effect[higher_trip_disruption.get("type")] == TripEffect.UNDEFINED:
                 raise UnsupportedValue("None of the disruption-types {} are supported".format(piv_disruptions))
-        elif plan_transport_source and plan_transport_source not in ["PTP", "OPE"]:
-            raise UnsupportedValue("planTransportSource {} is not supported".format(plan_transport_source))
+        elif plan_transport_source:
+            if plan_transport_source in ["PTP", "OPE"]:
+                higher_trip_disruption = ujson.loads('{"type": "CREATION", "texte": ""}')
+            else:
+                raise UnsupportedValue("planTransportSource {} is not supported".format(plan_transport_source))
 
-        json_train["evenement"] = higher_disruption
+        json_train["evenement"] = higher_trip_disruption
         train_date = get_value(json_train, "dateCirculation")
         train_numbers = get_value(json_train, "numero")
         train_company = get_value(get_value(json_train, "operateur"), "codeOperateur")
@@ -314,14 +318,15 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         # replace by cleaned and sorted version of stoptimes list.
         json_train["listeArretsDesserte"]["arret"] = ads
 
-        vj = self._get_navitia_vj(piv_key, ads)
+        is_trip_addition = higher_trip_disruption.get("type") == "CREATION"
+        vj = self._get_navitia_vj(piv_key, ads, is_trip_addition)
 
         trip_updates = [self._make_trip_update(json_train, vj)]
 
         log_dict = {}
         return trip_updates, log_dict
 
-    def _get_navitia_vj(self, piv_key, ads):
+    def _get_navitia_vj(self, piv_key, ads, is_trip_addition):
         log = logging.LoggerAdapter(logging.getLogger(__name__), extra={str("contributor"): self.contributor.id})
 
         log.debug("searching for vj {} in navitia".format(piv_key))
@@ -345,7 +350,9 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
             navitia_vj = navitia_vjs[0]
             try:
                 base_vs_rt_error_margin = datetime.timedelta(hours=1)
-                vj_base_start = _get_first_stop_base_datetime(ads, "depart", skip_fully_added_stops=True)
+                vj_base_start = _get_first_stop_base_datetime(
+                    ads, "depart", skip_fully_added_stops=not is_trip_addition
+                )
                 vj = model.VehicleJourney(
                     navitia_vj,
                     vj_base_start - base_vs_rt_error_margin,
@@ -370,14 +377,15 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         trip_status_type = trip_piv_status_to_effect[json_train.get("evenement").get("type")]
         trip_update.message = json_train.get("evenement").get("texte")
         trip_update.effect = trip_status_type.name
-
         if trip_status_type == TripEffect.NO_SERVICE:
             # the whole trip is deleted
             trip_update.status = ModificationType.delete.name
             trip_update.stop_time_updates = []
             return trip_update
-
-        trip_update.status = ModificationType.update.name
+        elif trip_status_type == TripEffect.ADDITIONAL_SERVICE:
+            trip_update.status = ModificationType.add.name
+        else:
+            trip_update.status = ModificationType.update.name
 
         highest_st_status = ModificationType.none.name
         ads = get_value(get_value(json_train, "listeArretsDesserte"), "arret")
@@ -417,13 +425,8 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
                     if event_datetime:
                         rt_stop_time[event_toggle] = event_datetime
                         setattr(st_update, STOP_EVENT_DATETIME_MAP[event_toggle], event_datetime)
-                    if piv_disruption:
-                        piv_event_delay = piv_disruption.get("retard", {}).get("duree", 0)
-                        setattr(st_update, DELAY_MAP[event_toggle], as_duration(piv_event_delay * 60))  # minutes
 
-                    if piv_event_status in ["RETARD_OBSERVE", "RETARD_PROJETE"]:
-                        setattr(st_update, STATUS_MAP[event_toggle], ModificationType.update.name)
-                    elif piv_event_status in ["SUPPRESSION_PARTIELLE"]:
+                    if piv_event_status in ["SUPPRESSION_PARTIELLE"]:
                         setattr(st_update, STATUS_MAP[event_toggle], ModificationType.delete.name)
                     elif piv_event_status in ["SUPPRESSION_DETOURNEMENT"]:
                         setattr(st_update, STATUS_MAP[event_toggle], ModificationType.deleted_for_detour.name)
@@ -431,6 +434,17 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
                         setattr(st_update, STATUS_MAP[event_toggle], ModificationType.add.name)
                     elif piv_event_status in ["CREATION_DETOURNEMENT"]:
                         setattr(st_update, STATUS_MAP[event_toggle], ModificationType.added_for_detour.name)
+                    elif trip_status_type == TripEffect.ADDITIONAL_SERVICE:
+                        # In this case we want to create schedules taking into account the delay
+                        # without adding the delay a second time
+                        setattr(st_update, STATUS_MAP[event_toggle], ModificationType.add.name)
+                    elif piv_event_status in ["RETARD_OBSERVE", "RETARD_PROJETE"]:
+                        setattr(st_update, STATUS_MAP[event_toggle], ModificationType.update.name)
+                        if piv_disruption:
+                            piv_event_delay = piv_disruption.get("retard", {}).get("duree", 0)
+                            setattr(
+                                st_update, DELAY_MAP[event_toggle], as_duration(piv_event_delay * 60)
+                            )  # minutes
                     else:
                         setattr(st_update, STATUS_MAP[event_toggle], ModificationType.none.name)
                     # otherwise let those be none
