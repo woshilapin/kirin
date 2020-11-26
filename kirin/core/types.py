@@ -46,6 +46,11 @@ class ModificationType(Enum):
     added_for_detour = 6
 
 
+SIMPLE_MODIF_STATUSES = [ModificationType.update.name, ModificationType.none.name]
+ADDED_STATUSES = [ModificationType.add.name, ModificationType.added_for_detour.name]
+DELETED_STATUSES = [ModificationType.delete.name, ModificationType.deleted_for_detour.name]
+
+
 def stop_time_status_to_protobuf(stop_time_status):
     return {
         "add": kirin_pb2.ADDED,

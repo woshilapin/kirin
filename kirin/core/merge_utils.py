@@ -36,7 +36,7 @@ import datetime
 
 from kirin.core.build_wrapper import TimeDelayTuple
 from kirin.core.model import StopTimeUpdate
-from kirin.core.types import ModificationType
+from kirin.core.types import ModificationType, DELETED_STATUSES, ADDED_STATUSES
 
 
 def find_st_in_vj(st_id, vj_sts):
@@ -181,12 +181,12 @@ def _get_update_info_of_stop_event(base_time, input_time, input_status, input_de
             new_time += input_delay
         status = input_status
         delay = input_delay
-    elif input_status in (ModificationType.delete.name, ModificationType.deleted_for_detour.name):
+    elif input_status in DELETED_STATUSES:
         # passing status 'delete' on the stop_time
         # Note: we keep providing base_schedule stop_time to better identify the stop_time
         # in the vj (for lollipop lines for example)
         status = input_status
-    elif input_status in (ModificationType.add.name, ModificationType.added_for_detour.name):
+    elif input_status in ADDED_STATUSES:
         status = input_status
         new_time = input_time.replace(tzinfo=None) if input_time else None
         if new_time is not None and input_delay:

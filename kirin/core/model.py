@@ -38,7 +38,7 @@ from flask_sqlalchemy import SQLAlchemy
 import datetime
 import sqlalchemy
 from sqlalchemy import desc
-from kirin.core.types import ModificationType, TripEffect, ConnectorType
+from kirin.core.types import ModificationType, TripEffect, ConnectorType, DELETED_STATUSES, ADDED_STATUSES
 from kirin.exceptions import ObjectNotFound, InternalException
 
 db = SQLAlchemy()
@@ -261,11 +261,11 @@ class StopTimeUpdate(db.Model, TimestampMixin):  # type: ignore
 
     def is_stop_event_deleted(self, event_name):
         status = self.get_stop_event_status(event_name)
-        return status in (ModificationType.delete.name, ModificationType.deleted_for_detour.name)
+        return status in DELETED_STATUSES
 
     def is_stop_event_added(self, event_name):
         status = self.get_stop_event_status(event_name)
-        return status in (ModificationType.add.name, ModificationType.added_for_detour.name)
+        return status in ADDED_STATUSES
 
 
 associate_realtimeupdate_tripupdate = db.Table(
