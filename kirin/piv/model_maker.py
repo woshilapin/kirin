@@ -32,7 +32,7 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 
 import logging
-from datetime import timedelta, datetime
+import datetime
 from sys import maxint
 
 import jmespath
@@ -203,7 +203,9 @@ def _extract_navitia_stop_time(uic8, nav_vj):
 
 def _check_stop_time_consistency(previous_rt_stop_time_dep, current_rt_stop_time, uic8):
     previous_rt_stop_time_dep = (
-        previous_rt_stop_time_dep if previous_rt_stop_time_dep is not None else datetime.fromtimestamp(0)
+        previous_rt_stop_time_dep
+        if previous_rt_stop_time_dep is not None
+        else datetime.datetime.fromtimestamp(0)
     )
 
     rt_arrival = current_rt_stop_time.get("arrivee")
@@ -334,7 +336,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         else:
             navitia_vj = navitia_vjs[0]
             try:
-                base_vs_rt_error_margin = timedelta(hours=1)
+                base_vs_rt_error_margin = datetime.timedelta(hours=1)
                 vj_base_start = _get_first_stop_base_datetime(ads, "depart", skip_fully_added_stops=True)
                 vj = model.VehicleJourney(
                     navitia_vj,
