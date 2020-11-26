@@ -916,8 +916,14 @@ def test_piv_delayed_post_twice(mock_rabbitmq):
     piv_str = ujson.dumps(_get_stomp_20201022_23187_delayed_5min_fixture())
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_str)
     assert "PIV feed processed" in res.get("message")
+    status = api_get("/status")
+    assert not status["last_update_error"]  # check no error
     res = api_post("/piv/{}".format(PIV_CONTRIBUTOR_ID), data=piv_str)
     assert "PIV feed processed" in res.get("message")
+    status = api_get("/status")
+    assert (
+        status["last_update_error"][PIV_CONTRIBUTOR_ID] == "No new information destined to navitia for this piv"
+    )  # check the same-feed detection is working
 
     with app.app_context():
         assert RealTimeUpdate.query.count() == 2
