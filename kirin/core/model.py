@@ -267,6 +267,15 @@ class StopTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         status = self.get_stop_event_status(event_name)
         return status in ADDED_STATUSES
 
+    def is_fully_added(self, index):
+        if index == 0:
+            # first stop
+            return self.departure_status in ADDED_STATUSES
+        if index == -1:
+            # last stop
+            return self.arrival_status in ADDED_STATUSES
+        return self.arrival_status in ADDED_STATUSES and self.departure_status in ADDED_STATUSES
+
 
 associate_realtimeupdate_tripupdate = db.Table(
     "associate_realtimeupdate_tripupdate",

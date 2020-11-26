@@ -41,8 +41,15 @@ from operator import itemgetter
 
 from kirin.core import model
 from kirin.core.abstract_builder import AbstractKirinModelBuilder
-from kirin.core.merge_utils import merge
-from kirin.core.types import ModificationType, TripEffect, get_higher_status, get_effect_by_stop_time_status
+from kirin.core.merge_utils import is_past_midnight, convert_nav_stop_list_to_stu_list
+from kirin.core.model import StopTimeUpdate
+from kirin.core.types import (
+    ModificationType,
+    TripEffect,
+    get_higher_status,
+    get_effect_by_stop_time_status,
+    SIMPLE_MODIF_STATUSES,
+)
 from kirin.exceptions import InvalidArguments, UnsupportedValue, ObjectNotFound
 from kirin.utils import make_rt_update, get_value, as_utc_naive_dt, record_internal_failure, as_duration
 
@@ -515,4 +522,192 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         return None, {"log": "No stop point found", "stop_point_code": uic8}
 
     def merge_trip_updates(self, navitia_vj, db_trip_update, new_trip_update):
-        return merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=True)
+        """
+        Steps:
+        1. Build TripUpdate info resulting of merge
+        2. Adjust TripUpdate info to have it be self-consistent (call adjust_trip_update_consistency())
+        3. If resulting TripUpdate info are new compared to the one from previous RT info: send it
+
+        NB:
+        * Working with ORM objects directly: no persistence of new object before knowing it's final version and
+          it's not a duplicate (performance and db unicity constraints)
+        """
+        res_stus = []  # final list of STUs (to be attached to res in the end)
+
+        circulation_date = new_trip_update.vj.get_circulation_date()
+        # last info known about stops in trip (before processing new feed):
+        # either from previous RT feed or base-schedule
+        old_stus = (
+            db_trip_update.stop_time_updates
+            if db_trip_update
+            else convert_nav_stop_list_to_stu_list(navitia_vj.get("stop_times", []), circulation_date)
+        )
+
+        # build resulting STU list
+        old_stus_unprocessed_start = 0  # keeps track of what was processed in previous STU info
+
+        for new_order, new_stu in enumerate(new_trip_update.stop_time_updates):
+            index_new_stu = new_order if new_order + 1 != len(new_trip_update.stop_time_updates) else -1
+
+            # find corresponding stop in last known information
+            match_old_stu_order, match_old_stu = find_enumerate_stu_in_stus(
+                new_stu, old_stus, start=old_stus_unprocessed_start
+            )
+            index_old_stu = match_old_stu_order if match_old_stu_order + 1 != len(old_stus) else -1
+
+            # If stop is not added, or if it was already added in last known information
+            if not new_stu.is_fully_added(index=index_new_stu) or (
+                match_old_stu is not None and match_old_stu.is_fully_added(index=index_old_stu)
+            ):
+                # mark old stops not found in new feed as deleted (the ones skipped to find current new_stu)
+                for old_order in range(old_stus_unprocessed_start, match_old_stu_order):
+                    del_stu = old_stus[old_order]
+                    del_stu.arrival_status = ModificationType.delete.name
+                    del_stu.departure_status = ModificationType.delete.name
+                    del_stu.order = len(res_stus)
+                    res_stus.append(del_stu)
+
+                # mark previously unknown stop-times as added
+                if match_old_stu is None:
+                    if new_stu.arrival_status in SIMPLE_MODIF_STATUSES:
+                        new_stu.arrival_status = ModificationType.add.name
+                    if new_stu.departure_status in SIMPLE_MODIF_STATUSES:
+                        new_stu.departure_status = ModificationType.add.name
+
+                old_stus_unprocessed_start = match_old_stu_order + 1
+
+            new_stu.order = len(res_stus)
+            if new_stu.departure_delay is None:
+                new_stu.departure_delay = datetime.timedelta(0)
+            if new_stu.arrival_delay is None:
+                new_stu.arrival_delay = datetime.timedelta(0)
+            # add stop currently processed
+            # GOTCHA: need a StopTimeUpdate detached of new_trip_update to avoid persisting new_trip_update
+            # (this would lead to 2 TripUpdates for the same trip on the same day, forbidden by unicity constraint)
+            res_stus.append(
+                StopTimeUpdate(
+                    navitia_stop=new_stu.navitia_stop,
+                    departure=new_stu.departure,
+                    arrival=new_stu.arrival,
+                    departure_delay=new_stu.departure_delay,
+                    arrival_delay=new_stu.arrival_delay,
+                    dep_status=new_stu.departure_status,
+                    arr_status=new_stu.arrival_status,
+                    message=new_stu.message,
+                    order=new_stu.order,
+                )
+            )
+
+        # if navitia_vj is empty, it's a creation
+        if not navitia_vj.get("stop_times", []):
+            new_trip_update.effect = TripEffect.ADDITIONAL_SERVICE.name
+            new_trip_update.status = ModificationType.add.name
+
+        # adjust consistency for resulting trip_update
+        adjust_trip_update_consistency(new_trip_update, res_stus)
+
+        has_changes = (
+            not db_trip_update
+            or db_trip_update.message != new_trip_update.message
+            or db_trip_update.status != new_trip_update.status
+            or db_trip_update.effect != new_trip_update.effect
+            or db_trip_update.physical_mode_id != new_trip_update.physical_mode_id
+            or db_trip_update.headsign != new_trip_update.headsign
+            or list_stu_is_not_equal(db_trip_update.stop_time_updates, res_stus)
+        )
+
+        # return result only if there are changes
+        if has_changes:
+            # update existing TripUpdate to avoid duplicates, keep created_at and preserve performance
+            res = db_trip_update if db_trip_update else new_trip_update
+            res.message = new_trip_update.message
+            res.status = new_trip_update.status
+            res.effect = new_trip_update.effect
+            res.physical_mode_id = new_trip_update.physical_mode_id
+            res.headsign = new_trip_update.headsign
+            res.stop_time_updates = res_stus
+            return res
+        else:
+            return None
+
+
+def list_stu_is_not_equal(left, right):
+    if len(right) != len(left):
+        return True
+    for i in range(0, len(left)):
+        if left[i].is_not_equal(right[i]):
+            return True
+    return False
+
+
+def find_enumerate_stu_in_stus(ref_stu, stus, start=0):
+    """
+    Find a stop_time in the navitia vehicle journey
+    :param ref_stu: the referent stop_time
+    :param stus: list of StopTimeUpdate available in a TripUpdate
+    :param start: order (comprised) to start the search from
+    :return: (order, stu) if found else (len(stus), None)
+    """
+    if start >= len(stus):
+        return len(stus), None
+
+    def same_stop(stu, ref_stu):
+        return stu.stop_id == ref_stu.stop_id
+
+    return next(((order, stu) for (order, stu) in enumerate(stus) if same_stop(stu, ref_stu)), (len(stus), None))
+
+
+def adjust_trip_update_consistency(trip_update, stus):
+    """
+    Adjust consistency of TripUpdate and StopTimeUpdates (side-effect).
+    NB : using list of StopTimeUpdate provided in stus, as the list is often not
+    attached to TripUpdate (to avoid ORM persiting it)
+    :param trip_update: TripUpdate to adjust (all but stop_time_updates)
+    :param stus: List of StopTimeUpdates to adjust
+    :return: None, just update given parameters
+    """
+    previous_stop_event_dt = datetime.datetime.min
+    for res_stu in stus:
+        # if trip is added: stops are either added or deleted (both can be for detour) + no delay
+        if trip_update.effect == TripEffect.ADDITIONAL_SERVICE.name:
+            if res_stu.arrival_status in SIMPLE_MODIF_STATUSES:
+                res_stu.arrival_status = ModificationType.add.name
+                res_stu.arrival_delay = datetime.timedelta(0)
+            if res_stu.departure_status in SIMPLE_MODIF_STATUSES:
+                res_stu.departure_status = ModificationType.add.name
+                res_stu.departure_delay = datetime.timedelta(0)
+
+        for stop_event_toggle in ["arrival", "departure"]:
+            # First fill missing datetime info
+            stop_event_dt = getattr(res_stu, stop_event_toggle)
+            if stop_event_dt is None:
+                # if info is missing, first consider the opposite event of same stop-time
+                opposite_event = {"arrival": "departure", "departure": "arrival"}
+                stop_event_dt = getattr(res_stu, opposite_event[stop_event_toggle], datetime.datetime.min)
+                if stop_event_dt is None and previous_stop_event_dt != datetime.datetime.min:
+                    # if info is still missing, consider last known stop-time event if info exists
+                    stop_event_dt = previous_stop_event_dt
+                setattr(res_stu, stop_event_toggle, stop_event_dt)
+
+            # Check time consistency: chaining of served stop_events must be time-sorted.
+            # Push to the same time than previous event to respect it if needed.
+            if not res_stu.is_stop_event_deleted(stop_event_toggle):
+                if previous_stop_event_dt > stop_event_dt:
+                    # adjust
+                    stop_event_delay = getattr(
+                        res_stu, "{}_delay".format(stop_event_toggle), datetime.timedelta(0)
+                    )
+                    stop_event_status = getattr(res_stu, "{}_status".format(stop_event_toggle))
+                    if stop_event_status in SIMPLE_MODIF_STATUSES:
+                        setattr(res_stu, "{}_status".format(stop_event_toggle), ModificationType.update.name)
+                        setattr(
+                            res_stu,
+                            "{}_delay".format(stop_event_toggle),
+                            stop_event_delay + (previous_stop_event_dt - stop_event_dt),
+                        )
+                    setattr(res_stu, stop_event_toggle, previous_stop_event_dt)
+
+                # update previous event's info for next event's management
+                final_stop_event_dt = getattr(res_stu, stop_event_toggle)
+                if final_stop_event_dt is not None:
+                    previous_stop_event_dt = final_stop_event_dt

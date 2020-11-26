@@ -269,16 +269,49 @@ def yield_next_stop_from_base_schedule_vj(navitia_vj):
         yield order, vj_st
 
 
-def is_past_midnight(prev_stop_event, next_stop_event):
-    if prev_stop_event.time is None or next_stop_event.time is None:
-        return False
+def convert_nav_stop_list_to_stu_list(nav_stop_list, circulation_date):
+    """
+    Convert navitia's json stop list to dated StopTimeUpdate list
+    :param nav_stop_list: list of dict containing navitia' stop info (extracted from json)
+    :param circulation_date: date of the first stop time event of the list
+    :return: A list of not impacted StopTimeUpdates
+    """
+    stus = []
+    previous_stop_dep_time = datetime.time.min
+    for nav_order, nav_stop in enumerate(nav_stop_list):
+        current_stop_arr_time = nav_stop.get("utc_arrival_time")
+        if is_past_midnight(previous_stop_dep_time, current_stop_arr_time):
+            circulation_date += datetime.timedelta(days=1)
+        current_stop_arr_dt = datetime.datetime.combine(circulation_date, current_stop_arr_time)
 
+        current_stop_dep_time = nav_stop.get("utc_departure_time")
+        if is_past_midnight(current_stop_arr_time, current_stop_dep_time):
+            circulation_date += datetime.timedelta(days=1)
+        current_stop_dep_dt = datetime.datetime.combine(circulation_date, current_stop_dep_time)
+
+        stu = StopTimeUpdate(
+            nav_stop.get("stop_point"),
+            arrival=current_stop_arr_dt,
+            departure=current_stop_dep_dt,
+            order=nav_order,
+        )
+        stus.append(stu)
+    return stus
+
+
+def is_past_midnight(previous_hour, current_hour):
+    if previous_hour is None or current_hour is None:
+        return False
+    return previous_hour > current_hour
+
+
+def is_past_midnight_event(prev_stop_event, next_stop_event):
     # it is not a pass-midnight if pure base-schedule is consistent
     # (after delay it may be inconsistent but it is corrected later in the process)
     # it is not a pass-midnight if after delay it is consistent
     # (in case of stop add, comparing before delay is pointless)
     date = datetime.date(2000, 1, 1)
-    return (prev_stop_event.time > next_stop_event.time) and (
+    return is_past_midnight(prev_stop_event.time, next_stop_event.time) and (
         datetime.datetime.combine(date, prev_stop_event.time) + prev_stop_event.delay
         > datetime.datetime.combine(date, next_stop_event.time) + next_stop_event.delay
     )
@@ -463,7 +496,7 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete):
 
             # For arrival we need to compare arrival time and delay with previous departure time and delay
             if nav_arrival_time is not None:
-                if is_past_midnight(previous_stop_event, arrival_stop_event):
+                if is_past_midnight_event(previous_stop_event, arrival_stop_event):
                     # last departure is after arrival, it's a past-midnight
                     circulation_date += datetime.timedelta(days=1)
                 base_arrival = datetime.datetime.combine(circulation_date, nav_arrival_time)
@@ -486,7 +519,7 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete):
             departure_stop_event = TimeDelayTuple(time=nav_departure_time, delay=departure_delay)
 
             if nav_departure_time is not None:
-                if is_past_midnight(previous_stop_event, departure_stop_event):
+                if is_past_midnight_event(previous_stop_event, departure_stop_event):
                     # departure is before arrival, it's a past-midnight
                     circulation_date += datetime.timedelta(days=1)
                 base_departure = datetime.datetime.combine(circulation_date, nav_departure_time)
