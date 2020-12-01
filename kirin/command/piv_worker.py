@@ -176,6 +176,11 @@ def piv_worker():
         except Exception as e:
             logger.warning("PIV worker died: {0}".format(e))
         finally:
+            try:
+                db.session.commit()
+            except Exception as db_e:
+                logger.warning("Exception while db-commit: {0}".format(db_e))
+                db.session.rollback()
             if should_wait:
                 time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
             db.session.expire(
