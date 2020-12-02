@@ -277,22 +277,28 @@ def convert_nav_stop_list_to_stu_list(nav_stop_list, circulation_date):
     :return: A list of not impacted StopTimeUpdates
     """
     stus = []
-    previous_stop_dep_time = datetime.time.min
+    previous_stop_event_time = datetime.time.min
     for nav_order, nav_stop in enumerate(nav_stop_list):
         current_stop_arr_time = nav_stop.get("utc_arrival_time")
-        if is_past_midnight(previous_stop_dep_time, current_stop_arr_time):
-            circulation_date += datetime.timedelta(days=1)
-        current_stop_arr_dt = datetime.datetime.combine(circulation_date, current_stop_arr_time)
+        if current_stop_arr_time is not None:
+            if is_past_midnight(previous_stop_event_time, current_stop_arr_time):
+                circulation_date += datetime.timedelta(days=1)
+            current_stop_arr_dt = datetime.datetime.combine(circulation_date, current_stop_arr_time)
+            previous_stop_event_time = current_stop_arr_time
 
-        current_stop_dep_time = nav_stop.get("utc_departure_time")
-        if is_past_midnight(current_stop_arr_time, current_stop_dep_time):
-            circulation_date += datetime.timedelta(days=1)
-        current_stop_dep_dt = datetime.datetime.combine(circulation_date, current_stop_dep_time)
+        current_stop_dep_time = nav_stop.get("utc_departure_time", datetime.time.min)
+        if current_stop_dep_time is not None:
+            if is_past_midnight(previous_stop_event_time, current_stop_dep_time):
+                circulation_date += datetime.timedelta(days=1)
+            current_stop_dep_dt = datetime.datetime.combine(circulation_date, current_stop_dep_time)
+            previous_stop_event_time = current_stop_dep_time
 
         stu = StopTimeUpdate(
             nav_stop.get("stop_point"),
             arrival=current_stop_arr_dt,
+            arrival_delay=datetime.timedelta(0),
             departure=current_stop_dep_dt,
+            departure_delay=datetime.timedelta(0),
             order=nav_order,
         )
         stus.append(stu)

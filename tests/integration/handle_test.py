@@ -32,11 +32,14 @@ from __future__ import absolute_import, print_function, unicode_literals, divisi
 from datetime import timedelta
 
 import pytest
+import ujson
+from navitia_wrapper import as_time
 
 from kirin.core import model
 from kirin.core.build_wrapper import handle
+from kirin.core.merge_utils import convert_nav_stop_list_to_stu_list
 from kirin.core.model import RealTimeUpdate, TripUpdate, VehicleJourney, StopTimeUpdate
-from kirin.core.types import ConnectorType
+from kirin.core.types import ConnectorType, ModificationType
 from kirin.gtfs_rt import gtfs_rt
 from kirin.utils import make_rt_update, db_commit
 from tests import mock_navitia
@@ -44,6 +47,7 @@ from tests.integration.conftest import GTFS_CONTRIBUTOR_ID
 import datetime
 from kirin import app, db
 from tests.check_utils import _dt
+from tests.mock_navitia import vj_pass_midnight_utc
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -858,3 +862,53 @@ def test_cancellation_then_delay_in_2_updates(navitia_vj):
         res, _ = handle(builder, real_time_update, [trip_update])
 
         _check_cancellation_then_delay(res)
+
+
+def test_convert_nav_stop_list_to_stu_list():
+    nav_stop_times = ujson.loads(vj_pass_midnight_utc.response.json_response)["vehicle_journeys"][0][
+        "stop_times"
+    ]
+    # prepare dict the same way navitia_wrapper does
+    for stop_time in nav_stop_times:
+        if "arrival_time" in stop_time:
+            stop_time["arrival_time"] = as_time(stop_time["arrival_time"])
+        if "departure_time" in stop_time:
+            stop_time["departure_time"] = as_time(stop_time["departure_time"])
+        if "utc_arrival_time" in stop_time:
+            stop_time["utc_arrival_time"] = as_time(stop_time["utc_arrival_time"])
+        if "utc_departure_time" in stop_time:
+            stop_time["utc_departure_time"] = as_time(stop_time["utc_departure_time"])
+
+    stus = convert_nav_stop_list_to_stu_list(nav_stop_times, datetime.date(2020, 11, 13))
+    assert len(stus) == 5
+    stu = stus[0]
+    assert stu.order == 0
+    assert stu.stop_id == "StopR1"
+    assert stu.arrival == datetime.datetime(2020, 11, 13, 23, 30)
+    assert stu.departure == datetime.datetime(2020, 11, 13, 23, 30)
+    stu = stus[1]
+    assert stu.order == 1
+    assert stu.stop_id == "StopR2"
+    assert stu.arrival == datetime.datetime(2020, 11, 13, 23, 59)
+    assert stu.departure == datetime.datetime(2020, 11, 14, 0, 0)
+    stu = stus[2]
+    assert stu.order == 2
+    assert stu.stop_id == "StopR2-bis"
+    assert stu.arrival == datetime.datetime(2020, 11, 14, 0, 0)
+    assert stu.departure == datetime.datetime(2020, 11, 14, 0, 0)
+    stu = stus[3]
+    assert stu.order == 3
+    assert stu.stop_id == "StopR3"
+    assert stu.arrival == datetime.datetime(2020, 11, 14, 0, 0)
+    assert stu.departure == datetime.datetime(2020, 11, 14, 0, 1)
+    stu = stus[4]
+    assert stu.order == 4
+    assert stu.stop_id == "StopR4"
+    assert stu.arrival == datetime.datetime(2020, 11, 14, 0, 30)
+    assert stu.departure == datetime.datetime(2020, 11, 14, 0, 30)
+    for stu in stus:
+        assert stu.arrival_status == ModificationType.none.name
+        assert stu.departure_status == ModificationType.none.name
+        assert stu.arrival_delay == datetime.timedelta(0)
+        assert stu.departure_delay == datetime.timedelta(0)
+        assert stu.message is None
