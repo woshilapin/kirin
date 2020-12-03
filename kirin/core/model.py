@@ -236,22 +236,22 @@ class StopTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         if status:
             self.arrival_status = status
 
-    def is_not_equal(self, other):
+    def is_equal(self, other):
         """
-        we don't want to override the __ne__ function to avoid side effects
+        we don't want to override the __eq__ function to avoid side effects
         :param other:
         :return:
         """
         return (
-            self.stop_id != other.stop_id
-            or self.message != other.message
-            or self.order != other.order
-            or self.departure != other.departure
-            or self.departure_delay != other.departure_delay
-            or self.departure_status != other.departure_status
-            or self.arrival != other.arrival
-            or self.arrival_delay != other.arrival_delay
-            or self.arrival_status != other.arrival_status
+            self.stop_id == other.stop_id
+            and self.message == other.message
+            and self.order == other.order
+            and self.departure == other.departure
+            and self.departure_delay == other.departure_delay
+            and self.departure_status == other.departure_status
+            and self.arrival == other.arrival
+            and self.arrival_delay == other.arrival_delay
+            and self.arrival_status == other.arrival_status
         )
 
     def get_stop_event_status(self, event_name):

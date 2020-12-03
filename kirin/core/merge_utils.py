@@ -305,21 +305,43 @@ def convert_nav_stop_list_to_stu_list(nav_stop_list, circulation_date):
     return stus
 
 
+def time_to_timedelta(hour):
+    """
+    Convert a datetime.time to a datetime.timedelta (allow adds)
+    :param hour: datetime.time to convert
+    :return: corresponding datetime.timedelta or None
+    >>> time_to_timedelta(None)
+
+    >>> time_to_timedelta(datetime.time(0))
+    datetime.timedelta(0)
+    >>> time_to_timedelta(datetime.time(8, 0)) == datetime.timedelta(hours=8)
+    True
+    >>> d = time_to_timedelta(datetime.time(0, 5)) + datetime.timedelta(minutes=-10)
+    >>> d == datetime.timedelta(minutes=-5)
+    True
+    >>> d = time_to_timedelta(datetime.time(23, 50)) + datetime.timedelta(minutes=30)
+    >>> d == datetime.timedelta(hours=24, minutes=20)
+    True
+    """
+    if hour is None:
+        return None
+    return datetime.datetime.combine(datetime.date.min, hour) - datetime.datetime.min
+
+
 def is_past_midnight(previous_hour, current_hour):
     if previous_hour is None or current_hour is None:
         return False
     return previous_hour > current_hour
 
 
-def is_past_midnight_event(prev_stop_event, next_stop_event):
+def is_past_midnight_event(prev_stop_event, current_stop_event):
     # it is not a pass-midnight if pure base-schedule is consistent
     # (after delay it may be inconsistent but it is corrected later in the process)
     # it is not a pass-midnight if after delay it is consistent
     # (in case of stop add, comparing before delay is pointless)
-    date = datetime.date(2000, 1, 1)
-    return is_past_midnight(prev_stop_event.time, next_stop_event.time) and (
-        datetime.datetime.combine(date, prev_stop_event.time) + prev_stop_event.delay
-        > datetime.datetime.combine(date, next_stop_event.time) + next_stop_event.delay
+    return is_past_midnight(prev_stop_event.time, current_stop_event.time) and (
+        time_to_timedelta(prev_stop_event.time) + prev_stop_event.delay
+        > time_to_timedelta(current_stop_event.time) + current_stop_event.delay
     )
 
 
@@ -543,7 +565,7 @@ def merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete):
             new_st_update = _make_stop_time_update(
                 base_arrival, base_departure, last_departure, new_st, navitia_stop["stop_point"], order=nav_order
             )
-            has_changes |= (db_st is None) or db_st.is_not_equal(new_st_update)
+            has_changes |= (db_st is None) or not db_st.is_equal(new_st_update)
             res_st = new_st_update if has_changes else db_st
 
         elif db_trip_update is None and new_st is not None:

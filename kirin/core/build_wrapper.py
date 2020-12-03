@@ -151,6 +151,7 @@ def wrap_build(builder, input_raw):
     start_datetime = datetime.datetime.utcnow()
     rt_update = None
     log_dict = {"contributor": contributor.id}
+    record_custom_parameter("contributor", contributor.id)
     status = "OK"
 
     try:

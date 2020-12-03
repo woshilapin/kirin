@@ -41,7 +41,7 @@ from operator import itemgetter
 
 from kirin.core import model
 from kirin.core.abstract_builder import AbstractKirinModelBuilder
-from kirin.core.merge_utils import is_past_midnight, convert_nav_stop_list_to_stu_list
+from kirin.core.merge_utils import convert_nav_stop_list_to_stu_list
 from kirin.core.model import StopTimeUpdate
 from kirin.core.types import (
     ModificationType,
@@ -532,7 +532,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         * Working with ORM objects directly: no persistence of new object before knowing it's final version and
           it's not a duplicate (performance and db unicity constraints)
         """
-        res_stus = []  # final list of STUs (to be attached to res in the end)
+        res_stus = []  # final list of StopTimeUpdates (to be attached to res in the end)
 
         circulation_date = new_trip_update.vj.get_circulation_date()
         # last info known about stops in trip (before processing new feed):
@@ -578,7 +578,6 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
                 if new_stu.departure_status in SIMPLE_MODIF_STATUSES:
                     new_stu.departure_status = ModificationType.add.name
 
-            new_stu.order = len(res_stus)
             if new_stu.departure_delay is None:
                 new_stu.departure_delay = datetime.timedelta(0)
             if new_stu.arrival_delay is None:
@@ -596,7 +595,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
                     dep_status=new_stu.departure_status,
                     arr_status=new_stu.arrival_status,
                     message=new_stu.message,
-                    order=new_stu.order,
+                    order=len(res_stus),
                 )
             )
         # Finish populating with old stops not found in new feed
@@ -616,19 +615,15 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         # adjust consistency for resulting trip_update
         adjust_trip_update_consistency(new_trip_update, res_stus)
 
-        has_changes = (
-            not db_trip_update
-            or db_trip_update.message != new_trip_update.message
-            or db_trip_update.status != new_trip_update.status
-            or db_trip_update.effect != new_trip_update.effect
-            or db_trip_update.physical_mode_id != new_trip_update.physical_mode_id
-            or db_trip_update.headsign != new_trip_update.headsign
-            or list_stu_is_not_equal(db_trip_update.stop_time_updates, res_stus)
-        )
-
         # return result only if there are changes
-        if has_changes:
-            # update existing TripUpdate to avoid duplicates, keep created_at and preserve performance
+        if not trip_updates_are_equal(
+            left_tu=db_trip_update,
+            left_stus=db_trip_update.stop_time_updates if db_trip_update else None,
+            right_tu=new_trip_update,
+            right_stus=res_stus,
+        ):
+            # update existing TripUpdate to avoid duplicates, keep created_at and
+            # preserve performance (ORM objects are heavy)
             res = db_trip_update if db_trip_update else new_trip_update
             res.message = new_trip_update.message
             res.status = new_trip_update.status
@@ -641,13 +636,39 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
             return None
 
 
-def list_stu_is_not_equal(left, right):
+def lists_stu_are_equal(left, right):
+    """
+    Compares 2 lists of StopTimeUpdates
+    :return: True if lists are equals, False otherwise
+    """
     if len(right) != len(left):
-        return True
+        return False
     for i in range(0, len(left)):
-        if left[i].is_not_equal(right[i]):
-            return True
-    return False
+        if not left[i].is_equal(right[i]):
+            return False
+    return True
+
+
+def trip_updates_are_equal(left_tu, left_stus, right_tu, right_stus):
+    """
+    Compares 2 TripUpdates (StopTimeUpdate list are provided separately)
+    :param left_tu: TripUpdate containing attributes for left
+    :param left_stus: list of StopTimeUpdates for left
+    :param right_tu: TripUpdate containing attributes for right
+    :param right_stus: list of StopTimeUpdates for right
+    :return: True if TripUpdates are equal, False otherwise
+    """
+    # If only one of the two is None or empty, they're not equal
+    if bool(left_tu) != bool(right_tu):
+        return False
+    return (
+        left_tu.message == right_tu.message
+        and left_tu.status == right_tu.status
+        and left_tu.effect == right_tu.effect
+        and left_tu.physical_mode_id == right_tu.physical_mode_id
+        and left_tu.headsign == right_tu.headsign
+        and lists_stu_are_equal(left_stus, right_stus)
+    )
 
 
 def find_enumerate_stu_in_stus(ref_stu, stus, start=0):
@@ -708,7 +729,7 @@ def adjust_trip_update_consistency(trip_update, stus):
                         res_stu, "{}_delay".format(stop_event_toggle), datetime.timedelta(0)
                     )
                     stop_event_status = getattr(res_stu, "{}_status".format(stop_event_toggle))
-                    if stop_event_status in SIMPLE_MODIF_STATUSES:
+                    if stop_event_status in SIMPLE_MODIF_STATUSES:  # do not affect deleted and added events
                         setattr(res_stu, "{}_status".format(stop_event_toggle), ModificationType.update.name)
                         setattr(
                             res_stu,
