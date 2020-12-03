@@ -555,26 +555,28 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
             )
             index_old_stu = match_old_stu_order if match_old_stu_order + 1 != len(old_stus) else -1
 
-            # If stop is not added, or if it was already added in last known information
+            # If new stop-time is not added, or if it is and was already added in last known information
+            # Progress on stop-times from last-known information and process them
             if not new_stu.is_fully_added(index=index_new_stu) or (
                 match_old_stu is not None and match_old_stu.is_fully_added(index=index_old_stu)
             ):
-                # mark old stops not found in new feed as deleted (the ones skipped to find current new_stu)
-                for old_order in range(old_stus_unprocessed_start, match_old_stu_order):
-                    del_stu = old_stus[old_order]
-                    del_stu.arrival_status = ModificationType.delete.name
-                    del_stu.departure_status = ModificationType.delete.name
-                    del_stu.order = len(res_stus)
-                    res_stus.append(del_stu)
-
-                # mark previously unknown stop-times as added
-                if match_old_stu is None:
-                    if new_stu.arrival_status in SIMPLE_MODIF_STATUSES:
-                        new_stu.arrival_status = ModificationType.add.name
-                    if new_stu.departure_status in SIMPLE_MODIF_STATUSES:
-                        new_stu.departure_status = ModificationType.add.name
-
+                # Populate with old stops not found in new feed (the ones skipped to find current new_stu)
+                populate_res_stus_with_unfound_old_stus(
+                    res_stus=res_stus,
+                    old_stus=old_stus,
+                    unfound_start=old_stus_unprocessed_start,
+                    unfound_end=match_old_stu_order,
+                )
+                # Remember progress (to avoid matching the same old stop-time for 2 different new stop-times)
                 old_stus_unprocessed_start = match_old_stu_order + 1
+
+            # mark new stop-time as added if it was not known previously
+            # Ex: a "delay" on a stop that doesn't exist in base-schedule is actually an "add"
+            if match_old_stu is None:
+                if new_stu.arrival_status in SIMPLE_MODIF_STATUSES:
+                    new_stu.arrival_status = ModificationType.add.name
+                if new_stu.departure_status in SIMPLE_MODIF_STATUSES:
+                    new_stu.departure_status = ModificationType.add.name
 
             new_stu.order = len(res_stus)
             if new_stu.departure_delay is None:
@@ -597,6 +599,14 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
                     order=new_stu.order,
                 )
             )
+        # Finish populating with old stops not found in new feed
+        # (the ones at the end after searching stops from new feed, if any)
+        populate_res_stus_with_unfound_old_stus(
+            res_stus=res_stus,
+            old_stus=old_stus,
+            unfound_start=old_stus_unprocessed_start,
+            unfound_end=len(old_stus),
+        )
 
         # if navitia_vj is empty, it's a creation
         if not navitia_vj.get("stop_times", []):
@@ -711,3 +721,14 @@ def adjust_trip_update_consistency(trip_update, stus):
                 final_stop_event_dt = getattr(res_stu, stop_event_toggle)
                 if final_stop_event_dt is not None:
                     previous_stop_event_dt = final_stop_event_dt
+
+
+def populate_res_stus_with_unfound_old_stus(res_stus, old_stus, unfound_start, unfound_end):
+    # Get old stops not found, mark them as deleted and populate res_stus
+    # Ex: a stop-time in base-schedule that is not known in PIV feed is actually deleted
+    for old_order in range(unfound_start, unfound_end):
+        del_stu = old_stus[old_order]
+        del_stu.arrival_status = ModificationType.delete.name
+        del_stu.departure_status = ModificationType.delete.name
+        del_stu.order = len(res_stus)
+        res_stus.append(del_stu)

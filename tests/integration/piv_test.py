@@ -975,7 +975,14 @@ def test_piv_trip_removal_simple_post(mock_rabbitmq):
     with app.app_context():
         assert RealTimeUpdate.query.count() == 1
         assert TripUpdate.query.count() == 1
-        assert StopTimeUpdate.query.count() == 0
+        # The 6 stops from base-schedule are marked as deleted.
+        # We could also have none as trip-delete is enough.
+        # It may help if trip is reactivated in tricky chaining of feeds:
+        # 1. Add a stop
+        # 2. Delete whole trip
+        # 3. Reactivate base-schedule trip only : stop added previously should appear as
+        #    deleted (so it has to be remembered).
+        assert StopTimeUpdate.query.count() == 6
 
         db_trip_removal = TripUpdate.query.first()
         assert db_trip_removal
@@ -984,8 +991,10 @@ def test_piv_trip_removal_simple_post(mock_rabbitmq):
         assert db_trip_removal.status == "delete"
         assert db_trip_removal.effect == "NO_SERVICE"
         assert db_trip_removal.message == "Indisponibilité d'un matériel"
-        # full trip removal : no stop_time to precise
-        assert len(db_trip_removal.stop_time_updates) == 0
+        assert len(db_trip_removal.stop_time_updates) == 6
+        for st in db_trip_removal.stop_time_updates:
+            assert st.arrival_status == ModificationType.delete.name
+            assert st.departure_status == ModificationType.delete.name
 
     assert mock_rabbitmq.call_count == 1
 
@@ -1015,7 +1024,7 @@ def test_piv_event_priority(mock_rabbitmq):
     with app.app_context():
         assert RealTimeUpdate.query.count() == 1
         assert TripUpdate.query.count() == 1
-        assert StopTimeUpdate.query.count() == 0
+        assert StopTimeUpdate.query.count() == 6  # Remembering all stops that were served once
 
         db_trip_removal = TripUpdate.query.first()
         assert db_trip_removal
@@ -1024,8 +1033,10 @@ def test_piv_event_priority(mock_rabbitmq):
         assert db_trip_removal.status == "delete"
         assert db_trip_removal.effect == "NO_SERVICE"
         assert db_trip_removal.message == "Indisponibilité d'un matériel"
-        # full trip removal : no stop_time to precise
-        assert len(db_trip_removal.stop_time_updates) == 0
+        assert len(db_trip_removal.stop_time_updates) == 6
+        for st in db_trip_removal.stop_time_updates:
+            assert st.arrival_status == ModificationType.delete.name
+            assert st.departure_status == ModificationType.delete.name
 
     assert mock_rabbitmq.call_count == 1
 
