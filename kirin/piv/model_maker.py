@@ -49,6 +49,7 @@ from kirin.core.types import (
     get_higher_status,
     get_effect_by_stop_time_status,
     SIMPLE_MODIF_STATUSES,
+    StopTimeEvent,
 )
 from kirin.exceptions import InvalidArguments, UnsupportedValue, ObjectNotFound
 from kirin.utils import make_rt_update, get_value, as_utc_naive_dt, record_internal_failure, as_duration
@@ -682,10 +683,68 @@ def find_enumerate_stu_in_stus(ref_stu, stus, start=0):
     if start >= len(stus):
         return len(stus), None
 
-    def same_stop(stu, ref_stu):
-        return stu.stop_id == ref_stu.stop_id
+    def same_stop(stu, ref):
+        return stu.stop_id == ref.stop_id
 
     return next(((order, stu) for (order, stu) in enumerate(stus) if same_stop(stu, ref_stu)), (len(stus), None))
+
+
+def fill_missing_stop_event_dt(stu, stop_event, previous_stop_event_dt):
+    stop_event_dt = getattr(stu, stop_event.name)
+    if stop_event_dt is None:
+        # if info is missing, first consider the opposite event of same stop-time
+        stop_event_dt = getattr(stu, stop_event.opposite().name, datetime.datetime.min)
+        if stop_event_dt is None and previous_stop_event_dt != datetime.datetime.min:
+            # if info is still missing, consider last known stop-time event if info exists
+            stop_event_dt = previous_stop_event_dt
+        setattr(stu, stop_event.name, stop_event_dt)
+
+
+def adjust_stop_event_in_time(stu, stop_event, previous_stop_event_dt):
+    """
+    Compare current stop_event datetime with previous stop_event, and push it to be at the same time if it is earlier
+    :param stu: StopTimeUpdate to containing the event to consider
+    :param stop_event: StopEvent to consider
+    :param previous_stop_event_dt: datetime of the previous StopEvent
+    :return:
+    """
+    stop_event_dt = getattr(stu, stop_event.name)
+    # If not time-sorted
+    if previous_stop_event_dt > stop_event_dt:
+        # Adjust delay and status: do not affect deleted and added events
+        if stu.get_stop_event_status(stop_event.name) in SIMPLE_MODIF_STATUSES:
+            stop_event_delay = getattr(stu, "{}_delay".format(stop_event.name), datetime.timedelta(0))
+            setattr(
+                stu,
+                "{}_delay".format(stop_event.name),
+                stop_event_delay + (previous_stop_event_dt - stop_event_dt),
+            )
+            setattr(stu, "{}_status".format(stop_event.name), ModificationType.update.name)
+        # Adjust datetime
+        setattr(stu, stop_event.name, previous_stop_event_dt)
+
+
+def adjust_stop_event_consistency(stu, stop_event, previous_stop_event_dt):
+    """
+    Adjust info for given stop-event to have it consistent with surrounding stop-events
+    :param stu: StopTimeUpdate to containing the event to consider
+    :param stop_event: StopEvent to consider
+    :param previous_stop_event_dt: datetime of the previous StopEvent
+    :return: datetime of stop-event considered once adjusted
+    """
+    # First fill missing datetime info
+    fill_missing_stop_event_dt(stu, stop_event, previous_stop_event_dt)
+
+    # Check time consistency: chaining of served stop_events must be time-sorted.
+    # Push to the same time than previous event to respect it if needed.
+    if not stu.is_stop_event_deleted(stop_event.name):
+        adjust_stop_event_in_time(stu, stop_event, previous_stop_event_dt)
+
+        # update previous event's info for next event's management
+        final_stop_event_dt = getattr(stu, stop_event.name)
+        if final_stop_event_dt is not None:
+            return final_stop_event_dt
+    return previous_stop_event_dt
 
 
 def adjust_trip_update_consistency(trip_update, stus):
@@ -708,40 +767,13 @@ def adjust_trip_update_consistency(trip_update, stus):
                 res_stu.departure_status = ModificationType.add.name
                 res_stu.departure_delay = datetime.timedelta(0)
 
-        for stop_event_toggle in ["arrival", "departure"]:
-            # First fill missing datetime info
-            stop_event_dt = getattr(res_stu, stop_event_toggle)
-            if stop_event_dt is None:
-                # if info is missing, first consider the opposite event of same stop-time
-                opposite_event = {"arrival": "departure", "departure": "arrival"}
-                stop_event_dt = getattr(res_stu, opposite_event[stop_event_toggle], datetime.datetime.min)
-                if stop_event_dt is None and previous_stop_event_dt != datetime.datetime.min:
-                    # if info is still missing, consider last known stop-time event if info exists
-                    stop_event_dt = previous_stop_event_dt
-                setattr(res_stu, stop_event_toggle, stop_event_dt)
-
-            # Check time consistency: chaining of served stop_events must be time-sorted.
-            # Push to the same time than previous event to respect it if needed.
-            if not res_stu.is_stop_event_deleted(stop_event_toggle):
-                if previous_stop_event_dt > stop_event_dt:
-                    # adjust
-                    stop_event_delay = getattr(
-                        res_stu, "{}_delay".format(stop_event_toggle), datetime.timedelta(0)
-                    )
-                    stop_event_status = getattr(res_stu, "{}_status".format(stop_event_toggle))
-                    if stop_event_status in SIMPLE_MODIF_STATUSES:  # do not affect deleted and added events
-                        setattr(res_stu, "{}_status".format(stop_event_toggle), ModificationType.update.name)
-                        setattr(
-                            res_stu,
-                            "{}_delay".format(stop_event_toggle),
-                            stop_event_delay + (previous_stop_event_dt - stop_event_dt),
-                        )
-                    setattr(res_stu, stop_event_toggle, previous_stop_event_dt)
-
-                # update previous event's info for next event's management
-                final_stop_event_dt = getattr(res_stu, stop_event_toggle)
-                if final_stop_event_dt is not None:
-                    previous_stop_event_dt = final_stop_event_dt
+        # adjust stop-events considering stop-events surrounding them
+        previous_stop_event_dt = adjust_stop_event_consistency(
+            res_stu, StopTimeEvent.arrival, previous_stop_event_dt
+        )
+        previous_stop_event_dt = adjust_stop_event_consistency(
+            res_stu, StopTimeEvent.departure, previous_stop_event_dt
+        )
 
 
 def populate_res_stus_with_unfound_old_stus(res_stus, old_stus, unfound_start, unfound_end):

@@ -121,3 +121,20 @@ def get_mode_filter(indicator=None):
         "FERRE": "physical_mode.id=physical_mode:LongDistanceTrain",
         "ROUTIER": "physical_mode.id=physical_mode:Coach",
     }.get(indicator, "physical_mode.id=physical_mode:LongDistanceTrain")
+
+
+class StopTimeEvent(Enum):
+    """
+    Represent the 2 possible events at a stop
+    """
+
+    # TODO: remove "name" and dispatch use directly in model.py and everywhere useful
+    arrival = "arrival"  # drop-off
+    departure = "departure"  # pickup
+
+    def opposite(self):
+        if self == StopTimeEvent.arrival:
+            return StopTimeEvent.departure
+        if self == StopTimeEvent.departure:
+            return StopTimeEvent.arrival
+        return None
