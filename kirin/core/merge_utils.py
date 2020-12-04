@@ -305,16 +305,18 @@ def convert_nav_stop_list_to_stu_list(nav_stop_list, circulation_date):
     return stus
 
 
-def time_to_timedelta(hour):
+def time_to_timedelta(t):
     """
-    Convert a datetime.time to a datetime.timedelta (allow adds)
-    :param hour: datetime.time to convert
+    Convert a datetime.time to a datetime.timedelta, ignoring timezone (allow adds)
+    :param t: datetime.time to convert
     :return: corresponding datetime.timedelta or None
     >>> time_to_timedelta(None)
 
     >>> time_to_timedelta(datetime.time(0))
     datetime.timedelta(0)
-    >>> time_to_timedelta(datetime.time(8, 0)) == datetime.timedelta(hours=8)
+    >>> from pytz import timezone
+    >>> time_to_timedelta(datetime.time(8, 1, 2, 44555, timezone('Australia/Sydney'))) == \
+        datetime.timedelta(hours=8, minutes=1, seconds=2, milliseconds=44, microseconds=555)
     True
     >>> d = time_to_timedelta(datetime.time(0, 5)) + datetime.timedelta(minutes=-10)
     >>> d == datetime.timedelta(minutes=-5)
@@ -323,15 +325,15 @@ def time_to_timedelta(hour):
     >>> d == datetime.timedelta(hours=24, minutes=20)
     True
     """
-    if hour is None:
+    if t is None:
         return None
-    return datetime.datetime.combine(datetime.date.min, hour) - datetime.datetime.min
+    return datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=t.second, microseconds=t.microsecond)
 
 
-def is_past_midnight(previous_hour, current_hour):
-    if previous_hour is None or current_hour is None:
+def is_past_midnight(previous_time, current_time):
+    if previous_time is None or current_time is None:
         return False
-    return previous_hour > current_hour
+    return previous_time > current_time
 
 
 def is_past_midnight_event(prev_stop_event, current_stop_event):
