@@ -38,7 +38,7 @@ from flask_sqlalchemy import SQLAlchemy
 import datetime
 import sqlalchemy
 from sqlalchemy import desc
-from kirin.core.types import ModificationType, TripEffect, ConnectorType
+from kirin.core.types import ModificationType, TripEffect, ConnectorType, DELETED_STATUSES, ADDED_STATUSES
 from kirin.exceptions import ObjectNotFound, InternalException
 
 db = SQLAlchemy()
@@ -236,22 +236,22 @@ class StopTimeUpdate(db.Model, TimestampMixin):  # type: ignore
         if status:
             self.arrival_status = status
 
-    def is_not_equal(self, other):
+    def is_equal(self, other):
         """
-        we don't want to override the __ne__ function to avoid side effects
+        we don't want to override the __eq__ function to avoid side effects
         :param other:
         :return:
         """
         return (
-            self.stop_id != other.stop_id
-            or self.message != other.message
-            or self.order != other.order
-            or self.departure != other.departure
-            or self.departure_delay != other.departure_delay
-            or self.departure_status != other.departure_status
-            or self.arrival != other.arrival
-            or self.arrival_delay != other.arrival_delay
-            or self.arrival_status != other.arrival_status
+            self.stop_id == other.stop_id
+            and self.message == other.message
+            and self.order == other.order
+            and self.departure == other.departure
+            and self.departure_delay == other.departure_delay
+            and self.departure_status == other.departure_status
+            and self.arrival == other.arrival
+            and self.arrival_delay == other.arrival_delay
+            and self.arrival_status == other.arrival_status
         )
 
     def get_stop_event_status(self, event_name):
@@ -261,11 +261,20 @@ class StopTimeUpdate(db.Model, TimestampMixin):  # type: ignore
 
     def is_stop_event_deleted(self, event_name):
         status = self.get_stop_event_status(event_name)
-        return status in (ModificationType.delete.name, ModificationType.deleted_for_detour.name)
+        return status in DELETED_STATUSES
 
     def is_stop_event_added(self, event_name):
         status = self.get_stop_event_status(event_name)
-        return status in (ModificationType.add.name, ModificationType.added_for_detour.name)
+        return status in ADDED_STATUSES
+
+    def is_fully_added(self, index):
+        if index == 0:
+            # first stop
+            return self.departure_status in ADDED_STATUSES
+        if index == -1:
+            # last stop
+            return self.arrival_status in ADDED_STATUSES
+        return self.arrival_status in ADDED_STATUSES and self.departure_status in ADDED_STATUSES
 
 
 associate_realtimeupdate_tripupdate = db.Table(

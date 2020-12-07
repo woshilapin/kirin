@@ -48,28 +48,12 @@ from kirin.utils import set_rtu_status_ko, allow_reprocess_same_data, record_cal
 TimeDelayTuple = namedtuple("TimeDelayTuple", ["time", "delay"])
 
 
-def log_stu_modif(trip_update, stu, string_additional_info):
-    logger = logging.getLogger(__name__)
-    logger.debug(
-        "TripUpdate on navitia vj {nav_id} on {date}, "
-        "StopTimeUpdate {order} modified: {add_info}".format(
-            nav_id=trip_update.vj.navitia_trip_id,
-            date=trip_update.vj.get_circulation_date(),
-            order=stu.order,
-            add_info=string_additional_info,
-        )
-    )
-
-
-def manage_consistency(trip_update):
+def check_consistency(trip_update):
     """
-    receive a TripUpdate, then manage and adjust its consistency
-    returns False if trip update cannot be managed
+    returns False if trip update is inconsistent
     """
     logger = logging.getLogger(__name__)
-    previous_stop_event = TimeDelayTuple(time=None, delay=None)
     for current_order, stu in enumerate(trip_update.stop_time_updates):
-        # rejections
         if stu.order != current_order:
             logger.warning(
                 "TripUpdate on navitia vj {nav_id} on {date} rejected: "
@@ -81,73 +65,6 @@ def manage_consistency(trip_update):
                 )
             )
             return False
-
-        # modifications
-        if stu.arrival is None:
-            stu.arrival = stu.departure
-            if stu.arrival is None and previous_stop_event.time is not None:
-                stu.arrival = previous_stop_event.time
-            if stu.arrival is None:
-                logger.warning(
-                    "TripUpdate on navitia vj {nav_id} on {date} rejected: "
-                    "StopTimeUpdate missing arrival time".format(
-                        nav_id=trip_update.vj.navitia_trip_id, date=trip_update.vj.get_circulation_date()
-                    )
-                )
-                return False
-            log_stu_modif(trip_update, stu, "arrival = {v}".format(v=stu.arrival))
-            if not stu.arrival_delay and stu.departure_delay:
-                stu.arrival_delay = stu.departure_delay
-                log_stu_modif(trip_update, stu, "arrival_delay = {v}".format(v=stu.arrival_delay))
-
-        if stu.departure is None:
-            stu.departure = stu.arrival
-            log_stu_modif(trip_update, stu, "departure = {v}".format(v=stu.departure))
-            if not stu.departure_delay and stu.arrival_delay:
-                stu.departure_delay = stu.arrival_delay
-                log_stu_modif(trip_update, stu, "departure_delay = {v}".format(v=stu.departure_delay))
-
-        if stu.arrival_delay is None:
-            stu.arrival_delay = datetime.timedelta(0)
-            log_stu_modif(trip_update, stu, "arrival_delay = {v}".format(v=stu.arrival_delay))
-
-        if stu.departure_delay is None:
-            stu.departure_delay = datetime.timedelta(0)
-            log_stu_modif(trip_update, stu, "departure_delay = {v}".format(v=stu.departure_delay))
-
-        # not considering deleted arrival
-        if not stu.is_stop_event_deleted("arrival"):
-            # if arrival is before previous stop-event's time:
-            # push arrival time so that its delay is the same than for previous time
-            if previous_stop_event.time is not None and previous_stop_event.time > stu.arrival:
-                delay_diff = previous_stop_event.delay - stu.arrival_delay
-                stu.arrival_delay += delay_diff
-                stu.arrival += delay_diff
-                log_stu_modif(
-                    trip_update,
-                    stu,
-                    "arrival = {t} and arrival_delay = {d}".format(t=stu.arrival, d=stu.arrival_delay),
-                )
-
-            # store arrival as previous stop-event
-            previous_stop_event = TimeDelayTuple(time=stu.arrival, delay=stu.arrival_delay)
-
-        # not considering deleted departure (same logic as before)
-        if not stu.is_stop_event_deleted("departure"):
-            # if departure is before previous stop-event's time:
-            # push departure time so that its delay is the same than for previous time
-            if previous_stop_event.time is not None and previous_stop_event.time > stu.departure:
-                delay_diff = previous_stop_event.delay - stu.departure_delay
-                stu.departure_delay += delay_diff
-                stu.departure += delay_diff
-                log_stu_modif(
-                    trip_update,
-                    stu,
-                    "departure = {t} and departure_delay = {d}".format(t=stu.departure, d=stu.departure_delay),
-                )
-            # store departure as previous stop-event
-            previous_stop_event = TimeDelayTuple(time=stu.departure, delay=stu.departure_delay)
-
     return True
 
 
@@ -192,7 +109,7 @@ def handle(builder, real_time_update, trip_updates):
         current_trip_update = builder.merge_trip_updates(trip_update.vj.navitia_vj, old, trip_update)
 
         # manage and adjust consistency if possible
-        if current_trip_update and manage_consistency(current_trip_update):
+        if current_trip_update is not None and check_consistency(current_trip_update):
             # we have to link the current_vj_update with the new real_time_update
             # this link is done quite late to avoid too soon persistence of trip_update by sqlalchemy
             current_trip_update.real_time_updates.append(real_time_update)
@@ -234,6 +151,7 @@ def wrap_build(builder, input_raw):
     start_datetime = datetime.datetime.utcnow()
     rt_update = None
     log_dict = {"contributor": contributor.id}
+    record_custom_parameter("contributor", contributor.id)
     status = "OK"
 
     try:

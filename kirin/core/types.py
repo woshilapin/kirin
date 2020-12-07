@@ -46,6 +46,11 @@ class ModificationType(Enum):
     added_for_detour = 6
 
 
+SIMPLE_MODIF_STATUSES = [ModificationType.update.name, ModificationType.none.name]
+ADDED_STATUSES = [ModificationType.add.name, ModificationType.added_for_detour.name]
+DELETED_STATUSES = [ModificationType.delete.name, ModificationType.deleted_for_detour.name]
+
+
 def stop_time_status_to_protobuf(stop_time_status):
     return {
         "add": kirin_pb2.ADDED,
@@ -116,3 +121,20 @@ def get_mode_filter(indicator=None):
         "FERRE": "physical_mode.id=physical_mode:LongDistanceTrain",
         "ROUTIER": "physical_mode.id=physical_mode:Coach",
     }.get(indicator, "physical_mode.id=physical_mode:LongDistanceTrain")
+
+
+class StopTimeEvent(Enum):
+    """
+    Represent the 2 possible events at a stop
+    """
+
+    # TODO: remove "name" and dispatch use directly in model.py and everywhere useful
+    arrival = "arrival"  # drop-off
+    departure = "departure"  # pickup
+
+    def opposite(self):
+        if self == StopTimeEvent.arrival:
+            return StopTimeEvent.departure
+        if self == StopTimeEvent.departure:
+            return StopTimeEvent.arrival
+        return None

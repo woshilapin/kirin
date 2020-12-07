@@ -32,7 +32,7 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 
 import logging
-from datetime import timedelta, datetime
+import datetime
 from sys import maxint
 
 import jmespath
@@ -41,8 +41,16 @@ from operator import itemgetter
 
 from kirin.core import model
 from kirin.core.abstract_builder import AbstractKirinModelBuilder
-from kirin.core.merge_utils import merge
-from kirin.core.types import ModificationType, TripEffect, get_higher_status, get_effect_by_stop_time_status
+from kirin.core.merge_utils import convert_nav_stop_list_to_stu_list
+from kirin.core.model import StopTimeUpdate
+from kirin.core.types import (
+    ModificationType,
+    TripEffect,
+    get_higher_status,
+    get_effect_by_stop_time_status,
+    SIMPLE_MODIF_STATUSES,
+    StopTimeEvent,
+)
 from kirin.exceptions import InvalidArguments, UnsupportedValue, ObjectNotFound
 from kirin.utils import make_rt_update, get_value, as_utc_naive_dt, record_internal_failure, as_duration
 
@@ -203,7 +211,9 @@ def _extract_navitia_stop_time(uic8, nav_vj):
 
 def _check_stop_time_consistency(previous_rt_stop_time_dep, current_rt_stop_time, uic8):
     previous_rt_stop_time_dep = (
-        previous_rt_stop_time_dep if previous_rt_stop_time_dep is not None else datetime.fromtimestamp(0)
+        previous_rt_stop_time_dep
+        if previous_rt_stop_time_dep is not None
+        else datetime.datetime.fromtimestamp(0)
     )
 
     rt_arrival = current_rt_stop_time.get("arrivee")
@@ -334,7 +344,7 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         else:
             navitia_vj = navitia_vjs[0]
             try:
-                base_vs_rt_error_margin = timedelta(hours=1)
+                base_vs_rt_error_margin = datetime.timedelta(hours=1)
                 vj_base_start = _get_first_stop_base_datetime(ads, "depart", skip_fully_added_stops=True)
                 vj = model.VehicleJourney(
                     navitia_vj,
@@ -513,4 +523,265 @@ class KirinModelBuilder(AbstractKirinModelBuilder):
         return None, {"log": "No stop point found", "stop_point_code": uic8}
 
     def merge_trip_updates(self, navitia_vj, db_trip_update, new_trip_update):
-        return merge(navitia_vj, db_trip_update, new_trip_update, is_new_complete=True)
+        """
+        Steps:
+        1. Build TripUpdate info resulting of merge
+        2. Adjust TripUpdate info to have it be self-consistent (call adjust_trip_update_consistency())
+        3. If resulting TripUpdate info are new compared to the one from previous RT info: send it
+
+        NB:
+        * Working with ORM objects directly: no persistence of new object before knowing it's final version and
+          it's not a duplicate (performance and db unicity constraints)
+        """
+        res_stus = []  # final list of StopTimeUpdates (to be attached to res in the end)
+
+        circulation_date = new_trip_update.vj.get_circulation_date()
+        # last info known about stops in trip (before processing new feed):
+        # either from previous RT feed or base-schedule
+        old_stus = (
+            db_trip_update.stop_time_updates
+            if db_trip_update
+            else convert_nav_stop_list_to_stu_list(navitia_vj.get("stop_times", []), circulation_date)
+        )
+
+        # build resulting STU list
+        old_stus_unprocessed_start = 0  # keeps track of what was processed in previous STU info
+
+        for new_order, new_stu in enumerate(new_trip_update.stop_time_updates):
+            index_new_stu = new_order if new_order + 1 != len(new_trip_update.stop_time_updates) else -1
+
+            # find corresponding stop in last known information
+            match_old_stu_order, match_old_stu = find_enumerate_stu_in_stus(
+                new_stu, old_stus, start=old_stus_unprocessed_start
+            )
+            index_old_stu = match_old_stu_order if match_old_stu_order + 1 != len(old_stus) else -1
+
+            # If new stop-time is not added, or if it is and was already added in last known information
+            # Progress on stop-times from last-known information and process them
+            if not new_stu.is_fully_added(index=index_new_stu) or (
+                match_old_stu is not None and match_old_stu.is_fully_added(index=index_old_stu)
+            ):
+                # Populate with old stops not found in new feed (the ones skipped to find current new_stu)
+                populate_res_stus_with_unfound_old_stus(
+                    res_stus=res_stus,
+                    old_stus=old_stus,
+                    unfound_start=old_stus_unprocessed_start,
+                    unfound_end=match_old_stu_order,
+                )
+                # Remember progress (to avoid matching the same old stop-time for 2 different new stop-times)
+                old_stus_unprocessed_start = match_old_stu_order + 1
+
+            # mark new stop-time as added if it was not known previously
+            # Ex: a "delay" on a stop that doesn't exist in base-schedule is actually an "add"
+            if match_old_stu is None:
+                if new_stu.arrival_status in SIMPLE_MODIF_STATUSES:
+                    new_stu.arrival_status = ModificationType.add.name
+                if new_stu.departure_status in SIMPLE_MODIF_STATUSES:
+                    new_stu.departure_status = ModificationType.add.name
+
+            if new_stu.departure_delay is None:
+                new_stu.departure_delay = datetime.timedelta(0)
+            if new_stu.arrival_delay is None:
+                new_stu.arrival_delay = datetime.timedelta(0)
+            # add stop currently processed
+            # GOTCHA: need a StopTimeUpdate detached of new_trip_update to avoid persisting new_trip_update
+            # (this would lead to 2 TripUpdates for the same trip on the same day, forbidden by unicity constraint)
+            res_stus.append(
+                StopTimeUpdate(
+                    navitia_stop=new_stu.navitia_stop,
+                    departure=new_stu.departure,
+                    arrival=new_stu.arrival,
+                    departure_delay=new_stu.departure_delay,
+                    arrival_delay=new_stu.arrival_delay,
+                    dep_status=new_stu.departure_status,
+                    arr_status=new_stu.arrival_status,
+                    message=new_stu.message,
+                    order=len(res_stus),
+                )
+            )
+        # Finish populating with old stops not found in new feed
+        # (the ones at the end after searching stops from new feed, if any)
+        populate_res_stus_with_unfound_old_stus(
+            res_stus=res_stus,
+            old_stus=old_stus,
+            unfound_start=old_stus_unprocessed_start,
+            unfound_end=len(old_stus),
+        )
+
+        # if navitia_vj is empty, it's a creation
+        if not navitia_vj.get("stop_times", []):
+            new_trip_update.effect = TripEffect.ADDITIONAL_SERVICE.name
+            new_trip_update.status = ModificationType.add.name
+
+        # adjust consistency for resulting trip_update
+        adjust_trip_update_consistency(new_trip_update, res_stus)
+
+        # return result only if there are changes
+        if not trip_updates_are_equal(
+            left_tu=db_trip_update,
+            left_stus=db_trip_update.stop_time_updates if db_trip_update else None,
+            right_tu=new_trip_update,
+            right_stus=res_stus,
+        ):
+            # update existing TripUpdate to avoid duplicates, keep created_at and
+            # preserve performance (ORM objects are heavy)
+            res = db_trip_update if db_trip_update else new_trip_update
+            res.message = new_trip_update.message
+            res.status = new_trip_update.status
+            res.effect = new_trip_update.effect
+            res.physical_mode_id = new_trip_update.physical_mode_id
+            res.headsign = new_trip_update.headsign
+            res.stop_time_updates = res_stus
+            return res
+        else:
+            return None
+
+
+def lists_stu_are_equal(left, right):
+    """
+    Compares 2 lists of StopTimeUpdates
+    :return: True if lists are equals, False otherwise
+    """
+    if len(right) != len(left):
+        return False
+    for i in range(0, len(left)):
+        if not left[i].is_equal(right[i]):
+            return False
+    return True
+
+
+def trip_updates_are_equal(left_tu, left_stus, right_tu, right_stus):
+    """
+    Compares 2 TripUpdates (StopTimeUpdate list are provided separately)
+    :param left_tu: TripUpdate containing attributes for left
+    :param left_stus: list of StopTimeUpdates for left
+    :param right_tu: TripUpdate containing attributes for right
+    :param right_stus: list of StopTimeUpdates for right
+    :return: True if TripUpdates are equal, False otherwise
+    """
+    # If only one of the two is None or empty, they're not equal
+    if bool(left_tu) != bool(right_tu):
+        return False
+    return (
+        left_tu.message == right_tu.message
+        and left_tu.status == right_tu.status
+        and left_tu.effect == right_tu.effect
+        and left_tu.physical_mode_id == right_tu.physical_mode_id
+        and left_tu.headsign == right_tu.headsign
+        and lists_stu_are_equal(left_stus, right_stus)
+    )
+
+
+def find_enumerate_stu_in_stus(ref_stu, stus, start=0):
+    """
+    Find a stop_time in the navitia vehicle journey
+    :param ref_stu: the referent stop_time
+    :param stus: list of StopTimeUpdate available in a TripUpdate
+    :param start: order (comprised) to start the search from
+    :return: (order, stu) if found else (len(stus), None)
+    """
+    if start >= len(stus):
+        return len(stus), None
+
+    def same_stop(stu, ref):
+        return stu.stop_id == ref.stop_id
+
+    return next(((order, stu) for (order, stu) in enumerate(stus) if same_stop(stu, ref_stu)), (len(stus), None))
+
+
+def fill_missing_stop_event_dt(stu, stop_event, previous_stop_event_dt):
+    stop_event_dt = getattr(stu, stop_event.name)
+    if stop_event_dt is None:
+        # if info is missing, first consider the opposite event of same stop-time
+        stop_event_dt = getattr(stu, stop_event.opposite().name, datetime.datetime.min)
+        if stop_event_dt is None and previous_stop_event_dt != datetime.datetime.min:
+            # if info is still missing, consider last known stop-time event if info exists
+            stop_event_dt = previous_stop_event_dt
+        setattr(stu, stop_event.name, stop_event_dt)
+
+
+def adjust_stop_event_in_time(stu, stop_event, previous_stop_event_dt):
+    """
+    Compare current stop_event datetime with previous stop_event, and push it to be at the same time if it is earlier
+    :param stu: StopTimeUpdate to containing the event to consider
+    :param stop_event: StopEvent to consider
+    :param previous_stop_event_dt: datetime of the previous StopEvent
+    :return:
+    """
+    stop_event_dt = getattr(stu, stop_event.name)
+    # If not time-sorted
+    if previous_stop_event_dt > stop_event_dt:
+        # Adjust delay and status: do not affect deleted and added events
+        if stu.get_stop_event_status(stop_event.name) in SIMPLE_MODIF_STATUSES:
+            stop_event_delay = getattr(stu, "{}_delay".format(stop_event.name), datetime.timedelta(0))
+            setattr(
+                stu,
+                "{}_delay".format(stop_event.name),
+                stop_event_delay + (previous_stop_event_dt - stop_event_dt),
+            )
+            setattr(stu, "{}_status".format(stop_event.name), ModificationType.update.name)
+        # Adjust datetime
+        setattr(stu, stop_event.name, previous_stop_event_dt)
+
+
+def adjust_stop_event_consistency(stu, stop_event, previous_stop_event_dt):
+    """
+    Adjust info for given stop-event to have it consistent with surrounding stop-events
+    :param stu: StopTimeUpdate to containing the event to consider
+    :param stop_event: StopEvent to consider
+    :param previous_stop_event_dt: datetime of the previous StopEvent
+    :return: datetime of stop-event considered once adjusted
+    """
+    # First fill missing datetime info
+    fill_missing_stop_event_dt(stu, stop_event, previous_stop_event_dt)
+
+    # Check time consistency: chaining of served stop_events must be time-sorted.
+    # Push to the same time than previous event to respect it if needed.
+    if not stu.is_stop_event_deleted(stop_event.name):
+        adjust_stop_event_in_time(stu, stop_event, previous_stop_event_dt)
+
+        # update previous event's info for next event's management
+        final_stop_event_dt = getattr(stu, stop_event.name)
+        if final_stop_event_dt is not None:
+            return final_stop_event_dt
+    return previous_stop_event_dt
+
+
+def adjust_trip_update_consistency(trip_update, stus):
+    """
+    Adjust consistency of TripUpdate and StopTimeUpdates (side-effect).
+    NB : using list of StopTimeUpdate provided in stus, as the list is often not
+    attached to TripUpdate (to avoid ORM persiting it)
+    :param trip_update: TripUpdate to adjust (all but stop_time_updates)
+    :param stus: List of StopTimeUpdates to adjust
+    :return: None, just update given parameters
+    """
+    previous_stop_event_dt = datetime.datetime.min
+    for res_stu in stus:
+        # if trip is added: stops are either added or deleted (both can be for detour) + no delay
+        if trip_update.effect == TripEffect.ADDITIONAL_SERVICE.name:
+            if res_stu.arrival_status in SIMPLE_MODIF_STATUSES:
+                res_stu.arrival_status = ModificationType.add.name
+                res_stu.arrival_delay = datetime.timedelta(0)
+            if res_stu.departure_status in SIMPLE_MODIF_STATUSES:
+                res_stu.departure_status = ModificationType.add.name
+                res_stu.departure_delay = datetime.timedelta(0)
+
+        # adjust stop-events considering stop-events surrounding them
+        previous_stop_event_dt = adjust_stop_event_consistency(
+            res_stu, StopTimeEvent.arrival, previous_stop_event_dt
+        )
+        previous_stop_event_dt = adjust_stop_event_consistency(
+            res_stu, StopTimeEvent.departure, previous_stop_event_dt
+        )
+
+
+def populate_res_stus_with_unfound_old_stus(res_stus, old_stus, unfound_start, unfound_end):
+    # Get old stops not found, mark them as deleted and populate res_stus
+    # Ex: a stop-time in base-schedule that is not known in PIV feed is actually deleted
+    for old_order in range(unfound_start, unfound_end):
+        del_stu = old_stus[old_order]
+        del_stu.arrival_status = ModificationType.delete.name
+        del_stu.departure_status = ModificationType.delete.name
+        del_stu.order = len(res_stus)
+        res_stus.append(del_stu)
