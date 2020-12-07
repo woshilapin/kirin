@@ -1,6 +1,7 @@
 # encoding: utf-8
 
 from __future__ import absolute_import, print_function, unicode_literals, division
+from datetime import timedelta
 
 log_formatter = "json"
 
@@ -11,3 +12,5 @@ COTS_PAR_IV_CLIENT_ID = "tchoutchou_id"
 COTS_PAR_IV_CLIENT_SECRET = "tchoutchou_secret"
 
 BROKER_CONSUMER_CONFIGURATION_RELOAD_INTERVAL = 1  # in seconds
+
+REDIS_LOCK_TIMEOUT_POLLER = "10"  # in seconds

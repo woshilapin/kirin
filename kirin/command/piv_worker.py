@@ -46,13 +46,23 @@ from copy import deepcopy
 import logging
 import time
 
-from kirin.utils import log_exception
+from kirin.utils import log_exception, get_lock, make_kirin_lock_name
+from kirin import redis_client
+from redis.exceptions import LockError
+
 
 logger = logging.getLogger(__name__)
 
 CONF_RELOAD_INTERVAL = timedelta(
     seconds=float(str(app.config.get(str("BROKER_CONSUMER_CONFIGURATION_RELOAD_INTERVAL"))))
 )
+# In case of postgresql disconnection, it seems that the timeout (so exception) takes 10 seconds to happen,
+# the lock expiration shall not occur during this time otherwise it can lead to incorrect state (still working but
+# unlocked)
+PIV_WORKER_REDIS_TIMEOUT_LOCK = max(
+    timedelta(seconds=float(str(app.config.get(str("REDIS_LOCK_TIMEOUT_POLLER"))))), timedelta(seconds=15)
+)
+PIV_LOCK_NAME = make_kirin_lock_name("piv_poller")  # only one contributor and one PIV worker at a time
 
 
 class PivWorker(ConsumerMixin):
@@ -80,6 +90,7 @@ class PivWorker(ConsumerMixin):
         self.broker_url = deepcopy(contributor.broker_url)
         self.navitia_coverage = deepcopy(contributor.navitia_coverage)
         self.navitia_token = deepcopy(contributor.navitia_token)
+        self.last_lock_update = datetime.now()
 
     @new_relic.agent.background_task(name="piv_worker-enter", group="Task")
     def __enter__(self):
@@ -92,7 +103,7 @@ class PivWorker(ConsumerMixin):
         self.connection.release()
 
     def _get_exchange(self, exchange_name):
-        return Exchange(name=exchange_name, type="fanout", durable=True, no_declare=True, auto_delete=False)
+        return Exchange(name=exchange_name, type=str("fanout"), durable=True, no_declare=True, auto_delete=False)
 
     def _get_or_create_queue(self, queue_name):
         queue = Queue(name=queue_name, exchange=self.exchange, durable=True, auto_delete=False)
@@ -124,6 +135,11 @@ class PivWorker(ConsumerMixin):
 
     @new_relic.agent.background_task(name="piv_worker-on_iteration", group="Task")
     def on_iteration(self):
+        if datetime.now() - self.last_lock_update > PIV_WORKER_REDIS_TIMEOUT_LOCK // 5:
+            redis_client.expire(PIV_LOCK_NAME, PIV_WORKER_REDIS_TIMEOUT_LOCK)
+            self.last_lock_update = datetime.now()
+            logger.debug("lock {%s} updated", PIV_LOCK_NAME)
+
         if datetime.now() - self.last_config_checked_time < CONF_RELOAD_INTERVAL:
             return
 
@@ -152,38 +168,47 @@ class PivWorker(ConsumerMixin):
 
 @manager.command
 def piv_worker():
-    import sys
-
     # We assume one and only one PIV contributor is going to exist in the DB
+    # Therefore, we enforce one and only one `PivWorker` is running at a time
     while True:
-        should_wait = True
         try:
-            contributors = get_piv_contributors()
-            if len(contributors) == 0:
-                logger.warning("no PIV contributor")
-                time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
-                continue
-            contributor = contributors[0]
-            if len(contributors) > 1:
-                logger.warning(
-                    "more than one PIV contributors: {0}; choosing '{1}'".format(
-                        map(lambda c: c.id, contributors), contributor.id
-                    )
-                )
-            with PivWorker(contributor) as worker:
-                should_wait = False  # wait only after init crash
-                logger.info("launching the PIV worker for '{0}'".format(contributor.id))
-                worker.run()
-        except Exception as e:
-            logger.warning("PIV worker died: {0}".format(e))
-        finally:
-            try:
-                db.session.commit()
-            except Exception as db_e:
-                logger.warning("Exception while db-commit: {0}".format(db_e))
-                db.session.rollback()
-            if should_wait:
-                time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
-            db.session.expire(
-                contributor
-            )  # force db-reload otherwise staying locked on previous contributor's config
+            with get_lock(logger, PIV_LOCK_NAME, PIV_WORKER_REDIS_TIMEOUT_LOCK.total_seconds()) as locked:
+                if locked:
+                    should_wait = True
+                    try:
+                        contributors = get_piv_contributors()
+                        if len(contributors) == 0:
+                            logger.warning("no PIV contributor")
+                            time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
+                            continue
+                        contributor = contributors[0]
+                        if len(contributors) > 1:
+                            logger.warning(
+                                "more than one PIV contributors: {0}; choosing '{1}'".format(
+                                    map(lambda c: c.id, contributors), contributor.id
+                                )
+                            )
+
+                        with PivWorker(contributor) as worker:
+                            should_wait = False  # wait only after init crash
+                            logger.info("launching the PIV worker for '{0}'".format(contributor.id))
+                            worker.run()
+
+                    except Exception as e:
+                        logger.warning("PIV worker died: {0}".format(e))
+                    finally:
+                        try:
+                            db.session.commit()
+                        except Exception as db_e:
+                            logger.warning("Exception while db-commit: {0}".format(db_e))
+                            db.session.rollback()
+                        if should_wait:
+                            time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
+                        db.session.expire(
+                            contributor
+                        )  # force db-reload otherwise staying locked on previous contributor's config
+                else:
+                    logger.debug("Lock {%s} un-acquired", PIV_LOCK_NAME)
+                    time.sleep(CONF_RELOAD_INTERVAL.total_seconds())
+        except LockError as lock_e:
+            logger.warning("Exception with lock : {0}".format(lock_e))
