@@ -1,6 +1,6 @@
 # coding=utf-8
-
-#  Copyright (c) 2001, Canal TP and/or its affiliates. All rights reserved.
+#
+# Copyright (c) Canal TP and/or its affiliates. All rights reserved.
 #
 # This file is part of Navitia,
 #     the software to build cool stuff with public transport.
@@ -34,20 +34,23 @@ from tests.mock_navitia import navitia_response
 
 response = navitia_response.NavitiaResponse()
 
-response.queries = [
-    "vehicle_journeys/?depth=2&since=20121120T100000Z&headsign=151515&show_codes=true&until=20121120T170000Z",
-    'vehicle_journeys/?filter=vehicle_journey.has_code("rt_piv", "2020-10-22:23188:1187:rail:regionalRail:FERRE")&depth=2&show_codes=true',
-    'vehicle_journeys/?filter=vehicle_journey.has_code("rt_piv", "2020-10-22:23188:1180:rail:regionalRail:FEROUTIER")&depth=2&show_codes=true',
-    'vehicle_journeys/?filter=vehicle_journey.has_code("rt_piv", "2020-10-22:23188:1190:rail:regionalRail:")&depth=2&show_codes=true',
-]
+response.queries = ['companies/?filter=company.has_code("source", "1190")&count=1']
 
-response.response_code = 404
+response.response_code = 200
 
-response.json_response = """{
-    "disruptions": [],
-    "error": {
-        "id": "unknown_object",
-        "message": "ptref : Filters: Unable to find object"
-    }
+response.json_response = """
+{
+    "companies":[
+        {
+            "codes":[
+                {
+                    "type":"source",
+                    "value":"1190"
+                }
+            ],
+            "id":"company:PIVPP:1190",
+            "name":"KISIO"
+        }
+    ]
 }
 """
