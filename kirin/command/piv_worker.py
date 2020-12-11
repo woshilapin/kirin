@@ -126,11 +126,12 @@ class PivWorker(ConsumerMixin):
     def on_iteration(self):
         if datetime.now() - self.last_config_checked_time < CONF_RELOAD_INTERVAL:
             return
-        else:
-            # SQLAlchemy is not querying the DB for read (uses cache instead),
-            # unless we specifically tell that the data is expired.
-            db.session.expire(self.builder.contributor)
-            self.last_config_checked_time = datetime.now()
+
+        # SQLAlchemy is not querying the DB for read (uses cache instead),
+        # unless we specifically tell that the data is expired.
+        db.session.expire(self.builder.contributor)
+        self.last_config_checked_time = datetime.now()
+
         contributor = get_piv_contributor(self.builder.contributor.id)
         if (
             not contributor
