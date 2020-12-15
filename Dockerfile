@@ -1,4 +1,4 @@
-FROM navitia/python
+FROM navitia/python:debian9
 
 WORKDIR /usr/src/app
 
