@@ -30,18 +30,21 @@
 # www.navitia.io
 from __future__ import absolute_import, print_function, unicode_literals, division
 
-from kirin import app, db
-from kirin.command.piv_worker import PivWorker
+from kirin.command.piv_worker import PivWorker, PIV_LOCK_NAME, PIV_WORKER_REDIS_TIMEOUT_LOCK
 from kirin.core.model import RealTimeUpdate
-from kirin.core.types import ConnectorType
 from kirin.piv.piv import get_piv_contributor
 from tests.integration.conftest import PIV_CONTRIBUTOR_ID, PIV_EXCHANGE_NAME, PIV_QUEUE_NAME
 
 from amqp.exceptions import NotFound
-from kombu import Connection, Exchange, Queue
+from kombu import Connection, Exchange
 import pytest
+import logging
+
 import threading
 from retrying import retry
+from mock import patch
+from datetime import datetime
+import time
 
 
 @retry(stop_max_delay=20000, wait_exponential_multiplier=100)
@@ -53,7 +56,7 @@ def is_exchange_created(connection, exchange_name, exchange_type="fanout"):
     try:
         channel = connection.channel()
         channel.exchange_declare(exchange_name, exchange_type, nowait=False, passive=True)
-    except NotFound as e:
+    except NotFound:
         return False
     except Exception as e:
         raise e
@@ -64,7 +67,7 @@ def is_queue_created(connection, queue_name):
     try:
         channel = connection.channel()
         channel.queue_declare(queue=queue_name, nowait=False, passive=True)
-    except NotFound as e:
+    except NotFound:
         return False
     except Exception as e:
         raise e
@@ -86,7 +89,7 @@ def create_exchange(broker_connection, exchange_name):
         exchange_name,
         durable=True,
         delivery_mode=2,
-        type="fanout",
+        type=str("fanout"),
         auto_delete=False,
         no_declare=False,
     )
@@ -102,8 +105,7 @@ def init_piv_exchange(broker_connection):
 
 
 def launch_piv_worker(pg_docker_fixture):
-    import kirin
-    from kirin import app, db, manager
+    from kirin import app
     from tests.conftest import init_flask_db
     from tests.integration.conftest import PIV_CONTRIBUTOR_ID
 
@@ -111,6 +113,7 @@ def launch_piv_worker(pg_docker_fixture):
         # re-init the db by overriding the db_url
         init_flask_db(pg_docker_fixture)
         contributor = get_piv_contributor(PIV_CONTRIBUTOR_ID)
+
         with PivWorker(contributor) as worker:
             worker.run()
 
@@ -121,6 +124,7 @@ class PivWorkerTest:
         self.broker_url = broker_url
         self.broker_connection = broker_connection
         self.pg_docker_fixture = pg_docker_fixture
+        self.last_lock_update = datetime.now()
 
     def __enter__(self):
         # Launch a PivWorker
@@ -147,3 +151,23 @@ def test_mq_message_received_and_stored(
         # Check that MQ message is received and stored in DB
         mq_handler.publish(str('{"key": "Some valid JSON"}'), PIV_CONTRIBUTOR_ID)
         wait_until(lambda: RealTimeUpdate.query.count() == 1)
+
+
+def test_redis_lock_update(
+    test_client,
+    pg_docker_fixture,
+    rabbitmq_docker_fixture,
+    broker_connection,
+    mq_handler,
+):
+    logger = logging.getLogger("kirin.command.piv_worker")
+    with patch.object(logger, "debug") as mock_debug:
+        with PivWorkerTest(test_client, rabbitmq_docker_fixture.url, broker_connection, pg_docker_fixture):
+            # Check that PivWorker is creating the queue
+            wait_until(lambda: is_queue_created(broker_connection, PIV_QUEUE_NAME))
+
+            time.sleep((PIV_WORKER_REDIS_TIMEOUT_LOCK.total_seconds() // 5) + 1)
+            mq_handler.publish(str('{"key": "Some valid JSON"}'), PIV_CONTRIBUTOR_ID)
+            wait_until(lambda: RealTimeUpdate.query.count() == 1)
+            # Check lock refreshed
+            mock_debug.assert_any_call("lock {%s} updated", PIV_LOCK_NAME)
