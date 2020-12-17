@@ -49,7 +49,7 @@ from kirin.core.model import RealTimeUpdate
 from kirin.exceptions import InternalException, InvalidArguments
 import requests
 
-from kirin.new_relic import allow_apm_logging, must_never_log, record_exception
+from kirin.new_relic import allow_newrelic_error_summary_logging, must_never_log, record_exception
 
 
 def floor_datetime(datetime):
@@ -359,5 +359,5 @@ def log_exception(exception, exception_source):
         logger.exception(error)
 
     # must filter on ALL exceptions (including flask's ones)
-    if allow_apm_logging(exception):
+    if allow_newrelic_error_summary_logging(exception):
         record_exception()

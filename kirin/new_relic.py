@@ -34,9 +34,10 @@ import logging
 import flask
 import os
 
+from navitia_wrapper import NavitiaException
 from werkzeug.exceptions import NotFound, MethodNotAllowed
 
-from kirin.exceptions import InvalidArguments
+from kirin.exceptions import InvalidArguments, ObjectNotFound, UnsupportedValue
 
 try:
     from newrelic import agent
@@ -50,8 +51,8 @@ def init(config_file):
     if agent and config_file and os.path.exists(config_file):
         agent.initialize(config_file)
     else:
-        logger = logging.getLogger(__name__)
-        logger.warning("newrelic hasn't been initialized")
+        log = logging.getLogger(__name__)
+        log.warning("newrelic hasn't been initialized")
 
 
 def must_never_log(exception):
@@ -65,18 +66,30 @@ def must_never_log(exception):
     return False
 
 
-def is_invalid_input_exception(exception):
-    if isinstance(exception, InvalidArguments):
+NOT_REPROCESSABLE_EXCEPTIONS = [InvalidArguments, UnsupportedValue]
+
+WARNING_EXCEPTIONS = [ObjectNotFound, NavitiaException] + NOT_REPROCESSABLE_EXCEPTIONS
+
+
+def is_only_warning_exception(exception):
+    if isinstance(exception, tuple(WARNING_EXCEPTIONS)):
         return True
-    # Any other exception is not related to an invalid input
+    # Any other exception is a failure that should alert developers and/or OPS
     return False
 
 
-def allow_apm_logging(exception):
+def is_reprocess_allowed(exception):  # next time Kirin receives the same feed, should it be ignored or not
+    if isinstance(exception, tuple(NOT_REPROCESSABLE_EXCEPTIONS)):
+        return False
+    # Any other exception allows the reprocessing of the same feed
+    return True
+
+
+def allow_newrelic_error_summary_logging(exception):
     if must_never_log(exception):
         return False
-    # Not tracking bad data errors in APM
-    if is_invalid_input_exception(exception):
+    # Not tracking warnings in newrelic's errors summary
+    if is_only_warning_exception(exception):
         return False
 
     return True

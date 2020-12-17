@@ -132,6 +132,22 @@ There must be at least one PIV-worker if any PIV contributor is configured.
 There can be several of these to ensure uptime.
 Limitation: currently, only the first PIV contributor encountered is polled.
 
+## Error management
+
+The main separations are:
+* `Info`, `debug` log levels and `"OK"` status in newrelic are for indicators only.
+  For example processing times, size of feeds.\
+  Nothing there can be expected to trigger alerts to anybody.
+* `Warning` log level and `"warning"` status in newrelic are for normal Kirin behavior but
+  abnormal functional behavior. This is the case of a feed that can not be processed because
+  base-schedule data is missing.\
+  Those are expected to alert contributors (or delegates).
+* `Error` log level and `"failure"` status in newrelic, and Errors in newrelic's summary
+  are for abnormal Kirin behavior.
+  This should never happen, but can be present for unknown errors, or when some external
+  components are disconnected.\
+  Those are expected to alert developers and OPS.
+
 ## Tests
 
 Most tests are implemented in `/tests` directory.\
