@@ -85,16 +85,6 @@ def is_reprocess_allowed(exception):  # next time Kirin receives the same feed, 
     return True
 
 
-def allow_newrelic_error_summary_logging(exception):
-    if must_never_log(exception):
-        return False
-    # Not tracking warnings in newrelic's errors summary
-    if is_only_warning_exception(exception):
-        return False
-
-    return True
-
-
 def record_exception():
     """
     record the exception currently handled to newrelic

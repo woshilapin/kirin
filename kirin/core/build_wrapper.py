@@ -186,7 +186,10 @@ def wrap_build(builder, input_raw):
         log_dict.update({"exc_summary": six.text_type(e), "reason": e})
 
         record_custom_parameter("reason", e)  # using __str__() here to have complete details
-        raise  # filters later for errors in newrelic's summary (auto for flask)
+        # Re-raise all exceptions (as flask manages exceptions for output)
+        # try/except mechanism must wrap calls to this wrap_build() function (auto. for flask)
+        # See CONTRIBUTING.md for newrelic's error filtering
+        raise
 
     finally:
         log_dict.update({"duration": (datetime.datetime.utcnow() - start_datetime).total_seconds()})

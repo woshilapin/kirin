@@ -148,6 +148,29 @@ The main separations are:
   components are disconnected.\
   Those are expected to alert developers and OPS.
 
+### Filter errors in New Relic
+
+Errors in NewRelic summary are filtered by adding a type of exception in `newrelic.ini`.
+This allows the filtering to be effective for all cases (flask, celery, piv-worker).
+
+The line to modify/add will look like:
+
+```ini
+[newrelic]
+
+...
+
+error_collector.ignore_errors = kirin.exceptions:ObjectNotFound werkzeug.exceptions:MethodNotAllowed
+```
+
+#### Troubleshooting New Relic
+
+For python agent, one can add environment variable to log NewRelic's calls to a given file.
+
+```bash
+NEW_RELIC_AUDIT_LOG=newrelic.log honcho start
+```
+
 ## Tests
 
 Most tests are implemented in `/tests` directory.\
