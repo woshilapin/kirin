@@ -80,8 +80,6 @@ class Contributors(Resource):
         "required": [
             "navitia_coverage",
             "connector_type",
-            "nb_days_to_keep_trip_update",
-            "nb_days_to_keep_rt_update",
         ],
     }
 
